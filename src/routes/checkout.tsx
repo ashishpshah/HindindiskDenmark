@@ -6,10 +6,13 @@ import { Layout } from "@/components/Layout";
 import { PageHero } from "@/components/PageHero";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/ui/FormField";
+import { OrderSummary } from "@/components/OrderSummary";
 import { branches } from "@/data/mock";
 import { useCart } from "@/context/CartContext";
 import { useI18n } from "@/i18n/I18nProvider";
+import { lsGet, lsSet } from "@/lib/storage";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({
@@ -38,26 +41,38 @@ function CheckoutPage() {
   const [details, setDetails] = useState({ name: "", phone: "", email: "", street: "", city: "", postal: "" });
   const [payment, setPayment] = useState("mobilepay");
 
-  const steps = [t("checkout.step1"), t("checkout.step2"), t("checkout.step3"), t("checkout.step4"), t("checkout.step5"), t("checkout.step6")];
-  const visibleSteps = orderType === "pickup" ? steps.filter((_, i) => i !== 3) : steps;
+  const ALL_STEPS = [
+    { id: 1, label: t("checkout.step1") },
+    { id: 2, label: t("checkout.step2") },
+    { id: 3, label: t("checkout.step3") },
+    { id: 4, label: t("checkout.step4") },
+    { id: 5, label: t("checkout.step5") },
+    { id: 6, label: t("checkout.step6") },
+  ];
+  const activeSteps = ALL_STEPS.filter((s) => !(s.id === 4 && orderType === "pickup"));
+  const currentIdx = activeSteps.findIndex((s) => s.id === step);
 
-  const next = () => setStep((s) => {
-    let n = Math.min(s + 1, 6);
-    if (n === 4 && orderType === "pickup") n = 5;
-    return n;
-  });
-  const back = () => setStep((s) => {
-    let n = Math.max(s - 1, 1);
-    if (n === 4 && orderType === "pickup") n = 3;
-    return n;
-  });
+  const next = () => {
+    if (step === 3) {
+      if (!details.name.trim()) { toast.error("Please enter your name."); return; }
+      if (!details.phone.trim()) { toast.error("Please enter your phone number."); return; }
+      if (!details.email.trim()) { toast.error("Please enter your email address."); return; }
+    }
+    if (step === 4) {
+      if (!details.street.trim()) { toast.error("Please enter your street address."); return; }
+      if (!details.city.trim()) { toast.error("Please enter your city."); return; }
+      if (!details.postal.trim()) { toast.error("Please enter your postal code."); return; }
+    }
+    if (currentIdx < activeSteps.length - 1) setStep(activeSteps[currentIdx + 1].id);
+  };
+  const back = () => {
+    if (currentIdx > 0) setStep(activeSteps[currentIdx - 1].id);
+  };
 
   const place = () => {
-    try {
-      const orders = JSON.parse(localStorage.getItem("hind-orders") || "[]");
-      orders.unshift({ id: orderId, date: new Date().toISOString(), branch, type: orderType, total, lines, status: "Placed" });
-      localStorage.setItem("hind-orders", JSON.stringify(orders));
-    } catch {}
+    const orders = lsGet<object[]>("hind-orders", []);
+    orders.unshift({ id: orderId, date: new Date().toISOString(), branch, type: orderType, total, lines, status: "Placed" });
+    lsSet("hind-orders", orders);
     setDone(true);
     clear();
   };
@@ -80,17 +95,16 @@ function CheckoutPage() {
 
       <section className="mx-auto max-w-6xl px-6 py-12">
         <div className="mb-8 flex flex-wrap items-center gap-2">
-          {visibleSteps.map((s, i) => {
-            const realIdx = orderType === "pickup" && i >= 3 ? i + 1 : i;
-            const active = step === realIdx + 1;
-            const completed = step > realIdx + 1;
+          {activeSteps.map((s, i) => {
+            const active = step === s.id;
+            const completed = currentIdx > i;
             return (
-              <div key={s} className="flex items-center gap-2">
+              <div key={s.id} className="flex items-center gap-2">
                 <div className={`grid h-8 w-8 place-items-center rounded-full text-sm font-bold ${active ? "gradient-primary text-primary-foreground" : completed ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>
                   {completed ? <Check className="h-4 w-4" /> : i + 1}
                 </div>
-                <span className={`text-sm ${active ? "font-semibold" : "text-muted-foreground"}`}>{s}</span>
-                {i < visibleSteps.length - 1 && <div className="hidden h-px w-8 bg-border sm:block" />}
+                <span className={`text-sm ${active ? "font-semibold" : "text-muted-foreground"}`}>{s.label}</span>
+                {i < activeSteps.length - 1 && <div className="hidden h-px w-8 bg-border sm:block" />}
               </div>
             );
           })}
@@ -135,9 +149,9 @@ function CheckoutPage() {
                   <div className="space-y-4">
                     <h2 className="font-display text-2xl font-semibold">{t("checkout.step3")}</h2>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <Field label="Name"><Input required value={details.name} onChange={(e) => setDetails({ ...details, name: e.target.value })} /></Field>
-                      <Field label="Phone"><Input required type="tel" value={details.phone} onChange={(e) => setDetails({ ...details, phone: e.target.value })} placeholder="+45 …" /></Field>
-                      <div className="sm:col-span-2"><Field label="Email"><Input required type="email" value={details.email} onChange={(e) => setDetails({ ...details, email: e.target.value })} /></Field></div>
+                      <FormField label="Name"><Input required value={details.name} onChange={(e) => setDetails({ ...details, name: e.target.value })} /></FormField>
+                      <FormField label="Phone"><Input required type="tel" value={details.phone} onChange={(e) => setDetails({ ...details, phone: e.target.value })} placeholder="+45 …" /></FormField>
+                      <div className="sm:col-span-2"><FormField label="Email"><Input required type="email" value={details.email} onChange={(e) => setDetails({ ...details, email: e.target.value })} /></FormField></div>
                     </div>
                   </div>
                 )}
@@ -145,9 +159,9 @@ function CheckoutPage() {
                   <div className="space-y-4">
                     <h2 className="font-display text-2xl font-semibold">{t("checkout.step4")}</h2>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="sm:col-span-2"><Field label="Street"><Input required value={details.street} onChange={(e) => setDetails({ ...details, street: e.target.value })} /></Field></div>
-                      <Field label="City"><Input required value={details.city} onChange={(e) => setDetails({ ...details, city: e.target.value })} /></Field>
-                      <Field label="Postal code"><Input required value={details.postal} onChange={(e) => setDetails({ ...details, postal: e.target.value })} /></Field>
+                      <div className="sm:col-span-2"><FormField label="Street"><Input required value={details.street} onChange={(e) => setDetails({ ...details, street: e.target.value })} /></FormField></div>
+                      <FormField label="City"><Input required value={details.city} onChange={(e) => setDetails({ ...details, city: e.target.value })} /></FormField>
+                      <FormField label="Postal code"><Input required value={details.postal} onChange={(e) => setDetails({ ...details, postal: e.target.value })} /></FormField>
                     </div>
                   </div>
                 )}
@@ -181,8 +195,8 @@ function CheckoutPage() {
             </AnimatePresence>
 
             <div className="mt-8 flex items-center justify-between">
-              <Button variant="ghost" onClick={back} disabled={step === 1}><ChevronLeft className="mr-1 h-4 w-4" /> {t("actions.back")}</Button>
-              {step < 6 ? (
+              <Button variant="ghost" onClick={back} disabled={currentIdx === 0}><ChevronLeft className="mr-1 h-4 w-4" /> {t("actions.back")}</Button>
+              {currentIdx < activeSteps.length - 1 ? (
                 <Button onClick={next} className="gradient-primary text-primary-foreground">{t("actions.next")} <ChevronRight className="ml-1 h-4 w-4" /></Button>
               ) : (
                 <Button onClick={place} className="gradient-primary text-primary-foreground">{t("actions.placeOrder")}</Button>
@@ -199,13 +213,9 @@ function CheckoutPage() {
                 </div>
               ))}
             </div>
-            <div className="mt-4 space-y-1 border-t pt-3 text-sm text-muted-foreground">
-              <div className="flex justify-between"><span>Subtotal</span><span>{subtotal} DKK</span></div>
-              {discount > 0 && <div className="flex justify-between text-primary"><span>Discount</span><span>-{discount} DKK</span></div>}
-              <div className="flex justify-between"><span>Tax (25%)</span><span>{tax} DKK</span></div>
-              <div className="flex justify-between"><span>Delivery</span><span>{delivery === 0 ? "Free" : `${delivery} DKK`}</span></div>
+            <div className="mt-4 border-t pt-3">
+              <OrderSummary subtotal={subtotal} discount={discount} tax={tax} delivery={delivery} total={total} />
             </div>
-            <div className="mt-3 flex justify-between border-t pt-3 font-display text-lg"><span>Total</span><span>{total} DKK</span></div>
           </aside>
         </div>
       </section>
@@ -234,9 +244,6 @@ function CheckoutPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="space-y-2"><Label className="text-sm font-medium">{label}</Label>{children}</div>;
-}
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return <div className="flex justify-between border-b py-2 text-sm"><span className="text-muted-foreground">{label}</span><span className="font-medium">{value}</span></div>;
 }

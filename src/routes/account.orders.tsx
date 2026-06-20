@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { lsGet } from "@/lib/storage";
 
 export const Route = createFileRoute("/account/orders")({ component: OrdersPage });
 
@@ -10,7 +11,7 @@ type Order = { id: string; date: string; branch: string; type: string; total: nu
 function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   useEffect(() => {
-    try { setOrders(JSON.parse(localStorage.getItem("hind-orders") || "[]")); } catch {}
+    setOrders(lsGet<Order[]>("hind-orders", []));
   }, []);
   return (
     <div className="space-y-4">

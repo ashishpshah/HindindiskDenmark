@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { lsGet, lsSet, lsRemove } from "@/lib/storage";
 
 export type User = { name: string; email: string; phone?: string; address?: string };
 
@@ -23,15 +24,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [modalMode, setModalMode] = useState<"login" | "register" | "forgot">("login");
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("hind-user");
-      if (raw) setUser(JSON.parse(raw));
-    } catch {}
+    const saved = lsGet<User | null>("hind-user", null);
+    if (saved) setUser(saved);
   }, []);
 
   const persist = (u: User | null) => {
     setUser(u);
-    try { if (u) localStorage.setItem("hind-user", JSON.stringify(u)); else localStorage.removeItem("hind-user"); } catch {}
+    if (u) lsSet("hind-user", u); else lsRemove("hind-user");
   };
 
   const login = useCallback(async (email: string, _password: string) => {
@@ -50,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateProfile = useCallback((u: Partial<User>) => {
     setUser((prev) => {
       const next = prev ? { ...prev, ...u } : null;
-      try { if (next) localStorage.setItem("hind-user", JSON.stringify(next)); } catch {}
+      if (next) lsSet("hind-user", next);
       return next;
     });
   }, []);

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { menuItems } from "@/data/mock";
+import { lsGet, lsSet, lsRemove } from "@/lib/storage";
 
 export type CartLine = {
   name: string;
@@ -48,18 +49,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [orderType, setOrderType] = useState<"pickup" | "delivery">("delivery");
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("hind-cart");
-      if (raw) setCart(JSON.parse(raw));
-      const c = localStorage.getItem("hind-coupon");
-      if (c) setCoupon(c);
-      const b = localStorage.getItem("hind-branch");
-      if (b) setBranch(b);
-    } catch {}
+    const savedCart = lsGet<Record<string, number>>("hind-cart", {});
+    if (Object.keys(savedCart).length > 0) setCart(savedCart);
+    const savedCoupon = lsGet<string | null>("hind-coupon", null);
+    if (savedCoupon) setCoupon(savedCoupon);
+    const savedBranch = lsGet<string | null>("hind-branch", null);
+    if (savedBranch) setBranch(savedBranch);
   }, []);
 
-  useEffect(() => { try { localStorage.setItem("hind-cart", JSON.stringify(cart)); } catch {} }, [cart]);
-  useEffect(() => { try { localStorage.setItem("hind-branch", branch); } catch {} }, [branch]);
+  useEffect(() => { lsSet("hind-cart", cart); }, [cart]);
+  useEffect(() => { lsSet("hind-branch", branch); }, [branch]);
 
   const add = useCallback((name: string, count: number = 1) => setCart((c) => ({ ...c, [name]: (c[name] || 0) + count })), []);
   const sub = useCallback((name: string) => setCart((c) => {
@@ -68,41 +67,38 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return next;
   }), []);
   const remove = useCallback((name: string) => setCart((c) => { const n = { ...c }; delete n[name]; return n; }), []);
-  const clear = useCallback(() => { setCart({}); setCoupon(null); try { localStorage.removeItem("hind-coupon"); } catch {} }, []);
+  const clear = useCallback(() => { setCart({}); setCoupon(null); lsRemove("hind-coupon"); }, []);
 
   const applyCoupon = useCallback((code: string) => {
     const up = code.trim().toUpperCase();
-    if (COUPONS[up]) {
-      setCoupon(up);
-      try { localStorage.setItem("hind-coupon", up); } catch {}
-      return true;
-    }
+    if (COUPONS[up]) { setCoupon(up); lsSet("hind-coupon", up); return true; }
     return false;
   }, []);
-  const removeCoupon = useCallback(() => { setCoupon(null); try { localStorage.removeItem("hind-coupon"); } catch {} }, []);
+  const removeCoupon = useCallback(() => { setCoupon(null); lsRemove("hind-coupon"); }, []);
 
-  const { lines, subtotal, totalQty } = useMemo(() => {
+  const { lines, subtotal, totalQty, discount, delivery, tax, total } = useMemo(() => {
     const lines: CartLine[] = Object.entries(cart).map(([name, qty]) => {
       const it = menuItems.find((m) => m.name === name);
       if (!it) return { name, qty, price: 0, image: "" };
-      return { name, qty, price: parseInt(it.price), image: it.image };
+      return { name, qty, price: it.price, image: it.image };
     });
     const subtotal = lines.reduce((a, l) => a + l.price * l.qty, 0);
     const totalQty = lines.reduce((a, l) => a + l.qty, 0);
-    return { lines, subtotal, totalQty };
-  }, [cart]);
 
-  const baseDelivery = orderType === "delivery" && subtotal > 0 ? 39 : 0;
-  let discount = 0;
-  let delivery = baseDelivery;
-  if (coupon && COUPONS[coupon]) {
-    const c = COUPONS[coupon];
-    if (c.type === "percent") discount = Math.round((subtotal * c.value) / 100);
-    if (c.type === "freeDelivery") delivery = 0;
-  }
-  const taxed = Math.max(subtotal - discount, 0);
-  const tax = Math.round(taxed * 0.25);
-  const total = taxed + tax + delivery;
+    const baseDelivery = orderType === "delivery" && subtotal > 0 ? 39 : 0;
+    let discount = 0;
+    let delivery = baseDelivery;
+    if (coupon && COUPONS[coupon]) {
+      const c = COUPONS[coupon];
+      if (c.type === "percent") discount = Math.round((subtotal * c.value) / 100);
+      if (c.type === "freeDelivery") delivery = 0;
+    }
+    const taxed = Math.max(subtotal - discount, 0);
+    const tax = Math.round(taxed * 0.25);
+    const total = taxed + tax + delivery;
+
+    return { lines, subtotal, totalQty, discount, delivery, tax, total };
+  }, [cart, orderType, coupon]);
 
   return (
     <CartContext.Provider value={{

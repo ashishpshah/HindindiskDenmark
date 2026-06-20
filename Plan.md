@@ -1,6 +1,6 @@
 # Backend Implementation Plan (.NET 8 Web API & MS SQL Server)
 
-This document outlines the architecture, database schema, API endpoints, and integration strategy to replace the current frontend mock system with a production-ready **.NET 8 Web API** and **MS SQL Server** database.
+This document outlines the architecture, database schema, API endpoints, and integration strategy to replace the current frontend mock system with a production-ready **.NET 8 Web API** and **MS SQL Server** database (Server : (localdb)\MSSQLLocalDB, Database Name : dbHindInDisk).
 
 ---
 
@@ -30,63 +30,128 @@ The database schema maps all frontend entities and workflows to MS SQL Server ta
 
 ```mermaid
 erDiagram
+    Roles ||--o{ Users : assigns
+    Users ||--o{ UserBranches : manages
+    Branches ||--o{ UserBranches : managed-by
+    Users ||--o{ UserAddresses : has
     Users ||--o{ Orders : places
     Users ||--o{ Reservations : schedules
-    Users ||--o{ SavedAddresses : owns
     Branches ||--o{ Orders : processes
     Branches ||--o{ Reservations : hosts
-    MenuCategories ||--o{ MenuItems : categorizes
+    Branches ||--o{ BranchMenus : has
+    Branches ||--o{ BranchMenuItemPrices : overrides-price-for
+    Menus ||--o{ BranchMenus : maps-to
+    Menus ||--o{ MenuItemsMapping : contains
+    MenuItems ||--o{ MenuItemsMapping : mapped-in
+    MenuItems ||--o{ BranchMenuItemPrices : priced-at
+    MenuItems ||--o{ MenuItemLabels : has
+    MenuLabels ||--o{ MenuItemLabels : mapped-to
+    Offers ||--o{ OfferMenus : restricts-to
+    Menus ||--o{ OfferMenus : maps-in
+    Offers ||--o{ OfferMenuItems : restricts-to
+    MenuItems ||--o{ OfferMenuItems : maps-in
+    Orders ||--o{ OrderAppliedOffers : applies
+    Offers ||--o{ OrderAppliedOffers : applied-in
     MenuItems ||--o{ OrderItems : included-in
     Orders ||--o{ OrderItems : contains
-    Coupons ||--o{ Orders : applies
     
+    Roles {
+        Int64 Id PK "SystemAdmin=1, Admin=2, Customer=3"
+        String Name "SystemAdmin, Admin, Customer"
+    }
+
+    UserBranches {
+        Int64 UserId FK
+        Int64 BranchId FK
+    }
+
     Users {
-        Guid Id PK
-        String Name
+        Int64 Id PK
+        String Firstname
+        String Lastname
         String Email UK
         String PasswordHash
         String Phone
+        Int64 RoleId FK
         DateTime CreatedAt
     }
     
-    SavedAddresses {
-        Guid Id PK
-        Guid UserId FK
-        String StreetAddress
+    UserAddresses {
+        Int64 Id PK
+        Int64 UserId FK
+        String AddressLine1
+        String AddressLine2 "nullable"
         String City
         String PostalCode
-        String Type "e.g. Home, Work"
+        String Country
+        String Type "Home / Office"
     }
 
     Branches {
-        Guid Id PK
+        Int64 Id PK
         String Name
+        String AddressLine1
+        String AddressLine2 "nullable"
         String City
-        String Address
+        String PostalCode
+        String Country
+        TimeOnly WeekdayOpenTime "HH:MM 24h format"
+        TimeOnly WeekdayCloseTime "HH:MM 24h format"
+        TimeOnly WeekendOpenTime "HH:MM 24h format"
+        TimeOnly WeekendCloseTime "HH:MM 24h format"
         String Phone
-        String OpeningHours
+        String Email
+        String GoogleMapsLink
+        String GooglePlaceId
+        String GoogleBusinessProfileLink
     }
 
-    MenuCategories {
-        Guid Id PK
+    Menus {
+        Int64 Id PK
         String Name
+        String Description
+        Boolean IsActive
     }
 
     MenuItems {
-        Guid Id PK
-        Guid CategoryId FK
+        Int64 Id PK
         String Name
         String Description
-        Decimal Price
-        Boolean IsVegetarian
-        Integer SpicyLevel "0-3 scale"
         String ImageUrl
+        Integer SpicyLevel "Dietary: 0-3 scale"
+    }
+
+    MenuLabels {
+        Int64 Id PK
+        String Name "e.g. Gluten, Nuts, Vegetarian, Contains Pork"
+        String Type "Allergen / Dietary"
+    }
+
+    MenuItemLabels {
+        Int64 MenuItemId FK
+        Int64 LabelId FK
+    }
+
+    MenuItemsMapping {
+        Int64 MenuId FK
+        Int64 MenuItemId FK
+    }
+
+    BranchMenus {
+        Int64 BranchId FK
+        Int64 MenuId FK
+    }
+
+    BranchMenuItemPrices {
+        Int64 BranchId FK
+        Int64 MenuItemId FK
+        Decimal Price
     }
 
     Orders {
-        Guid Id PK
-        Guid UserId FK
-        Guid BranchId FK
+        Int64 Id PK
+        Int64 UserId FK
+        Int64 BranchId FK
         String OrderType "Pickup / Delivery"
         Decimal Subtotal
         Decimal DeliveryFee
@@ -94,22 +159,22 @@ erDiagram
         Decimal Discount
         Decimal Total
         String Status "Pending, Preparing, OutForDelivery, Delivered, Cancelled"
-        Guid CouponId FK
         DateTime CreatedAt
     }
 
     OrderItems {
-        Guid Id PK
-        Guid OrderId FK
-        Guid MenuItemId FK
+        Int64 Id PK
+        Int64 OrderId FK
+        Int64 MenuId FK
+        Int64 MenuItemId FK
         Integer Quantity
         Decimal PriceAtPurchase
     }
 
     Reservations {
-        Guid Id PK
-        Guid UserId FK
-        Guid BranchId FK
+        Int64 Id PK
+        Int64 UserId FK
+        Int64 BranchId FK
         DateTime Date
         String TimeSlot
         Integer GuestCount
@@ -118,12 +183,37 @@ erDiagram
         DateTime CreatedAt
     }
 
-    Coupons {
-        Guid Id PK
-        String Code UK
-        String Type "Percent / FreeDelivery"
-        Decimal Value
+    Offers {
+        Int64 Id PK
+        String Title
+        String Description
+        String OfferType "Coupon / Direct / Conditional"
+        String DiscountType "Percent / FixedAmount / FreeShipping / FreeItem"
+        Decimal DiscountValue
+        String CouponCode "nullable, UK"
+        Decimal MinimumOrderAmount "nullable"
+        Boolean IsAutoApply
+        Integer UsageLimit "nullable"
+        Integer UsageCount
+        DateTime StartDate
+        DateTime EndDate
         Boolean IsActive
+    }
+
+    OfferMenus {
+        Int64 OfferId FK
+        Int64 MenuId FK
+    }
+
+    OfferMenuItems {
+        Int64 OfferId FK
+        Int64 MenuItemId FK
+    }
+
+    OrderAppliedOffers {
+        Int64 OrderId FK
+        Int64 OfferId FK
+        Decimal AppliedDiscountAmount
     }
 ```
 
@@ -170,14 +260,14 @@ We will create a new directory inside the project root named `backend` (or a par
    * `BCrypt.Net-Next` (for secure password hashing)
 
 ### Step 3.2: Code the Domain Entities and DbContext
-1. Create entity models for `User`, `Branch`, `MenuCategory`, `MenuItem`, `Order`, `OrderItem`, `Reservation`, `Coupon`, and `SavedAddress`.
+1. Create entity models for `User`, `Branch`, `Role`, `UserBranch`, `UserAddress`, `Menu`, `MenuItem`, `MenuLabel`, `MenuItemLabel`, `MenuItemsMapping`, `BranchMenus`, `BranchMenuItemPrices`, `Order`, `OrderItem`, `Reservation`, `Offer`, `OfferMenus`, `OfferMenuItems`, and `OrderAppliedOffers`.
 2. Configure relations, database constraints, and custom converters in `ApplicationDbContext`.
-3. Create default seed data (loading restaurant menu items and branches from current `mock.ts`).
+3. Create default seed data (loading restaurant menus, menu items, branch configurations, labels, roles, default users, and active offers/promotions from current `mock.ts`).
 
 ### Step 3.3: Implement Repository/Service Layers & Controllers
 1. Configure JWT security settings in `appsettings.json` and program pipeline.
 2. Implement Authentication Service + Controller.
-3. Implement Reservation + Order Processing validation rules (checking coupons and taxes).
+3. Implement Reservation + Order Processing validation rules (checking active offers, usage limits, auto-applies, and taxes).
 
 ### Step 3.4: Integrate with Frontend Core Contexts
 1. Setup a dynamic `VITE_API_URL` environment flag in the React frontend.

@@ -143,19 +143,19 @@ export const faqs = [
 export const menuCategories = ["Starters", "Main Course", "Rice", "Bread", "Desserts", "Drinks"] as const;
 
 export const menuItems = [
-  { name: "Samosa", category: "Starters", price: "49 DKK", desc: "Crispy pastry filled with spiced potatoes and peas.", veg: true, spicy: 1, image: "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80" },
-  { name: "Paneer Tikka", category: "Starters", price: "119 DKK", desc: "Marinated cottage cheese, flame grilled.", veg: true, spicy: 2, image: "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?auto=format&fit=crop&w=800&q=80" },
-  { name: "Chicken Pakora", category: "Starters", price: "99 DKK", desc: "Golden fried marinated chicken bites.", veg: false, spicy: 2, image: "https://images.unsplash.com/photo-1606491048802-8342506d6471?auto=format&fit=crop&w=800&q=80" },
-  { name: "Butter Chicken", category: "Main Course", price: "149 DKK", desc: "Tandoori chicken in creamy tomato sauce.", veg: false, spicy: 1, image: "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=800&q=80" },
-  { name: "Lamb Rogan Josh", category: "Main Course", price: "169 DKK", desc: "Slow-cooked lamb in Kashmiri spices.", veg: false, spicy: 3, image: "https://images.unsplash.com/photo-1545247181-516773cae754?auto=format&fit=crop&w=800&q=80" },
-  { name: "Palak Paneer", category: "Main Course", price: "139 DKK", desc: "Cottage cheese in silky spinach gravy.", veg: true, spicy: 1, image: "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80" },
-  { name: "Chicken Biryani", category: "Rice", price: "139 DKK", desc: "Fragrant basmati rice with chicken and saffron.", veg: false, spicy: 2, image: "https://images.unsplash.com/photo-1633945274309-2c16c9682a8d?auto=format&fit=crop&w=800&q=80" },
-  { name: "Vegetable Biryani", category: "Rice", price: "119 DKK", desc: "Aromatic rice with garden vegetables.", veg: true, spicy: 1, image: "https://images.unsplash.com/photo-1596797038530-2c107229654b?auto=format&fit=crop&w=800&q=80" },
-  { name: "Garlic Naan", category: "Bread", price: "39 DKK", desc: "Soft tandoor bread brushed with garlic butter.", veg: true, spicy: 0, image: "https://images.unsplash.com/photo-1626776876729-bab4369a5a5a?auto=format&fit=crop&w=800&q=80" },
-  { name: "Butter Naan", category: "Bread", price: "35 DKK", desc: "Classic tandoor naan with melted butter.", veg: true, spicy: 0, image: "https://images.unsplash.com/photo-1633237308525-cd587cf71926?auto=format&fit=crop&w=800&q=80" },
-  { name: "Gulab Jamun", category: "Desserts", price: "59 DKK", desc: "Warm milk dumplings in rose syrup.", veg: true, spicy: 0, image: "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80" },
-  { name: "Mango Lassi", category: "Drinks", price: "49 DKK", desc: "Creamy yoghurt drink with Alphonso mango.", veg: true, spicy: 0, image: "https://images.unsplash.com/photo-1626200419199-391ae4be7a41?auto=format&fit=crop&w=800&q=80" },
-  { name: "Masala Chai", category: "Drinks", price: "35 DKK", desc: "Spiced black tea with milk.", veg: true, spicy: 0, image: "https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=800&q=80" },
+  { name: "Samosa", category: "Starters", price: 49, desc: "Crispy pastry filled with spiced potatoes and peas.", veg: true, spicy: 1, image: "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80" },
+  { name: "Paneer Tikka", category: "Starters", price: 119, desc: "Marinated cottage cheese, flame grilled.", veg: true, spicy: 2, image: "https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?auto=format&fit=crop&w=800&q=80" },
+  { name: "Chicken Pakora", category: "Starters", price: 99, desc: "Golden fried marinated chicken bites.", veg: false, spicy: 2, image: "https://images.unsplash.com/photo-1606491048802-8342506d6471?auto=format&fit=crop&w=800&q=80" },
+  { name: "Butter Chicken", category: "Main Course", price: 149, desc: "Tandoori chicken in creamy tomato sauce.", veg: false, spicy: 1, image: "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=800&q=80" },
+  { name: "Lamb Rogan Josh", category: "Main Course", price: 169, desc: "Slow-cooked lamb in Kashmiri spices.", veg: false, spicy: 3, image: "https://images.unsplash.com/photo-1545247181-516773cae754?auto=format&fit=crop&w=800&q=80" },
+  { name: "Palak Paneer", category: "Main Course", price: 139, desc: "Cottage cheese in silky spinach gravy.", veg: true, spicy: 1, image: "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80" },
+  { name: "Chicken Biryani", category: "Rice", price: 139, desc: "Fragrant basmati rice with chicken and saffron.", veg: false, spicy: 2, image: "https://images.unsplash.com/photo-1633945274309-2c16c9682a8d?auto=format&fit=crop&w=800&q=80" },
+  { name: "Vegetable Biryani", category: "Rice", price: 119, desc: "Aromatic rice with garden vegetables.", veg: true, spicy: 1, image: "https://images.unsplash.com/photo-1596797038530-2c107229654b?auto=format&fit=crop&w=800&q=80" },
+  { name: "Garlic Naan", category: "Bread", price: 39, desc: "Soft tandoor bread brushed with garlic butter.", veg: true, spicy: 0, image: "https://images.unsplash.com/photo-1626776876729-bab4369a5a5a?auto=format&fit=crop&w=800&q=80" },
+  { name: "Butter Naan", category: "Bread", price: 35, desc: "Classic tandoor naan with melted butter.", veg: true, spicy: 0, image: "https://images.unsplash.com/photo-1633237308525-cd587cf71926?auto=format&fit=crop&w=800&q=80" },
+  { name: "Gulab Jamun", category: "Desserts", price: 59, desc: "Warm milk dumplings in rose syrup.", veg: true, spicy: 0, image: "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80" },
+  { name: "Mango Lassi", category: "Drinks", price: 49, desc: "Creamy yoghurt drink with Alphonso mango.", veg: true, spicy: 0, image: "https://images.unsplash.com/photo-1626200419199-391ae4be7a41?auto=format&fit=crop&w=800&q=80" },
+  { name: "Masala Chai", category: "Drinks", price: 35, desc: "Spiced black tea with milk.", veg: true, spicy: 0, image: "https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=800&q=80" },
 ];
 
 export const teamMembers = [

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Mail, Lock, User as UserIcon, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,17 +17,37 @@ export function AuthModal() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirm: "", otp: "", newpwd: "" });
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value });
 
+  // Task 1.4: reset forgot-password sub-step when modal closes or mode changes away
+  useEffect(() => { if (!modalOpen) setForgotStep(1); }, [modalOpen]);
+  useEffect(() => { if (modalMode !== "forgot") setForgotStep(1); }, [modalMode]);
+
+  // Task 1.2: try/catch/finally so loading is always reset and errors are surfaced
   const onLogin = async (e: React.FormEvent) => {
-    e.preventDefault(); setLoading(true);
-    await login(form.email, form.password); setLoading(false);
-    toast.success("Logged in"); closeModal();
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await login(form.email, form.password);
+      toast.success("Logged in");
+      closeModal();
+    } catch {
+      toast.error("Invalid email or password.");
+    } finally {
+      setLoading(false);
+    }
   };
   const onRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (form.password !== form.confirm) { toast.error("Passwords do not match"); return; }
     setLoading(true);
-    await register({ name: form.name, email: form.email, phone: form.phone, password: form.password });
-    setLoading(false); toast.success("Account created"); closeModal();
+    try {
+      await register({ name: form.name, email: form.email, phone: form.phone, password: form.password });
+      toast.success("Account created");
+      closeModal();
+    } catch {
+      toast.error("Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

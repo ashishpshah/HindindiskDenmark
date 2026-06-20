@@ -19,6 +19,11 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, []);
 
+  // Task 2.2: keep <html lang> in sync with the active language for accessibility
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
     try { localStorage.setItem("hind-lang", l); } catch {}

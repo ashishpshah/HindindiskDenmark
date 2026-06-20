@@ -21,6 +21,7 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountIndexRouteImport } from './routes/account.index'
+import { Route as MenuIndexRouteImport } from './routes/menu.index'
 import { Route as MenuNameRouteImport } from './routes/menu.$name'
 import { Route as AccountReservationsRouteImport } from './routes/account.reservations'
 import { Route as AccountProfileRouteImport } from './routes/account.profile'
@@ -88,6 +89,11 @@ const AccountIndexRoute = AccountIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AccountRoute,
 } as any)
+const MenuIndexRoute = MenuIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MenuRoute,
+} as any)
 const MenuNameRoute = MenuNameRouteImport.update({
   id: '/$name',
   path: '/$name',
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/account/reservations': typeof AccountReservationsRoute
   '/menu/$name': typeof MenuNameRoute
   '/account/': typeof AccountIndexRoute
+  '/menu/': typeof MenuIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -146,7 +153,6 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/gallery': typeof GalleryRoute
   '/locations': typeof LocationsRoute
-  '/menu': typeof MenuRouteWithChildren
   '/offers': typeof OffersRoute
   '/order-tracking': typeof OrderTrackingRoute
   '/reservation': typeof ReservationRoute
@@ -157,6 +163,7 @@ export interface FileRoutesByTo {
   '/account/reservations': typeof AccountReservationsRoute
   '/menu/$name': typeof MenuNameRoute
   '/account': typeof AccountIndexRoute
+  '/menu': typeof MenuIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -178,6 +185,7 @@ export interface FileRoutesById {
   '/account/reservations': typeof AccountReservationsRoute
   '/menu/$name': typeof MenuNameRoute
   '/account/': typeof AccountIndexRoute
+  '/menu/': typeof MenuIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -200,6 +208,7 @@ export interface FileRouteTypes {
     | '/account/reservations'
     | '/menu/$name'
     | '/account/'
+    | '/menu/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -208,7 +217,6 @@ export interface FileRouteTypes {
     | '/contact'
     | '/gallery'
     | '/locations'
-    | '/menu'
     | '/offers'
     | '/order-tracking'
     | '/reservation'
@@ -219,6 +227,7 @@ export interface FileRouteTypes {
     | '/account/reservations'
     | '/menu/$name'
     | '/account'
+    | '/menu'
   id:
     | '__root__'
     | '/'
@@ -239,6 +248,7 @@ export interface FileRouteTypes {
     | '/account/reservations'
     | '/menu/$name'
     | '/account/'
+    | '/menu/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -341,6 +351,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountIndexRouteImport
       parentRoute: typeof AccountRoute
     }
+    '/menu/': {
+      id: '/menu/'
+      path: '/'
+      fullPath: '/menu/'
+      preLoaderRoute: typeof MenuIndexRouteImport
+      parentRoute: typeof MenuRoute
+    }
     '/menu/$name': {
       id: '/menu/$name'
       path: '/$name'
@@ -409,10 +426,12 @@ const AccountRouteWithChildren =
 
 interface MenuRouteChildren {
   MenuNameRoute: typeof MenuNameRoute
+  MenuIndexRoute: typeof MenuIndexRoute
 }
 
 const MenuRouteChildren: MenuRouteChildren = {
   MenuNameRoute: MenuNameRoute,
+  MenuIndexRoute: MenuIndexRoute,
 }
 
 const MenuRouteWithChildren = MenuRoute._addFileChildren(MenuRouteChildren)

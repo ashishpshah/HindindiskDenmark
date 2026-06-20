@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Check, ChefHat, Package, Bike, ClipboardCheck, ClipboardList } from "lucide-react";
@@ -25,22 +25,34 @@ const STAGES = [
   { label: "Completed", icon: Check },
 ];
 
+const STATUS_TO_STAGE: Record<string, number> = {
+  Placed: 0, Accepted: 1, Preparing: 2, Ready: 3, "Out For Delivery": 4, Completed: 5,
+};
+
 function TrackPage() {
   const { id } = Route.useSearch();
+  const navigate = useNavigate();
   const [stage, setStage] = useState(0);
   const [code, setCode] = useState(id || "");
   const [order, setOrder] = useState<any>(null);
 
   useEffect(() => {
     if (!id) return;
-    setStage(0);
-    const timers = [1, 2, 3, 4, 5].map((i) => setTimeout(() => setStage(i), i * 1500));
-    
+
+    // Task 2.3: load order first, seed stage from its saved status
+    let found: any = null;
     try {
       const orders = JSON.parse(localStorage.getItem("hind-orders") || "[]");
-      const found = orders.find((o: any) => o.id === id);
+      found = orders.find((o: any) => o.id === id) ?? null;
       if (found) setOrder(found);
     } catch {}
+
+    const initialStage = found ? (STATUS_TO_STAGE[found.status] ?? 0) : 0;
+    setStage(initialStage);
+
+    // Only animate stages that haven't been reached yet
+    const remaining = [1, 2, 3, 4, 5].filter((i) => i > initialStage);
+    const timers = remaining.map((i, idx) => setTimeout(() => setStage(i), (idx + 1) * 1500));
 
     return () => timers.forEach(clearTimeout);
   }, [id]);
@@ -52,7 +64,7 @@ function TrackPage() {
 
       <section className="mx-auto max-w-5xl px-6 py-12">
         {!id ? (
-          <form className="mx-auto max-w-md flex gap-2" onSubmit={(e) => { e.preventDefault(); if (code) window.location.search = `?id=${encodeURIComponent(code)}`; }}>
+          <form className="mx-auto max-w-md flex gap-2" onSubmit={(e) => { e.preventDefault(); if (code) navigate({ to: "/order-tracking", search: { id: code } }); }}>
             <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Enter order ID, e.g. HIN-123456" />
             <Button className="gradient-primary text-primary-foreground">Track</Button>
           </form>

@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, Plus, Minus, Leaf, Flame, Star, MapPin, ShoppingBag } from "lucide-react";
@@ -33,12 +33,10 @@ function DishDetailsPage() {
   const { name } = Route.useParams();
   const decodedName = decodeURIComponent(name);
   const dish = menuItems.find((m) => m.name.toLowerCase() === decodedName.toLowerCase());
-  const navigate = useNavigate();
 
-  const { cart, add, sub, totalQty, total, setOpen: setCartOpen, branch, setBranch } = useCart();
+  const { add, totalQty, total, setOpen: setCartOpen, branch, setBranch } = useCart();
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [qty, setQty] = useState(1);
-  const [isAdding, setIsAdding] = useState(false);
 
   if (!dish) {
     return (
@@ -59,34 +57,24 @@ function DishDetailsPage() {
     .slice(0, 3);
 
   const handleAddToCart = () => {
-    // If cart is empty, prompt user to select location first
     if (totalQty === 0) {
       setShowLocationPrompt(true);
     } else {
-      setIsAdding(true);
-      setTimeout(() => {
-        add(dish.name, qty);
-        toast.success(`${qty}x ${dish.name} added to cart`);
-        setIsAdding(false);
-      }, 500);
+      add(dish.name, qty);
+      toast.success(`${qty}x ${dish.name} added to cart`);
     }
   };
 
   const selectLocationAndAdd = (selectedBranch: string) => {
     setBranch(selectedBranch);
-    setIsAdding(true);
     setShowLocationPrompt(false);
-    setTimeout(() => {
-      add(dish.name, qty);
-      toast.success(`${qty}x ${dish.name} added to cart from ${selectedBranch}`);
-      setIsAdding(false);
-    }, 500);
+    add(dish.name, qty);
+    toast.success(`${qty}x ${dish.name} added to cart from ${selectedBranch}`);
   };
 
   return (
     <Layout>
       <div className="mx-auto max-w-7xl px-6 pt-32 pb-12">
-        {/* Back Link */}
         <Link
           to="/menu"
           className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition mb-8"
@@ -94,9 +82,7 @@ function DishDetailsPage() {
           <ChevronLeft className="mr-1 h-4 w-4" /> Back to Menu
         </Link>
 
-        {/* Product Grid */}
         <div className="grid gap-12 md:grid-cols-2 items-center">
-          {/* Product Image */}
           <div className="relative aspect-[4/3] overflow-hidden rounded-3xl shadow-elegant bg-accent">
             <img src={dish.image} alt={dish.name} className="h-full w-full object-cover" />
             <div className="absolute left-4 top-4 flex gap-1.5">
@@ -111,7 +97,6 @@ function DishDetailsPage() {
             </div>
           </div>
 
-          {/* Product Info */}
           <div className="space-y-6">
             <div>
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
@@ -123,7 +108,7 @@ function DishDetailsPage() {
               </div>
             </div>
 
-            <div className="font-display text-3xl font-bold text-primary">{dish.price}</div>
+            <div className="font-display text-3xl font-bold text-primary">{dish.price} DKK</div>
 
             <p className="text-muted-foreground text-lg leading-relaxed">{dish.desc}</p>
 
@@ -148,26 +133,15 @@ function DishDetailsPage() {
                 </div>
 
                 <Button
-                  disabled={isAdding}
                   onClick={handleAddToCart}
                   size="lg"
                   className="rounded-full gradient-primary text-primary-foreground shadow-elegant hover:scale-105 transition-transform duration-200 cursor-pointer flex items-center justify-center min-w-[145px]"
                 >
-                  {isAdding ? (
-                    <>
-                      <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2 animate-duration-500" />
-                      <span>Adding...</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingBag className="mr-2 h-5 w-5" /> Add to cart
-                    </>
-                  )}
+                  <ShoppingBag className="mr-2 h-5 w-5" /> Add to cart
                 </Button>
               </div>
             </div>
 
-            {/* Current branch warning */}
             <div className="flex items-center gap-2 text-xs text-muted-foreground border-t pt-4">
               <MapPin className="h-4 w-4 text-primary" />
               <span>Ordering from: <strong>{branch}</strong></span>
@@ -175,7 +149,6 @@ function DishDetailsPage() {
           </div>
         </div>
 
-        {/* Related Products Section */}
         {related.length > 0 && (
           <div className="mt-24 border-t pt-16 space-y-8">
             <h2 className="font-display text-3xl font-bold">Related Dishes</h2>
@@ -204,7 +177,7 @@ function DishDetailsPage() {
                         <Link to="/menu/$name" params={{ name: m.name }} className="hover:text-primary transition">
                           <div className="font-display text-xl font-semibold">{m.name}</div>
                         </Link>
-                        <div className="font-display text-lg text-primary">{m.price}</div>
+                        <div className="font-display text-lg text-primary">{m.price} DKK</div>
                       </div>
                       <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{m.desc}</p>
                     </div>
@@ -226,7 +199,6 @@ function DishDetailsPage() {
         )}
       </div>
 
-      {/* Cart Button Overlay */}
       {totalQty > 0 && (
         <button
           onClick={() => setCartOpen(true)}
@@ -236,7 +208,6 @@ function DishDetailsPage() {
         </button>
       )}
 
-      {/* Location Selector Dialog Prompt */}
       <Dialog open={showLocationPrompt} onOpenChange={setShowLocationPrompt}>
         <DialogContent className="max-w-md rounded-3xl p-6">
           <DialogHeader className="text-center">
