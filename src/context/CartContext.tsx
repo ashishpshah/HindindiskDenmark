@@ -101,10 +101,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const remove = useCallback((name: string) => setCart((c) => { const n = { ...c }; delete n[name]; return n; }), []);
   const clear = useCallback(() => { setCart({}); setCoupon(null); lsRemove("hind-coupon"); }, []);
 
+  // Accepts any code — caller is responsible for pre-validating against the API.
+  // Local COUPONS map drives the preview discount; API codes show 0 discount until order is placed.
   const applyCoupon = useCallback((code: string) => {
     const up = code.trim().toUpperCase();
-    if (COUPONS[up]) { setCoupon(up); lsSet("hind-coupon", up); return true; }
-    return false;
+    if (!up) return false;
+    setCoupon(up);
+    lsSet("hind-coupon", up);
+    return true;
   }, []);
   const removeCoupon = useCallback(() => { setCoupon(null); lsRemove("hind-coupon"); }, []);
 

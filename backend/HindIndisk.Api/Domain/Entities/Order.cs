@@ -18,6 +18,17 @@ public class Order
     /// <summary>Placed | Accepted | Preparing | Ready | OutForDelivery | Completed | Cancelled</summary>
     public string Status { get; set; } = "Placed";
 
+    // Contact details captured at order time
+    public string  ContactName    { get; set; } = string.Empty;
+    public string  ContactPhone   { get; set; } = string.Empty;
+    public string? ContactEmail   { get; set; }
+
+    // Populated only for Delivery orders
+    public string? DeliveryAddress { get; set; }
+
+    // CashOnDelivery (only option for now)
+    public string PaymentMethod { get; set; } = "CashOnDelivery";
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public virtual User User { get; set; } = null!;

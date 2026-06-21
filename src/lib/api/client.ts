@@ -19,9 +19,22 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
   const res = await fetch(`${BASE}${path}`, { ...init, headers });
 
+  // Session expired — clear local state and notify AuthContext
+  if (res.status === 401) {
+    localStorage.removeItem("hind-token");
+    localStorage.removeItem("hind-user");
+    window.dispatchEvent(new Event("hind:session-expired"));
+    throw new Error("Your session has expired. Please log in again.");
+  }
+
   if (!res.ok) {
     const body = await res.json().catch(() => ({ message: res.statusText }));
     throw new Error((body as { message?: string }).message ?? res.statusText);
+  }
+
+  // 204 No Content — no body to parse (e.g. DELETE responses)
+  if (res.status === 204 || res.headers.get("content-length") === "0") {
+    return undefined as T;
   }
 
   return res.json() as Promise<T>;

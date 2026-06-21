@@ -19,6 +19,8 @@ public class Offer
 
     public decimal? MinimumOrderAmount { get; set; }
     public bool IsAutoApply { get; set; }
+    /// <summary>When true, only customers with no previous non-cancelled orders may use this offer.</summary>
+    public bool IsFirstOrderOnly { get; set; }
     public int? UsageLimit { get; set; }
     public int UsageCount { get; set; }
     public DateTime StartDate { get; set; }

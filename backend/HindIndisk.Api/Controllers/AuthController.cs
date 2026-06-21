@@ -3,6 +3,7 @@ using HindIndisk.Api.Application.DTOs.Auth;
 using HindIndisk.Api.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace HindIndisk.Api.Controllers;
 
@@ -16,6 +17,7 @@ public class AuthController : ControllerBase
 
     /// <summary>Register a new customer account.</summary>
     [HttpPost("register")]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(typeof(AuthResponse), 200)]
     [ProducesResponseType(400)]
     public async Task<IActionResult> Register(RegisterRequest request)
@@ -32,6 +34,7 @@ public class AuthController : ControllerBase
 
     /// <summary>Login and receive a JWT token.</summary>
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(typeof(AuthResponse), 200)]
     [ProducesResponseType(401)]
     public async Task<IActionResult> Login(LoginRequest request)

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Loader2, Search, ChevronDown, ChevronUp, ShoppingBag, CalendarCheck } from "lucide-react";
 import { useAdminCustomers, useAdminCustomerDetail } from "@/hooks/useAdminCustomers";
 import { Input } from "@/components/ui/input";
@@ -9,10 +9,16 @@ export const Route = createFileRoute("/admin/customers")({
 });
 
 function AdminCustomers() {
-  const [search,   setSearch]   = useState("");
-  const [expanded, setExpanded] = useState<number | null>(null);
+  const [search,         setSearch]         = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [expanded,       setExpanded]       = useState<number | null>(null);
 
-  const { data: customers = [], isLoading } = useAdminCustomers(search || undefined);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const { data: customers = [], isLoading } = useAdminCustomers(debouncedSearch || undefined);
   const { data: detail, isLoading: detailLoading } = useAdminCustomerDetail(expanded);
 
   const toggle = (id: number) => setExpanded((prev) => (prev === id ? null : id));
@@ -52,8 +58,8 @@ function AdminCustomers() {
             </thead>
             <tbody className="divide-y">
               {customers.map((c) => (
-                <>
-                  <tr key={c.id} className="hover:bg-muted/30 transition">
+                <Fragment key={c.id}>
+                  <tr className="hover:bg-muted/30 transition">
                     <td className="px-4 py-3 font-medium">{c.name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{c.email}</td>
                     <td className="px-4 py-3 text-muted-foreground">{c.phone || "—"}</td>
@@ -84,7 +90,7 @@ function AdminCustomers() {
                   </tr>
 
                   {expanded === c.id && (
-                    <tr key={`${c.id}-detail`} className="bg-muted/10">
+                    <tr className="bg-muted/10">
                       <td colSpan={8} className="px-8 py-4">
                         {detailLoading ? (
                           <div className="flex items-center gap-2 text-muted-foreground text-xs">
@@ -121,7 +127,7 @@ function AdminCustomers() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>

@@ -1,12 +1,12 @@
 {
   "ConnectionStrings": {
-    "Default": "Server=(localdb)\\MSSQLLocalDB;Database=dbHindInDisk;Trusted_Connection=True;TrustServerCertificate=True"
+    "Default": "Server=YOUR_SERVER;Database=HindIndisk;User Id=YOUR_USER;Password=YOUR_PASSWORD;TrustServerCertificate=True;"
   },
   "Jwt": {
-    "Secret": "REPLACE_WITH_MIN_32_CHAR_SECRET_KEY_HERE_1234",
+    "Key": "REPLACE_WITH_64_CHAR_RANDOM_SECRET_KEY_DO_NOT_USE_DEFAULT",
     "Issuer": "HindIndiskApi",
     "Audience": "HindIndiskClient",
-    "ExpiryMinutes": 1440
+    "ExpiryHours": 24
   },
   "Email": {
     "SmtpHost": "smtp.gmail.com",
@@ -15,14 +15,15 @@
     "SmtpPass": "your-16-char-app-password",
     "FromName": "Hind Indisk Restaurant",
     "FromAddress": "your-gmail@gmail.com",
-    "Enabled": false
+    "Enabled": true
   },
-  "AllowedOrigins": [ "http://localhost:3000" ],
+  "AllowedOrigins": [
+    "https://YOUR-FRONTEND-DOMAIN.com"
+  ],
   "Logging": {
     "LogLevel": {
-      "Default": "Information",
+      "Default": "Warning",
       "Microsoft.AspNetCore": "Warning"
     }
-  },
-  "AllowedHosts": "*"
+  }
 }

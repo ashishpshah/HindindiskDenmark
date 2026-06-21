@@ -13,8 +13,13 @@ public class AdminService : IAdminService
         ["Confirmed", "Cancelled"];
 
     private readonly ApplicationDbContext _db;
+    private readonly IEmailService _email;
 
-    public AdminService(ApplicationDbContext db) => _db = db;
+    public AdminService(ApplicationDbContext db, IEmailService email)
+    {
+        _db    = db;
+        _email = email;
+    }
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
 
@@ -32,8 +37,11 @@ public class AdminService : IAdminService
         var todayReservations = await _db.Reservations
                                     .CountAsync(r => r.Date >= today && r.Date < tomorrow);
         var totalOrders    = await _db.Orders.CountAsync();
+        var totalRevenue   = await _db.Orders
+                                .Where(o => o.Status != "Cancelled")
+                                .SumAsync(o => (decimal?)o.Total) ?? 0m;
 
-        return new AdminDashboardDto(todayOrders, todayRevenue, pendingOrders, todayReservations, totalOrders);
+        return new AdminDashboardDto(todayOrders, todayRevenue, pendingOrders, todayReservations, totalOrders, totalRevenue);
     }
 
     // ── Orders ────────────────────────────────────────────────────────────────
@@ -72,6 +80,15 @@ public class AdminService : IAdminService
 
         order.Status = status;
         await _db.SaveChangesAsync();
+
+        // Notify customer of status change
+        var email = order.User?.Email ?? order.ContactEmail;
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var name = string.IsNullOrWhiteSpace(order.ContactName) ? "Customer" : order.ContactName;
+            _ = _email.SendOrderStatusUpdateAsync(email, name, order.Id, status);
+        }
+
         return ToAdminOrderDto(order);
     }
 
@@ -196,6 +213,7 @@ public class AdminService : IAdminService
             DiscountValue      = request.DiscountValue,
             CouponCode         = request.CouponCode?.Trim().ToUpper(),
             MinimumOrderAmount = request.MinimumOrderAmount,
+            IsFirstOrderOnly   = request.IsFirstOrderOnly,
             UsageLimit         = request.UsageLimit,
             StartDate          = request.StartDate,
             EndDate            = request.EndDate,
@@ -214,10 +232,12 @@ public class AdminService : IAdminService
 
         offer.Title              = request.Title;
         offer.Description        = request.Description;
+        offer.OfferType          = string.IsNullOrWhiteSpace(request.CouponCode) ? "Direct" : "Coupon";
         offer.DiscountType       = request.DiscountType;
         offer.DiscountValue      = request.DiscountValue;
-        offer.CouponCode         = request.CouponCode?.Trim().ToUpper();
+        offer.CouponCode         = string.IsNullOrWhiteSpace(request.CouponCode) ? null : request.CouponCode.Trim().ToUpper();
         offer.MinimumOrderAmount = request.MinimumOrderAmount;
+        offer.IsFirstOrderOnly   = request.IsFirstOrderOnly;
         offer.UsageLimit         = request.UsageLimit;
         offer.StartDate          = request.StartDate;
         offer.EndDate            = request.EndDate;
@@ -240,11 +260,16 @@ public class AdminService : IAdminService
 
     private static AdminOrderDto ToAdminOrderDto(Domain.Entities.Order o)
     {
-        var coupon = o.AppliedOffers.FirstOrDefault()?.Offer.CouponCode;
+        var coupon       = o.AppliedOffers.FirstOrDefault()?.Offer?.CouponCode;
+        var customerName = o.User is not null
+            ? $"{o.User.Firstname} {o.User.Lastname}".Trim()
+            : o.ContactName;
+        var customerEmail = o.User?.Email ?? o.ContactEmail ?? "";
+
         return new AdminOrderDto(
             o.Id,
-            $"{o.User.Firstname} {o.User.Lastname}".Trim(),
-            o.User.Email,
+            customerName,
+            customerEmail,
             o.OrderType,
             o.Branch.Name,
             o.Subtotal,
@@ -255,7 +280,12 @@ public class AdminService : IAdminService
             o.Status,
             o.CreatedAt,
             o.OrderItems.Sum(i => i.Quantity),
-            coupon
+            coupon,
+            o.ContactName,
+            o.ContactPhone,
+            o.ContactEmail,
+            o.DeliveryAddress,
+            o.PaymentMethod
         );
     }
 
@@ -290,7 +320,7 @@ public class AdminService : IAdminService
     private static AdminOfferDto ToAdminOfferDto(Domain.Entities.Offer o) =>
         new(o.Id, o.Title, o.Description, o.OfferType, o.DiscountType,
             o.DiscountValue, o.CouponCode, o.MinimumOrderAmount,
-            o.IsAutoApply, o.UsageLimit, o.UsageCount,
+            o.IsAutoApply, o.IsFirstOrderOnly, o.UsageLimit, o.UsageCount,
             o.StartDate, o.EndDate, o.IsActive);
 
     // ── Customers ─────────────────────────────────────────────────────────────

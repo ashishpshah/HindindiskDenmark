@@ -11,6 +11,7 @@ export type AdminOfferDto = {
   couponCode?: string;
   minimumOrderAmount?: number;
   isAutoApply: boolean;
+  isFirstOrderOnly: boolean;
   usageLimit?: number;
   usageCount: number;
   startDate: string;

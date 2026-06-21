@@ -5,5 +5,6 @@ public record AdminDashboardDto(
     decimal TodayRevenue,
     int     PendingOrders,
     int     TodayReservations,
-    int     TotalOrders
+    int     TotalOrders,
+    decimal TotalRevenue
 );

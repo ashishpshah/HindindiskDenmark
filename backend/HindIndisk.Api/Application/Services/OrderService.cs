@@ -8,11 +8,19 @@ namespace HindIndisk.Api.Application.Services;
 public class OrderService : IOrderService
 {
     private readonly ApplicationDbContext _db;
+    private readonly IEmailService _email;
 
-    public OrderService(ApplicationDbContext db) => _db = db;
+    public OrderService(ApplicationDbContext db, IEmailService email)
+    {
+        _db    = db;
+        _email = email;
+    }
 
     public async Task<OrderDto> CreateOrderAsync(long userId, CreateOrderRequest request)
     {
+        if (request.OrderType == "Delivery" && string.IsNullOrWhiteSpace(request.DeliveryAddress))
+            throw new InvalidOperationException("Delivery address is required for delivery orders.");
+
         var itemIds = request.Items.Select(i => i.MenuItemId).Distinct().ToList();
 
         // Server recalculates all prices — client totals are never trusted
@@ -48,6 +56,14 @@ public class OrderService : IOrderService
             if (appliedOffer.UsageLimit.HasValue && appliedOffer.UsageCount >= appliedOffer.UsageLimit.Value)
                 throw new InvalidOperationException("This coupon has reached its usage limit.");
 
+            if (appliedOffer.IsFirstOrderOnly)
+            {
+                var hasPriorOrder = await _db.Orders
+                    .AnyAsync(o => o.UserId == userId && o.Status != "Cancelled");
+                if (hasPriorOrder)
+                    throw new InvalidOperationException("This offer is only valid on your first order.");
+            }
+
             discount = appliedOffer.DiscountType switch
             {
                 "Percent"     => Math.Round(subtotal * appliedOffer.DiscountValue / 100m, 2),
@@ -69,16 +85,21 @@ public class OrderService : IOrderService
         // Persist order
         var order = new Order
         {
-            UserId      = userId,
-            BranchId    = request.BranchId,
-            OrderType   = request.OrderType,
-            Subtotal    = subtotal,
-            DeliveryFee = deliveryFee,
-            Tax         = tax,
-            Discount    = discount,
-            Total       = total,
-            Status      = "Placed",
-            CreatedAt   = DateTime.UtcNow,
+            UserId          = userId,
+            BranchId        = request.BranchId,
+            OrderType       = request.OrderType,
+            Subtotal        = subtotal,
+            DeliveryFee     = deliveryFee,
+            Tax             = tax,
+            Discount        = discount,
+            Total           = total,
+            Status          = "Placed",
+            ContactName     = request.ContactName.Trim(),
+            ContactPhone    = request.ContactPhone.Trim(),
+            ContactEmail    = string.IsNullOrWhiteSpace(request.ContactEmail) ? null : request.ContactEmail.Trim(),
+            DeliveryAddress = string.IsNullOrWhiteSpace(request.DeliveryAddress) ? null : request.DeliveryAddress.Trim(),
+            PaymentMethod   = "CashOnDelivery",
+            CreatedAt       = DateTime.UtcNow,
         };
         _db.Orders.Add(order);
         await _db.SaveChangesAsync(); // generates order.Id
@@ -144,9 +165,17 @@ public class OrderService : IOrderService
             .Select(b => b.Name)
             .FirstOrDefaultAsync() ?? "";
 
-        return new OrderDto(order.Id, order.OrderType, branch,
+        var dto = new OrderDto(order.Id, order.OrderType, branch,
             order.Subtotal, order.DeliveryFee, order.Tax, order.Discount, order.Total,
-            order.Status, order.CreatedAt, itemDtos, appliedOffer?.CouponCode);
+            order.Status, order.CreatedAt, itemDtos, appliedOffer?.CouponCode,
+            order.ContactName, order.ContactPhone, order.ContactEmail,
+            order.DeliveryAddress, order.PaymentMethod);
+
+        // Send confirmation email if contact email provided
+        if (!string.IsNullOrWhiteSpace(order.ContactEmail))
+            _ = _email.SendOrderConfirmationAsync(order.ContactEmail, order.ContactName, dto);
+
+        return dto;
     }
 
     public async Task<OrderDto> GetOrderByIdAsync(long orderId, long userId)
@@ -190,6 +219,8 @@ public class OrderService : IOrderService
 
         return new OrderDto(o.Id, o.OrderType, o.Branch.Name,
             o.Subtotal, o.DeliveryFee, o.Tax, o.Discount, o.Total,
-            o.Status, o.CreatedAt, items, couponCode);
+            o.Status, o.CreatedAt, items, couponCode,
+            o.ContactName, o.ContactPhone, o.ContactEmail,
+            o.DeliveryAddress, o.PaymentMethod);
     }
 }

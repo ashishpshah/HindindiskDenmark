@@ -14,5 +14,11 @@ public record AdminOrderDto(
     string   Status,
     DateTime CreatedAt,
     int      ItemCount,
-    string?  CouponCode
+    string?  CouponCode,
+    // Contact & delivery — captured at order time, needed for COD dispatch
+    string   ContactName,
+    string   ContactPhone,
+    string?  ContactEmail,
+    string?  DeliveryAddress,
+    string   PaymentMethod
 );

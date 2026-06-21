@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ShoppingBag, CalendarCheck, TrendingUp, Clock, Loader2 } from "lucide-react";
+import { ShoppingBag, CalendarCheck, TrendingUp, Clock, Loader2, DollarSign } from "lucide-react";
 import { useAdminDashboard } from "@/hooks/useAdminDashboard";
 
 export const Route = createFileRoute("/admin/")({
@@ -78,15 +78,19 @@ function AdminDashboard() {
             value={data?.totalOrders ?? 0}
             icon={ShoppingBag}
           />
+          <StatCard
+            label="All-Time Revenue"
+            value={`${(data?.totalRevenue ?? 0).toFixed(0)} DKK`}
+            icon={DollarSign}
+            color="green"
+          />
         </div>
       )}
 
       <div className="rounded-2xl border bg-card p-6 shadow-soft">
         <h2 className="font-display text-lg font-semibold mb-2">Quick Links</h2>
         <p className="text-sm text-muted-foreground">
-          Use the sidebar to navigate Orders and Reservations management.
-          <br />
-          Login credentials: <code className="bg-muted px-1 py-0.5 rounded text-xs">admin@hindindisk.dk</code> / <code className="bg-muted px-1 py-0.5 rounded text-xs">Admin@123</code>
+          Use the sidebar to manage Orders, Reservations, Menu Items, Offers, and Customers.
         </p>
       </div>
     </div>

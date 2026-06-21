@@ -8,11 +8,16 @@ import { OrderSummary } from "@/components/OrderSummary";
 import { useCart } from "@/context/CartContext";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
+import { usePublicOffers } from "@/hooks/usePublicOffers";
+
+// Known local coupon codes for preview discount calculation
+const LOCAL_COUPONS = new Set(["WELCOME10", "FAMILY20", "FREEDELIVERY"]);
 
 export function CartDrawer() {
   const { open, setOpen, lines, add, sub, remove, subtotal, tax, delivery, discount, total, coupon, applyCoupon, removeCoupon } = useCart();
   const { t } = useI18n();
   const [code, setCode] = useState("");
+  const { data: apiOffers = [] } = usePublicOffers();
 
   return (
     <AnimatePresence>
@@ -66,9 +71,17 @@ export function CartDrawer() {
                     <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder={t("cart.coupon")} className="pl-9" />
                   </div>
                   <Button variant="outline" onClick={() => {
-                    if (!code) return;
-                    if (applyCoupon(code)) { toast.success(`Coupon ${code.toUpperCase()} applied`); setCode(""); }
-                    else toast.error("Invalid coupon");
+                    const up = code.trim().toUpperCase();
+                    if (!up) return;
+                    const isLocal = LOCAL_COUPONS.has(up);
+                    const isApi   = apiOffers.some((o) => o.couponCode === up);
+                    if (isLocal || isApi) {
+                      applyCoupon(up);
+                      toast.success(`Coupon ${up} applied`);
+                      setCode("");
+                    } else {
+                      toast.error("Invalid or expired coupon");
+                    }
                   }}>{t("actions.apply")}</Button>
                 </div>
                 {coupon && (

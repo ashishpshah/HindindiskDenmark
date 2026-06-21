@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useMyOrders } from "@/hooks/useMyOrders";
 import { useMyReservations } from "@/hooks/useMyReservations";
 import { usePublicOffers } from "@/hooks/usePublicOffers";
+import { useAddresses } from "@/hooks/useAddresses";
 
 export const Route = createFileRoute("/account/")({
   component: Dashboard,
@@ -14,6 +15,7 @@ function Dashboard() {
   const { data: orders       = [] } = useMyOrders(!!user);
   const { data: reservations = [] } = useMyReservations(!!user);
   const { data: offers       = [] } = usePublicOffers();
+  const { data: addresses    = [] } = useAddresses(!!user);
 
   if (!user) return null;
 
@@ -21,7 +23,7 @@ function Dashboard() {
     { to: "/account/orders",       label: "My Orders",    icon: ShoppingBag,    value: orders.length },
     { to: "/account/reservations", label: "Reservations", icon: CalendarCheck,  value: reservations.length },
     { to: "/account/coupons",      label: "Coupons",      icon: Ticket,         value: offers.length },
-    { to: "/account/addresses",    label: "Addresses",    icon: MapPin,         value: 1 },
+    { to: "/account/addresses",    label: "Addresses",    icon: MapPin,         value: addresses.length },
   ];
 
   return (

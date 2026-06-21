@@ -16,6 +16,11 @@ export type AdminOrderDto = {
   createdAt: string;
   itemCount: number;
   couponCode?: string;
+  contactName: string;
+  contactPhone: string;
+  contactEmail?: string;
+  deliveryAddress?: string;
+  paymentMethod: string;
 };
 
 export function useAdminOrders(params?: { status?: string; branchId?: number }) {

@@ -10,6 +10,7 @@ public class UpdateOfferRequest
     [Range(0, 100_000)]        public decimal  DiscountValue      { get; set; }
     [MaxLength(20)]            public string?  CouponCode         { get; set; }
     public decimal?  MinimumOrderAmount { get; set; }
+    public bool      IsFirstOrderOnly   { get; set; }
     public int?      UsageLimit         { get; set; }
     public DateTime  StartDate          { get; set; }
     public DateTime  EndDate            { get; set; }

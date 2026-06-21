@@ -33,5 +33,6 @@ export function useMenuItems(filters: MenuFilters = {}) {
   return useQuery({
     queryKey: ["menu-items", filters],
     queryFn:  () => apiFetch<MenuItemDto[]>(`/api/menu/items${qs ? `?${qs}` : ""}`),
+    staleTime: 1000 * 60 * 10,
   });
 }

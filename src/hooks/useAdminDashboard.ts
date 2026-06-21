@@ -7,6 +7,7 @@ export type AdminDashboardDto = {
   pendingOrders: number;
   todayReservations: number;
   totalOrders: number;
+  totalRevenue: number;
 };
 
 export function useAdminDashboard() {

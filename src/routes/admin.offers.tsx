@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Loader2, Plus, Pencil, RefreshCcw, ToggleLeft, ToggleRight } from "lucide-react";
+import { Loader2, Plus, Pencil, RefreshCcw, ToggleLeft, ToggleRight, Star } from "lucide-react";
 import { toast } from "sonner";
 import { useAdminOffers, type AdminOfferDto } from "@/hooks/useAdminOffers";
 import { useCreateOffer, type CreateOfferInput } from "@/hooks/useCreateOffer";
@@ -27,6 +27,7 @@ const EMPTY_FORM: CreateOfferInput = {
   discountValue: 10,
   couponCode: "",
   minimumOrderAmount: undefined,
+  isFirstOrderOnly: false,
   usageLimit: undefined,
   startDate: new Date().toISOString().slice(0, 10),
   endDate: new Date(Date.now() + 30 * 86400_000).toISOString().slice(0, 10),
@@ -57,6 +58,7 @@ function AdminOffers() {
       discountValue:      offer.discountValue,
       couponCode:         offer.couponCode ?? "",
       minimumOrderAmount: offer.minimumOrderAmount,
+      isFirstOrderOnly:   offer.isFirstOrderOnly,
       usageLimit:         offer.usageLimit,
       startDate:          offer.startDate.slice(0, 10),
       endDate:            offer.endDate.slice(0, 10),
@@ -128,6 +130,11 @@ function AdminOffers() {
                       <code className="rounded bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                         {offer.couponCode}
                       </code>
+                    )}
+                    {offer.isFirstOrderOnly && (
+                      <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                        <Star className="h-3 w-3" /> First Order
+                      </span>
                     )}
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                       offer.isActive ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"
@@ -237,6 +244,25 @@ function AdminOffers() {
                 />
               </div>
             </div>
+            {/* First Order Only toggle */}
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border p-4 hover:bg-muted/30 transition">
+              <input
+                type="checkbox"
+                checked={form.isFirstOrderOnly}
+                onChange={(e) => setForm({ ...form, isFirstOrderOnly: e.target.checked })}
+                className="mt-0.5 h-4 w-4 accent-primary"
+              />
+              <div>
+                <div className="flex items-center gap-1.5 font-medium text-sm">
+                  <Star className="h-3.5 w-3.5 text-amber-500" />
+                  First order only
+                </div>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Only customers with no previous orders can use this offer.
+                </p>
+              </div>
+            </label>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Start Date</Label>

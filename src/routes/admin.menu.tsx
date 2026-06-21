@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Loader2, Pencil, RefreshCcw, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { useAdminMenuItems, type AdminMenuItemDto } from "@/hooks/useAdminMenuItems";
@@ -77,8 +77,8 @@ function AdminMenu() {
             </thead>
             <tbody className="divide-y">
               {items.map((item) => (
-                <>
-                  <tr key={item.id} className="hover:bg-muted/30 transition">
+                <Fragment key={item.id}>
+                  <tr className="hover:bg-muted/30 transition">
                     <td className="px-4 py-3">
                       <img src={item.imageUrl} alt={item.name} className="h-10 w-10 rounded-lg object-cover" />
                     </td>
@@ -114,7 +114,7 @@ function AdminMenu() {
                     </td>
                   </tr>
                   {expanded === item.id && (
-                    <tr key={`${item.id}-prices`} className="bg-muted/20">
+                    <tr className="bg-muted/20">
                       <td colSpan={7} className="px-8 py-3">
                         <div className="flex flex-wrap gap-4 text-xs">
                           {item.prices.map((bp) => (
@@ -128,7 +128,7 @@ function AdminMenu() {
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>

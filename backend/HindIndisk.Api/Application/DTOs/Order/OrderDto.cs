@@ -12,5 +12,10 @@ public record OrderDto(
     string Status,
     DateTime CreatedAt,
     IReadOnlyList<OrderItemDto> Items,
-    string? CouponCode
+    string? CouponCode,
+    string ContactName,
+    string ContactPhone,
+    string? ContactEmail,
+    string? DeliveryAddress,
+    string PaymentMethod
 );

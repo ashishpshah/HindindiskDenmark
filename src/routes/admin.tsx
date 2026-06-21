@@ -31,7 +31,7 @@ function AdminLayout() {
           <h1 className="font-display text-2xl font-bold">Access Denied</h1>
           <p className="text-muted-foreground text-sm">
             You need an admin account to access this area.<br />
-            Login as <code className="text-xs bg-muted px-1 py-0.5 rounded">admin@hindindisk.dk</code>
+            Please log in with your admin credentials.
           </p>
           <Button asChild className="gradient-primary text-primary-foreground">
             <Link to="/">Back to Site</Link>

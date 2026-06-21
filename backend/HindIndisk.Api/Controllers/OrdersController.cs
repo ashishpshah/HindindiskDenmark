@@ -15,15 +15,20 @@ public class OrdersController : ControllerBase
 
     public OrdersController(IOrderService orders) => _orders = orders;
 
-    private long UserId =>
-        long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    private long GetUserId()
+    {
+        var raw = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!long.TryParse(raw, out var id))
+            throw new UnauthorizedAccessException("Invalid token claims.");
+        return id;
+    }
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateOrderRequest request)
     {
         try
         {
-            var order = await _orders.CreateOrderAsync(UserId, request);
+            var order = await _orders.CreateOrderAsync(GetUserId(), request);
             return Ok(order);
         }
         catch (InvalidOperationException ex)
@@ -35,7 +40,7 @@ public class OrdersController : ControllerBase
     [HttpGet("my")]
     public async Task<IActionResult> MyOrders()
     {
-        var orders = await _orders.GetMyOrdersAsync(UserId);
+        var orders = await _orders.GetMyOrdersAsync(GetUserId());
         return Ok(orders);
     }
 
@@ -44,7 +49,7 @@ public class OrdersController : ControllerBase
     {
         try
         {
-            var order = await _orders.GetOrderByIdAsync(id, UserId);
+            var order = await _orders.GetOrderByIdAsync(id, GetUserId());
             return Ok(order);
         }
         catch (InvalidOperationException)

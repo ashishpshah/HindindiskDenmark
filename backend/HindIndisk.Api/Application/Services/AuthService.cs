@@ -76,7 +76,7 @@ public class AuthService : IAuthService
 
         user.Firstname = request.Firstname;
         user.Lastname  = request.Lastname;
-        user.Phone     = request.Phone ?? user.Phone;
+        user.Phone     = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
         await _db.SaveChangesAsync();
         return ToDto(user);
     }

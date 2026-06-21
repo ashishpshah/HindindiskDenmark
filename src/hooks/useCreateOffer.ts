@@ -9,6 +9,7 @@ export type CreateOfferInput = {
   discountValue: number;
   couponCode?: string;
   minimumOrderAmount?: number;
+  isFirstOrderOnly: boolean;
   usageLimit?: number;
   startDate: string;
   endDate: string;

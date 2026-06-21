@@ -8,13 +8,21 @@ namespace HindIndisk.Api.Application.Services;
 public class ReservationService : IReservationService
 {
     private readonly ApplicationDbContext _db;
+    private readonly IEmailService _email;
 
-    public ReservationService(ApplicationDbContext db) => _db = db;
+    public ReservationService(ApplicationDbContext db, IEmailService email)
+    {
+        _db    = db;
+        _email = email;
+    }
 
     public async Task<ReservationDto> CreateAsync(long? userId, CreateReservationRequest request)
     {
         if (!DateTime.TryParse(request.Date, out var date))
             throw new InvalidOperationException($"Invalid date format: '{request.Date}'. Expected yyyy-MM-dd.");
+
+        if (date.Date < DateTime.UtcNow.Date)
+            throw new InvalidOperationException("Reservation date cannot be in the past.");
 
         var reservation = new Reservation
         {
@@ -40,7 +48,12 @@ public class ReservationService : IReservationService
             .Select(b => b.Name)
             .FirstOrDefaultAsync() ?? "";
 
-        return ToDto(reservation, branchName);
+        var dto = ToDto(reservation, branchName);
+
+        if (!string.IsNullOrWhiteSpace(reservation.ContactEmail))
+            _ = _email.SendReservationConfirmationAsync(reservation.ContactEmail, dto);
+
+        return dto;
     }
 
     public async Task<IReadOnlyList<ReservationDto>> GetMyAsync(long userId)

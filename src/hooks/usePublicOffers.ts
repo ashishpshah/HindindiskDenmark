@@ -15,5 +15,6 @@ export function usePublicOffers() {
   return useQuery({
     queryKey: ["public-offers"],
     queryFn:  () => apiFetch<PublicOfferDto[]>("/api/offers"),
+    staleTime: 1000 * 60 * 5,
   });
 }

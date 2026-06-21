@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronLeft, ChevronRight, CreditCard, Smartphone, Truck, Store, MapPin, CheckCircle2, Loader2 } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Truck, Store, MapPin, CheckCircle2, Loader2, Banknote } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { PageHero } from "@/components/PageHero";
 import { Button } from "@/components/ui/button";
@@ -24,13 +24,6 @@ export const Route = createFileRoute("/checkout")({
   component: CheckoutPage,
 });
 
-const PAYMENTS = [
-  { id: "mobilepay", label: "MobilePay",  icon: Smartphone },
-  { id: "visa",      label: "Visa",       icon: CreditCard },
-  { id: "mastercard",label: "Mastercard", icon: CreditCard },
-  { id: "dankort",   label: "Dankort",    icon: CreditCard },
-];
-
 function CheckoutPage() {
   const { t }     = useI18n();
   const navigate  = useNavigate();
@@ -39,32 +32,33 @@ function CheckoutPage() {
     branch, setBranch, orderType, setOrderType, coupon, clear,
   } = useCart();
 
-  const [step, setStep]                         = useState(1);
-  const [done, setDone]                         = useState(false);
-  const [confirmedOrder, setConfirmedOrder]     = useState<OrderDto | null>(null);
-  const [details, setDetails]                   = useState({ name: "", phone: "", email: "", street: "", city: "", postal: "" });
-  const [payment, setPayment]                   = useState("mobilepay");
+  const [step, setStep]                     = useState(1);
+  const [done, setDone]                     = useState(false);
+  const [confirmedOrder, setConfirmedOrder] = useState<OrderDto | null>(null);
+  const [details, setDetails]               = useState({ name: "", phone: "", email: "", street: "", city: "", postal: "" });
 
-  const { data: branchesData = [] }             = useBranches();
-  const currentBranchId                         = branchesData.find((b) => b.name === branch)?.id;
-  const createOrder                             = useCreateOrder();
+  const { data: branchesData = [] } = useBranches();
+  const currentBranch               = branchesData.find((b) => b.name === branch);
+  const createOrder                 = useCreateOrder();
 
   const ALL_STEPS = [
     { id: 1, label: t("checkout.step1") },
     { id: 2, label: t("checkout.step2") },
     { id: 3, label: t("checkout.step3") },
     { id: 4, label: t("checkout.step4") },
-    { id: 5, label: t("checkout.step5") },
+    { id: 5, label: "Payment" },
     { id: 6, label: t("checkout.step6") },
   ];
   const activeSteps = ALL_STEPS.filter((s) => !(s.id === 4 && orderType === "pickup"));
   const currentIdx  = activeSteps.findIndex((s) => s.id === step);
 
   const next = () => {
+    if (step === 1) {
+      if (!branch) { toast.error("Please select a branch."); return; }
+    }
     if (step === 3) {
       if (!details.name.trim())  { toast.error("Please enter your name.");          return; }
       if (!details.phone.trim()) { toast.error("Please enter your phone number.");  return; }
-      if (!details.email.trim()) { toast.error("Please enter your email address."); return; }
     }
     if (step === 4) {
       if (!details.street.trim()) { toast.error("Please enter your street address."); return; }
@@ -79,25 +73,33 @@ function CheckoutPage() {
   };
 
   const place = async () => {
-    if (!currentBranchId) { toast.error("Please select a branch."); return; }
+    if (!currentBranch) { toast.error("Please select a branch."); return; }
 
     const orderItems = Object.entries(cart).map(([, entry]) => ({
       menuItemId: entry.id,
       quantity:   entry.qty,
     }));
 
+    const deliveryAddress = orderType === "delivery"
+      ? `${details.street}, ${details.postal} ${details.city}`.trim()
+      : undefined;
+
     try {
       const order = await createOrder.mutateAsync({
-        branchId:   currentBranchId,
-        orderType:  orderType === "delivery" ? "Delivery" : "Pickup",
-        couponCode: coupon ?? undefined,
-        items:      orderItems,
+        branchId:        currentBranch.id,
+        orderType:       orderType === "delivery" ? "Delivery" : "Pickup",
+        couponCode:      coupon ?? undefined,
+        items:           orderItems,
+        contactName:     details.name.trim(),
+        contactPhone:    details.phone.trim(),
+        contactEmail:    details.email.trim() || undefined,
+        deliveryAddress,
       });
       setConfirmedOrder(order);
       setDone(true);
       clear();
-    } catch {
-      toast.error("Failed to place order. Please try again.");
+    } catch (e: unknown) {
+      toast.error((e as Error).message ?? "Failed to place order. Please try again.");
     }
   };
 
@@ -176,9 +178,13 @@ function CheckoutPage() {
                   <div className="space-y-4">
                     <h2 className="font-display text-2xl font-semibold">{t("checkout.step3")}</h2>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <FormField label="Name"><Input required value={details.name} onChange={(e) => setDetails({ ...details, name: e.target.value })} /></FormField>
-                      <FormField label="Phone"><Input required type="tel" value={details.phone} onChange={(e) => setDetails({ ...details, phone: e.target.value })} placeholder="+45 …" /></FormField>
-                      <div className="sm:col-span-2"><FormField label="Email"><Input required type="email" value={details.email} onChange={(e) => setDetails({ ...details, email: e.target.value })} /></FormField></div>
+                      <FormField label="Name *"><Input required value={details.name} onChange={(e) => setDetails({ ...details, name: e.target.value })} /></FormField>
+                      <FormField label="Phone *"><Input required type="tel" value={details.phone} onChange={(e) => setDetails({ ...details, phone: e.target.value })} placeholder="+45 …" /></FormField>
+                      <div className="sm:col-span-2">
+                        <FormField label="Email (for confirmation)">
+                          <Input type="email" value={details.email} onChange={(e) => setDetails({ ...details, email: e.target.value })} placeholder="optional" />
+                        </FormField>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -186,36 +192,40 @@ function CheckoutPage() {
                   <div className="space-y-4">
                     <h2 className="font-display text-2xl font-semibold">{t("checkout.step4")}</h2>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="sm:col-span-2"><FormField label="Street"><Input required value={details.street} onChange={(e) => setDetails({ ...details, street: e.target.value })} /></FormField></div>
-                      <FormField label="City"><Input required value={details.city} onChange={(e) => setDetails({ ...details, city: e.target.value })} /></FormField>
-                      <FormField label="Postal code"><Input required value={details.postal} onChange={(e) => setDetails({ ...details, postal: e.target.value })} /></FormField>
+                      <div className="sm:col-span-2"><FormField label="Street *"><Input required value={details.street} onChange={(e) => setDetails({ ...details, street: e.target.value })} /></FormField></div>
+                      <FormField label="City *"><Input required value={details.city} onChange={(e) => setDetails({ ...details, city: e.target.value })} /></FormField>
+                      <FormField label="Postal code *"><Input required value={details.postal} onChange={(e) => setDetails({ ...details, postal: e.target.value })} /></FormField>
                     </div>
                   </div>
                 )}
                 {step === 5 && (
                   <div className="space-y-4">
-                    <h2 className="font-display text-2xl font-semibold">{t("checkout.step5")}</h2>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {PAYMENTS.map((p) => {
-                        const Icon = p.icon;
-                        return (
-                          <button key={p.id} onClick={() => setPayment(p.id)}
-                            className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition ${payment === p.id ? "border-primary bg-primary/5" : "hover:border-primary/40"}`}>
-                            <Icon className="h-5 w-5 text-primary" /><span className="font-medium">{p.label}</span>
-                          </button>
-                        );
-                      })}
+                    <h2 className="font-display text-2xl font-semibold">Payment</h2>
+                    <div className="flex items-start gap-4 rounded-2xl border-2 border-primary bg-primary/5 p-6">
+                      <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl gradient-primary text-primary-foreground">
+                        <Banknote className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <div className="font-semibold">Cash on Delivery</div>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Pay with cash when your order arrives. Please have the exact amount ready.
+                        </p>
+                      </div>
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      Online payment options will be available soon. All prices include 25% Danish VAT (moms).
+                    </p>
                   </div>
                 )}
                 {step === 6 && (
                   <div className="space-y-4">
                     <h2 className="font-display text-2xl font-semibold">{t("checkout.step6")}</h2>
-                    <ReviewRow label="Branch"  value={branch} />
+                    <ReviewRow label="Branch"  value={branch || "—"} />
                     <ReviewRow label="Type"    value={orderType === "delivery" ? t("checkout.delivery") : t("checkout.pickup")} />
                     <ReviewRow label="Contact" value={`${details.name} · ${details.phone}`} />
+                    {details.email && <ReviewRow label="Email" value={details.email} />}
                     {orderType === "delivery" && <ReviewRow label="Address" value={`${details.street}, ${details.postal} ${details.city}`} />}
-                    <ReviewRow label="Payment" value={PAYMENTS.find((p) => p.id === payment)?.label || ""} />
+                    <ReviewRow label="Payment" value="Cash on Delivery" />
                     {coupon && <ReviewRow label="Coupon" value={coupon} />}
                   </div>
                 )}
@@ -273,6 +283,9 @@ function CheckoutPage() {
               <p className="mt-2 text-muted-foreground">
                 Order ID: <span className="font-mono font-semibold text-foreground">#{confirmedOrder.id}</span>
               </p>
+              {confirmedOrder.contactEmail && (
+                <p className="mt-1 text-sm text-muted-foreground">Confirmation sent to {confirmedOrder.contactEmail}</p>
+              )}
               <div className="mt-6 flex justify-center gap-2">
                 <Button
                   onClick={() => navigate({ to: "/order-tracking", search: { id: String(confirmedOrder.id) } })}

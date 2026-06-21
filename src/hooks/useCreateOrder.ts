@@ -6,6 +6,10 @@ export type CreateOrderRequest = {
   orderType: "Pickup" | "Delivery";
   couponCode?: string;
   items: { menuItemId: number; quantity: number }[];
+  contactName: string;
+  contactPhone: string;
+  contactEmail?: string;
+  deliveryAddress?: string;
 };
 
 export type OrderItemDto = {
@@ -29,6 +33,11 @@ export type OrderDto = {
   createdAt: string;
   items: OrderItemDto[];
   couponCode?: string;
+  contactName: string;
+  contactPhone: string;
+  contactEmail?: string;
+  deliveryAddress?: string;
+  paymentMethod: string;
 };
 
 export function useCreateOrder() {

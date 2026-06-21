@@ -51,6 +51,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (saved) setUser(saved);
   }, []);
 
+  // Auto-logout when JWT expires (fired by apiFetch on 401)
+  useEffect(() => {
+    const handler = () => {
+      persist(null);
+      setModalMode("login");
+      setModalOpen(true);
+    };
+    window.addEventListener("hind:session-expired", handler);
+    return () => window.removeEventListener("hind:session-expired", handler);
+  }, []);
+
   const persist = (u: User | null) => {
     setUser(u);
     if (u) lsSet("hind-user", u); else lsRemove("hind-user");

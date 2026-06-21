@@ -1,9 +1,12 @@
+using HindIndisk.Api.Application.Services;
 using HindIndisk.Api.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +18,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtSecret  = jwtSection["Secret"]
     ?? throw new InvalidOperationException("Jwt:Secret is not configured.");
+
+// Refuse to start in Production with the placeholder dev secret
+if (builder.Environment.IsProduction() &&
+    jwtSecret.StartsWith("REPLACE_WITH", StringComparison.OrdinalIgnoreCase))
+    throw new InvalidOperationException(
+        "Jwt:Secret must be replaced with a strong random key in appsettings.json before deploying.");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -66,6 +75,27 @@ builder.Services.AddScoped<HindIndisk.Api.Application.Services.IAdminService,
 builder.Services.AddScoped<HindIndisk.Api.Application.Services.IAddressService,
                            HindIndisk.Api.Application.Services.AddressService>();
 
+// ── Rate limiting (auth endpoints) ───────────────────────────────────────────
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("auth", opt =>
+    {
+        opt.PermitLimit          = 10;
+        opt.Window               = TimeSpan.FromMinutes(1);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit           = 0;
+    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
+// ── Email service ─────────────────────────────────────────────────────────────
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Email"));
+builder.Services.AddScoped<IEmailService, EmailService>();
+
+// ── Health checks ─────────────────────────────────────────────────────────────
+builder.Services.AddHealthChecks()
+    .AddSqlServer(builder.Configuration.GetConnectionString("Default")!);
+
 // ── Controllers ───────────────────────────────────────────────────────────────
 builder.Services.AddControllers();
 
@@ -116,6 +146,8 @@ using (var scope = app.Services.CreateScope())
 }
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
+app.UseRateLimiter();
+
 app.UseExceptionHandler(errorApp =>
 {
     errorApp.Run(async context =>
@@ -126,16 +158,23 @@ app.UseExceptionHandler(errorApp =>
     });
 });
 
-// if (app.Environment.IsDevelopment())
-//{
+// Serve React SPA from wwwroot/ (index.html + static assets)
+app.UseStaticFiles();
+
+if (app.Environment.IsDevelopment())
+{
     app.UseSwagger();
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Hind Indisk API v1"));
-//}
+}
 
 app.UseHttpsRedirection();
 app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/health");
+
+// SPA fallback — any route not matched by a controller serves index.html
+app.MapFallbackToFile("index.html");
 
 await app.RunAsync();

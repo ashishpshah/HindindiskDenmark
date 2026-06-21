@@ -10,6 +10,7 @@ public record AdminOfferDto(
     string?  CouponCode,
     decimal? MinimumOrderAmount,
     bool     IsAutoApply,
+    bool     IsFirstOrderOnly,
     int?     UsageLimit,
     int      UsageCount,
     DateTime StartDate,

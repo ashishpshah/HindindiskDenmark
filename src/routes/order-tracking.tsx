@@ -142,6 +142,16 @@ function TrackPage() {
                     <span className="text-muted-foreground">Order Type</span>
                     <span className="font-semibold">{apiOrder.orderType}</span>
                   </div>
+                  {apiOrder.deliveryAddress && (
+                    <div className="flex justify-between gap-4">
+                      <span className="text-muted-foreground shrink-0">Delivery To</span>
+                      <span className="font-semibold text-right">{apiOrder.deliveryAddress}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Payment</span>
+                    <span className="font-semibold">{apiOrder.paymentMethod.replace(/([A-Z])/g, " $1").trim()}</span>
+                  </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Status</span>
                     <span className="font-semibold text-primary">{STAGES[stage].label}</span>
@@ -159,7 +169,7 @@ function TrackPage() {
                   </div>
                 </div>
                 <div className="border-t pt-4 flex justify-between font-display text-lg font-bold">
-                  <span>Total Paid</span>
+                  <span>Order Total</span>
                   <span className="text-primary">{apiOrder.total.toFixed(0)} DKK</span>
                 </div>
               </aside>

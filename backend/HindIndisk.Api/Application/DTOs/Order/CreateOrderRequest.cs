@@ -13,7 +13,21 @@ public class CreateOrderRequest
 
     public string? CouponCode { get; set; }
 
-    [Required]
-    [MinLength(1, ErrorMessage = "At least one item is required.")]
+    [Required, MinLength(1, ErrorMessage = "At least one item is required.")]
     public List<OrderItemRequest> Items { get; set; } = [];
+
+    // Contact details
+    [Required, MaxLength(120)]
+    public string ContactName { get; set; } = string.Empty;
+
+    [Required, MaxLength(30)]
+    public string ContactPhone { get; set; } = string.Empty;
+
+    [MaxLength(200)]
+    [EmailAddress]
+    public string? ContactEmail { get; set; }
+
+    // Required for Delivery orders
+    [MaxLength(300)]
+    public string? DeliveryAddress { get; set; }
 }
