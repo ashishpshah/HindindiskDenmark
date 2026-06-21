@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { branches } from "@/data/mock";
+import { useBranches } from "@/hooks/useBranches";
 import { toast } from "sonner";
 import { lazy, Suspense } from "react";
 
@@ -27,6 +27,7 @@ export const Route = createFileRoute("/contact")({
 });
 
 function ContactPage() {
+  const { data: branchesData = [] } = useBranches();
   return (
     <Layout>
       <PageHero eyebrow="Contact" title="Say Hello" subtitle="Questions, bookings, feedback — we read every message."
@@ -56,7 +57,7 @@ function ContactPage() {
               ))}
             </div>
           </div>
-          {branches.map((b) => (
+          {branchesData.map((b) => (
             <div key={b.name} className="rounded-3xl border bg-card p-6 shadow-soft">
               <h3 className="font-display text-xl font-semibold">{b.name}</h3>
               <div className="mt-3 space-y-2 text-sm text-muted-foreground">

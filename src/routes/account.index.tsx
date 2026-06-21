@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ShoppingBag, CalendarCheck, Ticket, MapPin } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useMyOrders } from "@/hooks/useMyOrders";
+import { useMyReservations } from "@/hooks/useMyReservations";
+import { usePublicOffers } from "@/hooks/usePublicOffers";
 
 export const Route = createFileRoute("/account/")({
   component: Dashboard,
@@ -8,13 +11,19 @@ export const Route = createFileRoute("/account/")({
 
 function Dashboard() {
   const { user } = useAuth();
+  const { data: orders       = [] } = useMyOrders(!!user);
+  const { data: reservations = [] } = useMyReservations(!!user);
+  const { data: offers       = [] } = usePublicOffers();
+
   if (!user) return null;
+
   const cards = [
-    { to: "/account/orders", label: "My Orders", icon: ShoppingBag, value: getCount("hind-orders") },
-    { to: "/account/reservations", label: "Reservations", icon: CalendarCheck, value: getCount("hind-reservations") },
-    { to: "/account/coupons", label: "Coupons", icon: Ticket, value: 3 },
-    { to: "/account/addresses", label: "Addresses", icon: MapPin, value: 1 },
+    { to: "/account/orders",       label: "My Orders",    icon: ShoppingBag,    value: orders.length },
+    { to: "/account/reservations", label: "Reservations", icon: CalendarCheck,  value: reservations.length },
+    { to: "/account/coupons",      label: "Coupons",      icon: Ticket,         value: offers.length },
+    { to: "/account/addresses",    label: "Addresses",    icon: MapPin,         value: 1 },
   ];
+
   return (
     <div className="space-y-6">
       <div className="rounded-3xl border bg-card p-6 shadow-soft">
@@ -27,7 +36,9 @@ function Dashboard() {
           return (
             <Link key={c.to} to={c.to as any} className="rounded-3xl border bg-card p-6 shadow-soft transition hover:shadow-elegant">
               <div className="flex items-center justify-between">
-                <div className="grid h-12 w-12 place-items-center rounded-2xl gradient-primary text-primary-foreground"><Icon className="h-5 w-5" /></div>
+                <div className="grid h-12 w-12 place-items-center rounded-2xl gradient-primary text-primary-foreground">
+                  <Icon className="h-5 w-5" />
+                </div>
                 <div className="font-display text-3xl font-bold">{c.value}</div>
               </div>
               <div className="mt-3 font-semibold">{c.label}</div>
@@ -37,11 +48,4 @@ function Dashboard() {
       </div>
     </div>
   );
-}
-
-function getCount(key: string) {
-  try {
-    const raw = typeof window !== "undefined" ? localStorage.getItem(key) : null;
-    return raw ? JSON.parse(raw).length : 0;
-  } catch { return 0; }
 }

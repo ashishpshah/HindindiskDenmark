@@ -1,8 +1,23 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { menuItems } from "@/data/mock";
 import { lsGet, lsSet, lsRemove } from "@/lib/storage";
 
+// Full metadata stored per entry — no mock.ts lookup needed at render time
+type CartEntry = {
+  id: number;
+  qty: number;
+  price: number;
+  imageUrl: string;
+};
+
+export type CartItemInput = {
+  id: number;
+  name: string;
+  price: number;
+  imageUrl: string;
+};
+
 export type CartLine = {
+  id: number;
   name: string;
   qty: number;
   price: number;
@@ -10,7 +25,7 @@ export type CartLine = {
 };
 
 type Ctx = {
-  cart: Record<string, number>;
+  cart: Record<string, CartEntry>;
   lines: CartLine[];
   subtotal: number;
   tax: number;
@@ -21,7 +36,7 @@ type Ctx = {
   coupon: string | null;
   applyCoupon: (code: string) => boolean;
   removeCoupon: () => void;
-  add: (name: string, count?: number) => void;
+  add: (item: CartItemInput, count?: number) => void;
   sub: (name: string) => void;
   remove: (name: string) => void;
   clear: () => void;
@@ -42,15 +57,22 @@ const COUPONS: Record<string, { type: "percent" | "freeDelivery"; value: number 
 };
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [cart, setCart] = useState<Record<string, number>>({});
+  const [cart, setCart] = useState<Record<string, CartEntry>>({});
   const [open, setOpen] = useState(false);
   const [coupon, setCoupon] = useState<string | null>(null);
   const [branch, setBranch] = useState("Hind Indisk Aarhus");
   const [orderType, setOrderType] = useState<"pickup" | "delivery">("delivery");
 
   useEffect(() => {
-    const savedCart = lsGet<Record<string, number>>("hind-cart", {});
-    if (Object.keys(savedCart).length > 0) setCart(savedCart);
+    const saved = lsGet<Record<string, CartEntry | number>>("hind-cart", {});
+    // Migrate from old Record<string, number> format — skip numeric entries
+    const migrated: Record<string, CartEntry> = {};
+    for (const [name, v] of Object.entries(saved)) {
+      if (typeof v === "object" && v !== null && "id" in v) {
+        migrated[name] = v as CartEntry;
+      }
+    }
+    if (Object.keys(migrated).length > 0) setCart(migrated);
     const savedCoupon = lsGet<string | null>("hind-coupon", null);
     if (savedCoupon) setCoupon(savedCoupon);
     const savedBranch = lsGet<string | null>("hind-branch", null);
@@ -60,10 +82,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => { lsSet("hind-cart", cart); }, [cart]);
   useEffect(() => { lsSet("hind-branch", branch); }, [branch]);
 
-  const add = useCallback((name: string, count: number = 1) => setCart((c) => ({ ...c, [name]: (c[name] || 0) + count })), []);
+  const add = useCallback((item: CartItemInput, count: number = 1) =>
+    setCart((c) => ({
+      ...c,
+      [item.name]: {
+        id:       item.id,
+        qty:      (c[item.name]?.qty ?? 0) + count,
+        price:    item.price,
+        imageUrl: item.imageUrl,
+      },
+    })), []);
+
   const sub = useCallback((name: string) => setCart((c) => {
-    const n = (c[name] || 0) - 1; const next = { ...c };
-    if (n <= 0) delete next[name]; else next[name] = n;
+    const n = (c[name]?.qty ?? 0) - 1; const next = { ...c };
+    if (n <= 0) delete next[name]; else next[name] = { ...c[name], qty: n };
     return next;
   }), []);
   const remove = useCallback((name: string) => setCart((c) => { const n = { ...c }; delete n[name]; return n; }), []);
@@ -77,11 +109,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const removeCoupon = useCallback(() => { setCoupon(null); lsRemove("hind-coupon"); }, []);
 
   const { lines, subtotal, totalQty, discount, delivery, tax, total } = useMemo(() => {
-    const lines: CartLine[] = Object.entries(cart).map(([name, qty]) => {
-      const it = menuItems.find((m) => m.name === name);
-      if (!it) return { name, qty, price: 0, image: "" };
-      return { name, qty, price: it.price, image: it.image };
-    });
+    const lines: CartLine[] = Object.entries(cart).map(([name, entry]) => ({
+      id:    entry.id,
+      name,
+      qty:   entry.qty,
+      price: entry.price,
+      image: entry.imageUrl,
+    }));
     const subtotal = lines.reduce((a, l) => a + l.price * l.qty, 0);
     const totalQty = lines.reduce((a, l) => a + l.qty, 0);
 

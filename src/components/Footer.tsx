@@ -1,10 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { Facebook, Instagram, Twitter, Phone, Mail, MapPin, Send } from "lucide-react";
-import { branches, logoUrl, navLinks } from "@/data/mock";
+import { logoUrl, navLinks } from "@/data/mock";
+import { useBranches } from "@/hooks/useBranches";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export function Footer() {
+  const { data: branchesData = [] } = useBranches();
   return (
     <footer className="relative mt-32 overflow-hidden bg-secondary text-secondary-foreground">
       <div className="absolute inset-0 opacity-30" style={{ background: "var(--gradient-dark)" }} />
@@ -37,7 +39,7 @@ export function Footer() {
         <div>
           <h4 className="mb-4 font-display text-lg text-primary">Branches</h4>
           <ul className="space-y-4 text-sm font-sans text-white/70">
-            {branches.map((b) => (
+            {branchesData.map((b) => (
               <li key={b.name}>
                 <div className="font-medium font-sans text-white">{b.city}</div>
                 <div className="flex items-start gap-1.5 mt-1 font-sans"><MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />{b.address}</div>

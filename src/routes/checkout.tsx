@@ -1,18 +1,18 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronLeft, ChevronRight, CreditCard, Smartphone, Truck, Store, MapPin, CheckCircle2 } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, CreditCard, Smartphone, Truck, Store, MapPin, CheckCircle2, Loader2 } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { PageHero } from "@/components/PageHero";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/FormField";
 import { OrderSummary } from "@/components/OrderSummary";
-import { branches } from "@/data/mock";
 import { useCart } from "@/context/CartContext";
 import { useI18n } from "@/i18n/I18nProvider";
-import { lsGet, lsSet } from "@/lib/storage";
 import { toast } from "sonner";
+import { useBranches } from "@/hooks/useBranches";
+import { useCreateOrder, type OrderDto } from "@/hooks/useCreateOrder";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({
@@ -25,21 +25,29 @@ export const Route = createFileRoute("/checkout")({
 });
 
 const PAYMENTS = [
-  { id: "mobilepay", label: "MobilePay", icon: Smartphone },
-  { id: "visa", label: "Visa", icon: CreditCard },
-  { id: "mastercard", label: "Mastercard", icon: CreditCard },
-  { id: "dankort", label: "Dankort", icon: CreditCard },
+  { id: "mobilepay", label: "MobilePay",  icon: Smartphone },
+  { id: "visa",      label: "Visa",       icon: CreditCard },
+  { id: "mastercard",label: "Mastercard", icon: CreditCard },
+  { id: "dankort",   label: "Dankort",    icon: CreditCard },
 ];
 
 function CheckoutPage() {
-  const { t } = useI18n();
-  const navigate = useNavigate();
-  const { lines, subtotal, tax, delivery, discount, total, branch, setBranch, orderType, setOrderType, clear } = useCart();
-  const [step, setStep] = useState(1);
-  const [done, setDone] = useState(false);
-  const [orderId] = useState(() => "HIN-" + Math.floor(100000 + Math.random() * 900000));
-  const [details, setDetails] = useState({ name: "", phone: "", email: "", street: "", city: "", postal: "" });
-  const [payment, setPayment] = useState("mobilepay");
+  const { t }     = useI18n();
+  const navigate  = useNavigate();
+  const {
+    cart, lines, subtotal, tax, delivery, discount, total,
+    branch, setBranch, orderType, setOrderType, coupon, clear,
+  } = useCart();
+
+  const [step, setStep]                         = useState(1);
+  const [done, setDone]                         = useState(false);
+  const [confirmedOrder, setConfirmedOrder]     = useState<OrderDto | null>(null);
+  const [details, setDetails]                   = useState({ name: "", phone: "", email: "", street: "", city: "", postal: "" });
+  const [payment, setPayment]                   = useState("mobilepay");
+
+  const { data: branchesData = [] }             = useBranches();
+  const currentBranchId                         = branchesData.find((b) => b.name === branch)?.id;
+  const createOrder                             = useCreateOrder();
 
   const ALL_STEPS = [
     { id: 1, label: t("checkout.step1") },
@@ -50,37 +58,54 @@ function CheckoutPage() {
     { id: 6, label: t("checkout.step6") },
   ];
   const activeSteps = ALL_STEPS.filter((s) => !(s.id === 4 && orderType === "pickup"));
-  const currentIdx = activeSteps.findIndex((s) => s.id === step);
+  const currentIdx  = activeSteps.findIndex((s) => s.id === step);
 
   const next = () => {
     if (step === 3) {
-      if (!details.name.trim()) { toast.error("Please enter your name."); return; }
-      if (!details.phone.trim()) { toast.error("Please enter your phone number."); return; }
+      if (!details.name.trim())  { toast.error("Please enter your name.");          return; }
+      if (!details.phone.trim()) { toast.error("Please enter your phone number.");  return; }
       if (!details.email.trim()) { toast.error("Please enter your email address."); return; }
     }
     if (step === 4) {
       if (!details.street.trim()) { toast.error("Please enter your street address."); return; }
-      if (!details.city.trim()) { toast.error("Please enter your city."); return; }
-      if (!details.postal.trim()) { toast.error("Please enter your postal code."); return; }
+      if (!details.city.trim())   { toast.error("Please enter your city.");           return; }
+      if (!details.postal.trim()) { toast.error("Please enter your postal code.");    return; }
     }
     if (currentIdx < activeSteps.length - 1) setStep(activeSteps[currentIdx + 1].id);
   };
+
   const back = () => {
     if (currentIdx > 0) setStep(activeSteps[currentIdx - 1].id);
   };
 
-  const place = () => {
-    const orders = lsGet<object[]>("hind-orders", []);
-    orders.unshift({ id: orderId, date: new Date().toISOString(), branch, type: orderType, total, lines, status: "Placed" });
-    lsSet("hind-orders", orders);
-    setDone(true);
-    clear();
+  const place = async () => {
+    if (!currentBranchId) { toast.error("Please select a branch."); return; }
+
+    const orderItems = Object.entries(cart).map(([, entry]) => ({
+      menuItemId: entry.id,
+      quantity:   entry.qty,
+    }));
+
+    try {
+      const order = await createOrder.mutateAsync({
+        branchId:   currentBranchId,
+        orderType:  orderType === "delivery" ? "Delivery" : "Pickup",
+        couponCode: coupon ?? undefined,
+        items:      orderItems,
+      });
+      setConfirmedOrder(order);
+      setDone(true);
+      clear();
+    } catch {
+      toast.error("Failed to place order. Please try again.");
+    }
   };
 
   if (lines.length === 0 && !done) {
     return (
       <Layout>
-        <PageHero eyebrow={t("checkout.title")} title={t("checkout.title")} subtitle="Your cart is empty." image="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1920&q=80" />
+        <PageHero eyebrow={t("checkout.title")} title={t("checkout.title")} subtitle="Your cart is empty."
+          image="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1920&q=80" />
         <div className="mx-auto max-w-md px-6 py-16 text-center">
           <Button asChild className="gradient-primary text-primary-foreground"><Link to="/menu">Browse menu</Link></Button>
         </div>
@@ -90,13 +115,14 @@ function CheckoutPage() {
 
   return (
     <Layout>
-      <PageHero eyebrow={t("checkout.title")} title={t("checkout.title")} subtitle="A few quick details and you're done."
+      <PageHero eyebrow={t("checkout.title")} title={t("checkout.title")}
+        subtitle="A few quick details and you're done."
         image="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1920&q=80" />
 
       <section className="mx-auto max-w-6xl px-6 py-12">
         <div className="mb-8 flex flex-wrap items-center gap-2">
           {activeSteps.map((s, i) => {
-            const active = step === s.id;
+            const active    = step === s.id;
             const completed = currentIdx > i;
             return (
               <div key={s.id} className="flex items-center gap-2">
@@ -118,11 +144,12 @@ function CheckoutPage() {
                   <div className="space-y-4">
                     <h2 className="font-display text-2xl font-semibold">{t("checkout.step1")}</h2>
                     <div className="grid gap-3 sm:grid-cols-2">
-                      {branches.map((b) => (
-                        <button key={b.name} onClick={() => setBranch(b.name)} className={`rounded-2xl border p-5 text-left transition ${branch === b.name ? "border-primary bg-primary/5 shadow-soft" : "hover:border-primary/40"}`}>
+                      {branchesData.map((b) => (
+                        <button key={b.name} onClick={() => setBranch(b.name)}
+                          className={`rounded-2xl border p-5 text-left transition ${branch === b.name ? "border-primary bg-primary/5 shadow-soft" : "hover:border-primary/40"}`}>
                           <div className="flex items-center gap-2 font-semibold"><MapPin className="h-4 w-4 text-primary" />{b.name}</div>
-                          <div className="mt-1 text-sm text-muted-foreground">{b.address}</div>
-                          <div className="mt-1 text-xs text-muted-foreground">{b.hours}</div>
+                          <div className="mt-1 text-sm text-muted-foreground">{b.address}, {b.city}</div>
+                          <div className="mt-1 text-xs text-muted-foreground">{b.weekdayHours}</div>
                         </button>
                       ))}
                     </div>
@@ -172,9 +199,9 @@ function CheckoutPage() {
                       {PAYMENTS.map((p) => {
                         const Icon = p.icon;
                         return (
-                          <button key={p.id} onClick={() => setPayment(p.id)} className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition ${payment === p.id ? "border-primary bg-primary/5" : "hover:border-primary/40"}`}>
-                            <Icon className="h-5 w-5 text-primary" />
-                            <span className="font-medium">{p.label}</span>
+                          <button key={p.id} onClick={() => setPayment(p.id)}
+                            className={`flex items-center gap-3 rounded-2xl border p-4 text-left transition ${payment === p.id ? "border-primary bg-primary/5" : "hover:border-primary/40"}`}>
+                            <Icon className="h-5 w-5 text-primary" /><span className="font-medium">{p.label}</span>
                           </button>
                         );
                       })}
@@ -184,22 +211,31 @@ function CheckoutPage() {
                 {step === 6 && (
                   <div className="space-y-4">
                     <h2 className="font-display text-2xl font-semibold">{t("checkout.step6")}</h2>
-                    <ReviewRow label="Branch" value={branch} />
-                    <ReviewRow label="Type" value={orderType === "delivery" ? t("checkout.delivery") : t("checkout.pickup")} />
+                    <ReviewRow label="Branch"  value={branch} />
+                    <ReviewRow label="Type"    value={orderType === "delivery" ? t("checkout.delivery") : t("checkout.pickup")} />
                     <ReviewRow label="Contact" value={`${details.name} · ${details.phone}`} />
                     {orderType === "delivery" && <ReviewRow label="Address" value={`${details.street}, ${details.postal} ${details.city}`} />}
                     <ReviewRow label="Payment" value={PAYMENTS.find((p) => p.id === payment)?.label || ""} />
+                    {coupon && <ReviewRow label="Coupon" value={coupon} />}
                   </div>
                 )}
               </motion.div>
             </AnimatePresence>
 
             <div className="mt-8 flex items-center justify-between">
-              <Button variant="ghost" onClick={back} disabled={currentIdx === 0}><ChevronLeft className="mr-1 h-4 w-4" /> {t("actions.back")}</Button>
+              <Button variant="ghost" onClick={back} disabled={currentIdx === 0}>
+                <ChevronLeft className="mr-1 h-4 w-4" /> {t("actions.back")}
+              </Button>
               {currentIdx < activeSteps.length - 1 ? (
-                <Button onClick={next} className="gradient-primary text-primary-foreground">{t("actions.next")} <ChevronRight className="ml-1 h-4 w-4" /></Button>
+                <Button onClick={next} className="gradient-primary text-primary-foreground">
+                  {t("actions.next")} <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
               ) : (
-                <Button onClick={place} className="gradient-primary text-primary-foreground">{t("actions.placeOrder")}</Button>
+                <Button onClick={place} disabled={createOrder.isPending} className="gradient-primary text-primary-foreground min-w-[130px]">
+                  {createOrder.isPending
+                    ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Placing…</>
+                    : t("actions.placeOrder")}
+                </Button>
               )}
             </div>
           </div>
@@ -221,19 +257,28 @@ function CheckoutPage() {
       </section>
 
       <AnimatePresence>
-        {done && (
+        {done && confirmedOrder && (
           <>
-            <motion.div className="fixed inset-0 z-[120] bg-black/60" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+            <motion.div className="fixed inset-0 z-[120] bg-black/60"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
             <motion.div
               className="fixed left-1/2 top-1/2 z-[121] w-[94%] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-3xl bg-card p-8 text-center shadow-elegant"
               initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
             >
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.15, type: "spring" }}
-                className="mx-auto grid h-20 w-20 place-items-center rounded-full gradient-primary text-primary-foreground"><CheckCircle2 className="h-10 w-10" /></motion.div>
+                className="mx-auto grid h-20 w-20 place-items-center rounded-full gradient-primary text-primary-foreground">
+                <CheckCircle2 className="h-10 w-10" />
+              </motion.div>
               <h3 className="mt-5 font-display text-2xl font-bold">{t("checkout.placed")}</h3>
-              <p className="mt-2 text-muted-foreground">Order ID: <span className="font-mono font-semibold text-foreground">{orderId}</span></p>
+              <p className="mt-2 text-muted-foreground">
+                Order ID: <span className="font-mono font-semibold text-foreground">#{confirmedOrder.id}</span>
+              </p>
               <div className="mt-6 flex justify-center gap-2">
-                <Button onClick={() => navigate({ to: "/order-tracking", search: { id: orderId } })} className="gradient-primary text-primary-foreground">Track order</Button>
+                <Button
+                  onClick={() => navigate({ to: "/order-tracking", search: { id: String(confirmedOrder.id) } })}
+                  className="gradient-primary text-primary-foreground">
+                  Track order
+                </Button>
                 <Button variant="outline" onClick={() => navigate({ to: "/" })}>Done</Button>
               </div>
             </motion.div>
@@ -245,5 +290,10 @@ function CheckoutPage() {
 }
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
-  return <div className="flex justify-between border-b py-2 text-sm"><span className="text-muted-foreground">{label}</span><span className="font-medium">{value}</span></div>;
+  return (
+    <div className="flex justify-between border-b py-2 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium">{value}</span>
+    </div>
+  );
 }

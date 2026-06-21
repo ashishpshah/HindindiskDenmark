@@ -48,7 +48,7 @@ export function CartDrawer() {
                     <div className="mt-2 inline-flex items-center gap-2 rounded-full border px-1 py-0.5 text-sm">
                       <button onClick={() => sub(l.name)} className="grid h-6 w-6 place-items-center rounded-full hover:bg-accent"><Minus className="h-3 w-3" /></button>
                       <span className="min-w-4 text-center">{l.qty}</span>
-                      <button onClick={() => add(l.name)} className="grid h-6 w-6 place-items-center rounded-full gradient-primary text-primary-foreground"><Plus className="h-3 w-3" /></button>
+                      <button onClick={() => add({ id: l.id, name: l.name, price: l.price, imageUrl: l.image })} className="grid h-6 w-6 place-items-center rounded-full gradient-primary text-primary-foreground"><Plus className="h-3 w-3" /></button>
                     </div>
                   </div>
                   <div className="text-right">

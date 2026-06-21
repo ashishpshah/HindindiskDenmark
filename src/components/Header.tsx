@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Menu, X, Globe, ShoppingBag, User, LogOut, MapPin, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { branches, logoUrl } from "@/data/mock";
+import { logoUrl } from "@/data/mock";
+import { useBranches } from "@/hooks/useBranches";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -42,6 +43,7 @@ export function Header() {
   const { t, lang, setLang } = useI18n();
   const { user, openModal, logout } = useAuth();
   const { totalQty, setOpen: setCartOpen, branch, setBranch } = useCart();
+  const { data: branchesData = [] } = useBranches();
 
   const navLinks = [
     { to: "/", label: t("nav.home") },
@@ -95,7 +97,7 @@ export function Header() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {branches.map((b) => (
+              {branchesData.map((b) => (
                 <DropdownMenuItem key={b.name} onClick={() => setBranch(b.name)}>{b.name}</DropdownMenuItem>
               ))}
             </DropdownMenuContent>

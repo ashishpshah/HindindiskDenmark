@@ -1,22 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Leaf, Flame, ShoppingBag, MapPin, ChevronLeft } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { PageHero } from "@/components/PageHero";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { menuCategories, menuItems, branches } from "@/data/mock";
 import { toast } from "sonner";
 import { useCart } from "@/context/CartContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useMenuItems, type MenuItemDto } from "@/hooks/useMenuItems";
+import { useMenuCategories } from "@/hooks/useMenuCategories";
+import { useBranches } from "@/hooks/useBranches";
 
 export const Route = createFileRoute("/menu/")({
   head: () => ({
@@ -30,30 +26,34 @@ export const Route = createFileRoute("/menu/")({
   component: MenuPage,
 });
 
-type Item = (typeof menuItems)[number];
-
 function MenuPage() {
-  const [cat, setCat] = useState<string>("All");
-  const [q, setQ] = useState("");
+  const [cat, setCat]         = useState<string>("All");
+  const [q, setQ]             = useState("");
   const [vegOnly, setVegOnly] = useState(false);
   const { add, totalQty, total, setOpen: setCartOpen, branch, setBranch } = useCart();
 
-  const filtered = useMemo(() => menuItems.filter((m) =>
-    (cat === "All" || m.category === cat) &&
-    (!vegOnly || m.veg) &&
-    (q === "" || m.name.toLowerCase().includes(q.toLowerCase()))
-  ), [cat, q, vegOnly]);
+  const { data: branchesData = [] }    = useBranches();
+  const { data: categoriesData = [] }  = useMenuCategories();
+
+  const currentBranchId = branchesData.find((b) => b.name === branch)?.id;
+
+  const { data: items = [], isLoading } = useMenuItems({
+    category: cat === "All" ? undefined : cat,
+    q:        q || undefined,
+    veg:      vegOnly || undefined,
+    branchId: currentBranchId,
+  });
 
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
-  const [pendingItem, setPendingItem] = useState<string | null>(null);
+  const [pendingItem, setPendingItem]               = useState<MenuItemDto | null>(null);
 
-  const onAdd = (i: Item) => {
+  const onAdd = (item: MenuItemDto) => {
     if (totalQty === 0) {
-      setPendingItem(i.name);
+      setPendingItem(item);
       setShowLocationPrompt(true);
     } else {
-      add(i.name);
-      toast.success(`${i.name} added`);
+      add(item);
+      toast.success(`${item.name} added`);
     }
   };
 
@@ -61,7 +61,7 @@ function MenuPage() {
     setBranch(selectedBranch);
     if (pendingItem) {
       add(pendingItem);
-      toast.success(`${pendingItem} added to cart from ${selectedBranch}`);
+      toast.success(`${pendingItem.name} added to cart from ${selectedBranch}`);
       setPendingItem(null);
     }
     setShowLocationPrompt(false);
@@ -90,10 +90,8 @@ function MenuPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {branches.map((b) => (
-                  <SelectItem key={b.name} value={b.name}>
-                    {b.name}
-                  </SelectItem>
+                {branchesData.map((b) => (
+                  <SelectItem key={b.name} value={b.name}>{b.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -114,54 +112,64 @@ function MenuPage() {
         </div>
 
         <div className="mt-6 -mx-6 flex gap-2 overflow-x-auto px-6 pb-2 no-scrollbar">
-          {["All", ...menuCategories].map((c) => (
+          {["All", ...categoriesData.map((c) => c.name)].map((c) => (
             <button key={c} onClick={() => setCat(c)}
               className={`shrink-0 rounded-full border px-5 py-2 text-sm font-medium transition ${cat === c ? "gradient-primary border-transparent text-primary-foreground shadow-elegant" : "hover:bg-accent"}`}>{c}</button>
           ))}
         </div>
 
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <AnimatePresence>
-            {filtered.map((m) => (
-              <motion.div
-                key={m.name}
-                layout
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-                className="group overflow-hidden rounded-3xl border bg-card shadow-soft transition hover:shadow-elegant"
-              >
-                <Link to="/menu/$name" params={{ name: m.name }} className="relative h-48 overflow-hidden block">
-                  <img src={m.image} alt={m.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-110" />
-                  <div className="absolute left-3 top-3 flex gap-1.5">
-                    {m.veg && <span className="rounded-full bg-green-600/95 px-2 py-0.5 text-[10px] font-semibold uppercase text-white"><Leaf className="inline h-3 w-3" /></span>}
-                    {Array.from({ length: m.spicy }).map((_, i) => <Flame key={i} className="h-4 w-4 fill-red-500 text-red-500 drop-shadow" />)}
-                  </div>
-                </Link>
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <Link to="/menu/$name" params={{ name: m.name }} className="hover:text-primary transition">
-                        <div className="font-display text-xl font-semibold">{m.name}</div>
-                      </Link>
-                      <div className="mt-0.5 text-xs uppercase tracking-wider text-muted-foreground">{m.category}</div>
-                    </div>
-                    <div className="font-display text-lg text-primary">{m.price} DKK</div>
-                  </div>
-                  <p className="mt-3 text-sm text-muted-foreground">{m.desc}</p>
-                  <div className="mt-4 flex items-center justify-between">
-                    <Button
-                      onClick={() => onAdd(m)}
-                      size="sm"
-                      className="rounded-full gradient-primary text-primary-foreground cursor-pointer flex items-center justify-center gap-1.5 min-w-[96px]"
-                    >
-                      Add to cart
-                    </Button>
-                  </div>
-                </div>
-              </motion.div>
+        {isLoading ? (
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-72 rounded-3xl border bg-accent/40 animate-pulse" />
             ))}
-          </AnimatePresence>
-        </div>
-        {filtered.length === 0 && <div className="py-20 text-center text-muted-foreground">No dishes match your filters.</div>}
+          </div>
+        ) : (
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <AnimatePresence>
+              {items.map((m) => (
+                <motion.div
+                  key={m.id}
+                  layout
+                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+                  className="group overflow-hidden rounded-3xl border bg-card shadow-soft transition hover:shadow-elegant"
+                >
+                  <Link to="/menu/$name" params={{ name: m.name }} className="relative h-48 overflow-hidden block">
+                    <img src={m.imageUrl} alt={m.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-110" />
+                    <div className="absolute left-3 top-3 flex gap-1.5">
+                      {m.isVegetarian && <span className="rounded-full bg-green-600/95 px-2 py-0.5 text-[10px] font-semibold uppercase text-white"><Leaf className="inline h-3 w-3" /></span>}
+                      {Array.from({ length: m.spicyLevel }).map((_, i) => <Flame key={i} className="h-4 w-4 fill-red-500 text-red-500 drop-shadow" />)}
+                    </div>
+                  </Link>
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <Link to="/menu/$name" params={{ name: m.name }} className="hover:text-primary transition">
+                          <div className="font-display text-xl font-semibold">{m.name}</div>
+                        </Link>
+                        <div className="mt-0.5 text-xs uppercase tracking-wider text-muted-foreground">{m.category}</div>
+                      </div>
+                      <div className="font-display text-lg text-primary">{m.price} DKK</div>
+                    </div>
+                    <p className="mt-3 text-sm text-muted-foreground">{m.description}</p>
+                    <div className="mt-4 flex items-center justify-between">
+                      <Button
+                        onClick={() => onAdd(m)}
+                        size="sm"
+                        className="rounded-full gradient-primary text-primary-foreground cursor-pointer flex items-center justify-center gap-1.5 min-w-[96px]"
+                      >
+                        Add to cart
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
+        {!isLoading && items.length === 0 && (
+          <div className="py-20 text-center text-muted-foreground">No dishes match your filters.</div>
+        )}
       </section>
 
       {totalQty > 0 && (
@@ -184,7 +192,7 @@ function MenuPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 mt-6">
-            {branches.map((b) => (
+            {branchesData.map((b) => (
               <button
                 key={b.name}
                 onClick={() => selectLocationAndAdd(b.name)}

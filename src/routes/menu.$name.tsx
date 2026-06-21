@@ -4,25 +4,19 @@ import { motion } from "framer-motion";
 import { ChevronLeft, Plus, Minus, Leaf, Flame, Star, MapPin, ShoppingBag } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { menuItems, branches } from "@/data/mock";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useMenuItem } from "@/hooks/useMenuItem";
+import { useBranches } from "@/hooks/useBranches";
 
 export const Route = createFileRoute("/menu/$name")({
   head: ({ params }) => {
     const dishName = decodeURIComponent(params.name);
-    const dish = menuItems.find((m) => m.name.toLowerCase() === dishName.toLowerCase());
     return {
       meta: [
-        { title: dish ? `${dish.name} — Hind Indisk Menu` : "Dish Details" },
-        { name: "description", content: dish ? dish.desc : "Authentic Indian dish details." },
+        { title: `${dishName} — Hind Indisk Menu` },
+        { name: "description", content: "Authentic Indian dish details." },
       ],
     };
   },
@@ -30,15 +24,34 @@ export const Route = createFileRoute("/menu/$name")({
 });
 
 function DishDetailsPage() {
-  const { name } = Route.useParams();
-  const decodedName = decodeURIComponent(name);
-  const dish = menuItems.find((m) => m.name.toLowerCase() === decodedName.toLowerCase());
+  const { name }      = Route.useParams();
+  const decodedName   = decodeURIComponent(name);
 
   const { add, totalQty, total, setOpen: setCartOpen, branch, setBranch } = useCart();
-  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
-  const [qty, setQty] = useState(1);
 
-  if (!dish) {
+  const { data: branchesData = [] }                 = useBranches();
+  const currentBranchId                             = branchesData.find((b) => b.name === branch)?.id;
+  const { data, isLoading }                         = useMenuItem(decodedName, currentBranchId);
+
+  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [qty, setQty]                               = useState(1);
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="mx-auto max-w-7xl px-6 pt-32 pb-12 grid gap-12 md:grid-cols-2">
+          <div className="aspect-[4/3] rounded-3xl bg-accent/40 animate-pulse" />
+          <div className="space-y-4">
+            <div className="h-6 w-32 rounded bg-accent/40 animate-pulse" />
+            <div className="h-12 w-3/4 rounded bg-accent/40 animate-pulse" />
+            <div className="h-8 w-24 rounded bg-accent/40 animate-pulse" />
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!data) {
     return (
       <Layout>
         <div className="mx-auto max-w-md px-6 py-32 text-center space-y-4">
@@ -52,46 +65,41 @@ function DishDetailsPage() {
     );
   }
 
-  const related = menuItems
-    .filter((m) => m.category === dish.category && m.name !== dish.name)
-    .slice(0, 3);
+  const { item: dish, relatedItems: related } = data;
 
   const handleAddToCart = () => {
     if (totalQty === 0) {
       setShowLocationPrompt(true);
     } else {
-      add(dish.name, qty);
-      toast.success(`${qty}x ${dish.name} added to cart`);
+      add(dish, qty);
+      toast.success(`${qty}× ${dish.name} added to cart`);
     }
   };
 
   const selectLocationAndAdd = (selectedBranch: string) => {
     setBranch(selectedBranch);
     setShowLocationPrompt(false);
-    add(dish.name, qty);
-    toast.success(`${qty}x ${dish.name} added to cart from ${selectedBranch}`);
+    add(dish, qty);
+    toast.success(`${qty}× ${dish.name} added to cart from ${selectedBranch}`);
   };
 
   return (
     <Layout>
       <div className="mx-auto max-w-7xl px-6 pt-32 pb-12">
-        <Link
-          to="/menu"
-          className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition mb-8"
-        >
+        <Link to="/menu" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition mb-8">
           <ChevronLeft className="mr-1 h-4 w-4" /> Back to Menu
         </Link>
 
         <div className="grid gap-12 md:grid-cols-2 items-center">
           <div className="relative aspect-[4/3] overflow-hidden rounded-3xl shadow-elegant bg-accent">
-            <img src={dish.image} alt={dish.name} className="h-full w-full object-cover" />
+            <img src={dish.imageUrl} alt={dish.name} className="h-full w-full object-cover" />
             <div className="absolute left-4 top-4 flex gap-1.5">
-              {dish.veg && (
+              {dish.isVegetarian && (
                 <span className="rounded-full bg-green-600/95 px-3 py-1 text-xs font-semibold uppercase text-white flex items-center gap-1 shadow-md">
                   <Leaf className="h-3 w-3" /> Veg
                 </span>
               )}
-              {Array.from({ length: dish.spicy }).map((_, i) => (
+              {Array.from({ length: dish.spicyLevel }).map((_, i) => (
                 <Flame key={i} className="h-5 w-5 fill-red-500 text-red-500 drop-shadow-md" />
               ))}
             </div>
@@ -99,9 +107,7 @@ function DishDetailsPage() {
 
           <div className="space-y-6">
             <div>
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                {dish.category}
-              </span>
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{dish.category}</span>
               <h1 className="mt-2 font-display text-4xl sm:text-5xl font-bold">{dish.name}</h1>
               <div className="mt-3 inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1 text-sm text-foreground/80">
                 <Star className="h-4 w-4 fill-primary text-primary" /> 4.9 · Recommended
@@ -110,7 +116,7 @@ function DishDetailsPage() {
 
             <div className="font-display text-3xl font-bold text-primary">{dish.price} DKK</div>
 
-            <p className="text-muted-foreground text-lg leading-relaxed">{dish.desc}</p>
+            <p className="text-muted-foreground text-lg leading-relaxed">{dish.description}</p>
 
             <div className="border-t pt-6">
               <div className="flex flex-wrap items-center gap-4">
@@ -119,17 +125,13 @@ function DishDetailsPage() {
                     onClick={() => setQty((q) => Math.max(1, q - 1))}
                     className="grid h-10 w-10 place-items-center rounded-full hover:bg-accent text-foreground transition cursor-pointer"
                     aria-label="Decrease quantity"
-                  >
-                    <Minus className="h-5 w-5" />
-                  </button>
+                  ><Minus className="h-5 w-5" /></button>
                   <span className="min-w-6 text-center text-base font-semibold select-none">{qty}</span>
                   <button
                     onClick={() => setQty((q) => q + 1)}
                     className="grid h-10 w-10 place-items-center rounded-full hover:bg-accent text-foreground transition cursor-pointer"
                     aria-label="Increase quantity"
-                  >
-                    <Plus className="h-5 w-5" />
-                  </button>
+                  ><Plus className="h-5 w-5" /></button>
                 </div>
 
                 <Button
@@ -154,19 +156,16 @@ function DishDetailsPage() {
             <h2 className="font-display text-3xl font-bold">Related Dishes</h2>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {related.map((m) => (
-                <div
-                  key={m.name}
-                  className="group overflow-hidden rounded-3xl border bg-card shadow-soft transition hover:shadow-elegant flex flex-col"
-                >
+                <div key={m.id} className="group overflow-hidden rounded-3xl border bg-card shadow-soft transition hover:shadow-elegant flex flex-col">
                   <Link to="/menu/$name" params={{ name: m.name }} className="relative h-48 overflow-hidden block">
-                    <img src={m.image} alt={m.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-110" />
+                    <img src={m.imageUrl} alt={m.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-110" />
                     <div className="absolute left-3 top-3 flex gap-1.5">
-                      {m.veg && (
+                      {m.isVegetarian && (
                         <span className="rounded-full bg-green-600/95 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
                           <Leaf className="inline h-3 w-3" />
                         </span>
                       )}
-                      {Array.from({ length: m.spicy }).map((_, i) => (
+                      {Array.from({ length: m.spicyLevel }).map((_, i) => (
                         <Flame key={i} className="h-4 w-4 fill-red-500 text-red-500 drop-shadow" />
                       ))}
                     </div>
@@ -179,15 +178,10 @@ function DishDetailsPage() {
                         </Link>
                         <div className="font-display text-lg text-primary">{m.price} DKK</div>
                       </div>
-                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{m.desc}</p>
+                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{m.description}</p>
                     </div>
                     <div className="mt-4 pt-3 border-t">
-                      <Button
-                        asChild
-                        variant="outline"
-                        size="sm"
-                        className="w-full rounded-full cursor-pointer hover:bg-primary hover:text-white transition-colors"
-                      >
+                      <Button asChild variant="outline" size="sm" className="w-full rounded-full cursor-pointer hover:bg-primary hover:text-white transition-colors">
                         <Link to="/menu/$name" params={{ name: m.name }}>View Details</Link>
                       </Button>
                     </div>
@@ -219,7 +213,7 @@ function DishDetailsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 mt-6">
-            {branches.map((b) => (
+            {branchesData.map((b) => (
               <button
                 key={b.name}
                 onClick={() => selectLocationAndAdd(b.name)}

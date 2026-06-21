@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { MapPin, Phone, Clock, Star, ArrowRight, CheckCircle2 } from "lucide-react";
+import { MapPin, Phone, Clock, Star, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Layout } from "@/components/Layout";
 import { PageHero } from "@/components/PageHero";
 import { Button } from "@/components/ui/button";
-import { branches } from "@/data/mock";
+import { useBranches } from "@/hooks/useBranches";
+import { useCreateReservation } from "@/hooks/useCreateReservation";
 import { useCart } from "@/context/CartContext";
 import {
   Dialog,
@@ -17,6 +18,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+
+// Editorial data not stored in the DB
+const BRANCH_DISPLAY: Record<string, { rating: number; reviews: number }> = {
+  "Hind Indisk Aarhus":     { rating: 4.8, reviews: 2400 },
+  "Hind Indisk Copenhagen": { rating: 4.9, reviews: 3100 },
+};
 
 export const Route = createFileRoute("/locations")({
   head: () => ({
@@ -32,6 +40,9 @@ export const Route = createFileRoute("/locations")({
 
 function LocationsPage() {
   const { setBranch } = useCart();
+  const { data: branchesData = [] } = useBranches();
+  const createReservation = useCreateReservation();
+
   const [bookingBranch, setBookingBranch] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [form, setForm] = useState({
@@ -46,31 +57,30 @@ function LocationsPage() {
   });
 
   const openBookingModal = (branchName: string) => {
-    setForm({
-      branch: branchName,
-      guests: "2",
-      date: "",
-      time: "19:00",
-      name: "",
-      phone: "",
-      email: "",
-      note: "",
-    });
+    setForm({ branch: branchName, guests: "2", date: "", time: "19:00", name: "", phone: "", email: "", note: "" });
     setBookingBranch(branchName);
+    setDone(false);
   };
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const selectedBranch = branchesData.find((b) => b.name === form.branch);
+    if (!selectedBranch) return;
     try {
-      const list = JSON.parse(localStorage.getItem("hind-reservations") || "[]");
-      list.unshift({
-        id: "RES-" + Math.floor(100000 + Math.random() * 900000),
-        ...form,
-        guests: Number(form.guests),
+      await createReservation.mutateAsync({
+        branchId:       selectedBranch.id,
+        date:           form.date,
+        timeSlot:       form.time,
+        guestCount:     Number(form.guests),
+        contactName:    form.name,
+        contactPhone:   form.phone,
+        contactEmail:   form.email,
+        specialRequests: form.note || undefined,
       });
-      localStorage.setItem("hind-reservations", JSON.stringify(list));
-    } catch {}
-    setDone(true);
+      setDone(true);
+    } catch {
+      toast.error("Could not save reservation. Please try again.");
+    }
   };
 
   return (
@@ -81,47 +91,50 @@ function LocationsPage() {
         subtitle="Two restaurants, one shared love of authentic Indian cooking."
         image="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1920&q=80"
       />
-      
+
       <section className="mx-auto max-w-7xl px-6 py-20 space-y-12">
-        {branches.map((b, i) => (
-          <div key={b.name} className={`grid gap-10 lg:grid-cols-2 lg:items-center ${i % 2 ? "lg:[&>*:first-child]:order-2" : ""}`}>
-            <div className="aspect-[4/3] overflow-hidden rounded-3xl shadow-elegant">
-              <iframe
-                title={b.name}
-                className="h-full w-full grayscale-[20%]"
-                src={`https://www.google.com/maps?q=${encodeURIComponent(b.address)}&output=embed`}
-                loading="lazy"
-              />
+        {branchesData.map((b, i) => {
+          const display = BRANCH_DISPLAY[b.name] ?? { rating: 4.8, reviews: 0 };
+          return (
+            <div key={b.name} className={`grid gap-10 lg:grid-cols-2 lg:items-center ${i % 2 ? "lg:[&>*:first-child]:order-2" : ""}`}>
+              <div className="aspect-[4/3] overflow-hidden rounded-3xl shadow-elegant">
+                <iframe
+                  title={b.name}
+                  className="h-full w-full grayscale-[20%]"
+                  src={`https://www.google.com/maps?q=${encodeURIComponent(b.address + ", " + b.city)}&output=embed`}
+                  loading="lazy"
+                />
+              </div>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">{b.city}</div>
+                <h2 className="mt-3 font-display text-4xl font-bold">{b.name}</h2>
+                <div className="mt-3 inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1 text-sm">
+                  <Star className="h-3.5 w-3.5 fill-primary text-primary" /> {display.rating} · {display.reviews.toLocaleString()} reviews
+                </div>
+                <div className="mt-6 space-y-3 text-muted-foreground">
+                  <div className="flex items-start gap-3"><MapPin className="h-5 w-5 text-primary" /><span>{b.address}, {b.postalCode} {b.city}</span></div>
+                  <div className="flex items-center gap-3"><Phone className="h-5 w-5 text-primary" /><span>{b.phone}</span></div>
+                  <div className="flex items-center gap-3"><Clock className="h-5 w-5 text-primary" /><span>{b.weekdayHours}</span></div>
+                </div>
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <Button onClick={() => openBookingModal(b.name)} className="gradient-primary text-primary-foreground cursor-pointer">
+                    Book a Table <ArrowRight className="ml-1 h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" asChild className="cursor-pointer">
+                    <Link to="/menu" onClick={() => setBranch(b.name)}>
+                      Order Online
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" asChild className="cursor-pointer">
+                    <a href={`https://maps.google.com/?q=${encodeURIComponent(b.address + ", " + b.city)}`} target="_blank" rel="noreferrer">
+                      Get Directions
+                    </a>
+                  </Button>
+                </div>
+              </div>
             </div>
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">{b.city}</div>
-              <h2 className="mt-3 font-display text-4xl font-bold">{b.name}</h2>
-              <div className="mt-3 inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1 text-sm">
-                <Star className="h-3.5 w-3.5 fill-primary text-primary" /> {b.rating} · {b.reviews.toLocaleString()} reviews
-              </div>
-              <div className="mt-6 space-y-3 text-muted-foreground">
-                <div className="flex items-start gap-3"><MapPin className="h-5 w-5 text-primary" /><span>{b.address}</span></div>
-                <div className="flex items-center gap-3"><Phone className="h-5 w-5 text-primary" /><span>{b.phone}</span></div>
-                <div className="flex items-center gap-3"><Clock className="h-5 w-5 text-primary" /><span>{b.hours}</span></div>
-              </div>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Button onClick={() => openBookingModal(b.name)} className="gradient-primary text-primary-foreground cursor-pointer">
-                  Book a Table <ArrowRight className="ml-1 h-4 w-4" />
-                </Button>
-                <Button variant="outline" asChild className="cursor-pointer">
-                  <Link to="/menu" onClick={() => setBranch(b.name)}>
-                    Order Online
-                  </Link>
-                </Button>
-                <Button variant="ghost" asChild className="cursor-pointer">
-                  <a href={`https://maps.google.com/?q=${encodeURIComponent(b.address)}`} target="_blank" rel="noreferrer">
-                    Get Directions
-                  </a>
-                </Button>
-              </div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </section>
 
       <Dialog open={bookingBranch !== null} onOpenChange={(open) => { if (!open) { setBookingBranch(null); setDone(false); } }}>
@@ -133,7 +146,7 @@ function LocationsPage() {
               </div>
               <h3 className="font-display text-2xl font-bold">Reservation Confirmed</h3>
               <p className="text-muted-foreground">
-                A confirmation has been sent to your email. We can't wait to welcome you at <strong>{form.branch}</strong> on <strong>{form.date}</strong> at <strong>{form.time}</strong>.
+                We can't wait to welcome you at <strong>{form.branch}</strong> on <strong>{form.date}</strong> at <strong>{form.time}</strong>.
               </p>
               <Button className="gradient-primary text-primary-foreground w-full cursor-pointer mt-4" onClick={() => { setBookingBranch(null); setDone(false); }}>
                 Done
@@ -153,7 +166,7 @@ function LocationsPage() {
                     <Select value={form.branch} onValueChange={(v) => setForm({ ...form, branch: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {branches.map((b) => <SelectItem key={b.name} value={b.name}>{b.name}</SelectItem>)}
+                        {branchesData.map((b) => <SelectItem key={b.name} value={b.name}>{b.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </Field>
@@ -168,7 +181,7 @@ function LocationsPage() {
                     </Select>
                   </Field>
                   <Field label="Date">
-                    <Input type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                    <Input type="date" required value={form.date} min={new Date().toISOString().split("T")[0]} onChange={(e) => setForm({ ...form, date: e.target.value })} />
                   </Field>
                   <Field label="Time">
                     <Input type="time" required value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
@@ -190,9 +203,14 @@ function LocationsPage() {
                     </Field>
                   </div>
                 </div>
-                <Button size="lg" type="submit" className="w-full gradient-primary text-primary-foreground mt-2 cursor-pointer">
-                  Confirm Reservation
+                <Button size="lg" type="submit" disabled={createReservation.isPending} className="w-full gradient-primary text-primary-foreground mt-2 cursor-pointer">
+                  {createReservation.isPending
+                    ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Confirming…</>
+                    : "Confirm Reservation"}
                 </Button>
+                {createReservation.isError && (
+                  <p className="text-center text-sm text-destructive">Something went wrong. Please try again.</p>
+                )}
               </form>
             </>
           )}

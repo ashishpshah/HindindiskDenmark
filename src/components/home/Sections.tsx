@@ -1,19 +1,11 @@
 import { motion, useInView } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Plus, Star, ChefHat, Leaf, Bike, HeartHandshake, Quote, ArrowRight, BadgePercent, Copy, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
+import { Plus, Star, ChefHat, Leaf, Bike, HeartHandshake, Quote, ArrowRight, Copy, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { stats, featuredMenu, whyChooseUs, offers, reviews, branches } from "@/data/mock";
+import { stats, featuredMenu, whyChooseUs, offers, reviews } from "@/data/mock";
 import { SectionHeading } from "./Branches";
-import { useCart } from "@/context/CartContext";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 
 const iconMap = { ChefHat, Leaf, Bike, HeartHandshake } as const;
 
@@ -86,10 +78,6 @@ export function FeaturedMenu() {
   const [stepWidth, setStepWidth] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
-  const { branch, setBranch, add } = useCart();
-  const [showLocationDialog, setShowLocationDialog] = useState(false);
-  const [pendingItem, setPendingItem] = useState<any>(null);
-
   // Triple the featured items array to enable infinite smooth scroll-wrapping
   const duplicatedMenu = [...featuredMenu, ...featuredMenu, ...featuredMenu];
 
@@ -133,26 +121,6 @@ export function FeaturedMenu() {
 
   const handlePrev = () => {
     setI((prev) => (prev <= 0 ? featuredMenu.length - 1 : prev - 1));
-  };
-
-  const handleAddToCart = (item: any) => {
-    if (!branch) {
-      setPendingItem(item);
-      setShowLocationDialog(true);
-    } else {
-      add(item.name);
-      toast.success(`${item.name} added to cart!`);
-    }
-  };
-
-  const selectBranch = (selectedBranch: string) => {
-    setBranch(selectedBranch);
-    setShowLocationDialog(false);
-    if (pendingItem) {
-      add(pendingItem.name);
-      toast.success(`${pendingItem.name} added to cart for ${selectedBranch}!`);
-      setPendingItem(null);
-    }
   };
 
   return (
@@ -205,11 +173,12 @@ export function FeaturedMenu() {
                   <Link to="/menu/$name" params={{ name: m.name }} className="font-display text-xl font-semibold hover:text-primary transition">{m.name}</Link>
                   <div className="mt-3 flex items-center justify-between">
                     <div className="font-display text-lg text-primary">{m.price}</div>
-                    <button
-                      onClick={() => handleAddToCart(m)}
+                    <Link
+                      to="/menu/$name"
+                      params={{ name: m.name }}
                       className="grid h-10 w-10 place-items-center rounded-full gradient-primary text-primary-foreground transition hover:scale-110"
-                      aria-label={`Add ${m.name} to cart`}
-                    ><Plus className="h-4 w-4" /></button>
+                      aria-label={`View ${m.name}`}
+                    ><Plus className="h-4 w-4" /></Link>
                   </div>
                 </div>
               </motion.div>
@@ -218,34 +187,6 @@ export function FeaturedMenu() {
         </div>
       </div>
 
-      {/* Location Selector Dialog Modal */}
-      <Dialog open={showLocationDialog} onOpenChange={setShowLocationDialog}>
-        <DialogContent className="max-w-md rounded-3xl p-6 bg-card">
-          <DialogHeader>
-            <DialogTitle className="font-display text-2xl font-bold text-center">Choose Location</DialogTitle>
-            <DialogDescription className="text-center mt-2 text-muted-foreground">
-              Please select which branch you would like to order from.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 mt-6">
-            {branches.map((b) => (
-              <button
-                key={b.city}
-                onClick={() => selectBranch(b.city)}
-                className="flex items-center justify-between rounded-2xl border p-4 text-left transition hover:border-primary hover:bg-primary/5 group"
-              >
-                <div>
-                  <div className="font-semibold text-lg group-hover:text-primary">{b.city}</div>
-                  <div className="text-sm text-muted-foreground mt-0.5">{b.address}</div>
-                </div>
-                <div className="grid h-10 w-10 place-items-center rounded-full bg-secondary text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
-                  <MapPin className="h-5 w-5" />
-                </div>
-              </button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
     </section>
   );
 }

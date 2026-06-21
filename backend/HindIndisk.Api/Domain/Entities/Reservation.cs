@@ -11,6 +11,11 @@ public class Reservation
     public DateTime Date { get; set; }
     public string TimeSlot { get; set; } = string.Empty;
     public int GuestCount { get; set; }
+
+    public string ContactName { get; set; } = string.Empty;
+    public string ContactPhone { get; set; } = string.Empty;
+    public string ContactEmail { get; set; } = string.Empty;
+
     public string? SpecialRequests { get; set; }
 
     /// <summary>Confirmed or Cancelled</summary>

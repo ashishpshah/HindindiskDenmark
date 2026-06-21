@@ -48,6 +48,24 @@ builder.Services.AddCors(options =>
 // ── AutoMapper ────────────────────────────────────────────────────────────────
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
+// ── Application services ──────────────────────────────────────────────────────
+builder.Services.AddScoped<HindIndisk.Api.Application.Services.IAuthService,
+                           HindIndisk.Api.Application.Services.AuthService>();
+builder.Services.AddScoped<HindIndisk.Api.Application.Services.IMenuService,
+                           HindIndisk.Api.Application.Services.MenuService>();
+builder.Services.AddScoped<HindIndisk.Api.Application.Services.ILocationService,
+                           HindIndisk.Api.Application.Services.LocationService>();
+builder.Services.AddScoped<HindIndisk.Api.Application.Services.IOrderService,
+                           HindIndisk.Api.Application.Services.OrderService>();
+builder.Services.AddScoped<HindIndisk.Api.Application.Services.IOfferService,
+                           HindIndisk.Api.Application.Services.OfferService>();
+builder.Services.AddScoped<HindIndisk.Api.Application.Services.IReservationService,
+                           HindIndisk.Api.Application.Services.ReservationService>();
+builder.Services.AddScoped<HindIndisk.Api.Application.Services.IAdminService,
+                           HindIndisk.Api.Application.Services.AdminService>();
+builder.Services.AddScoped<HindIndisk.Api.Application.Services.IAddressService,
+                           HindIndisk.Api.Application.Services.AddressService>();
+
 // ── Controllers ───────────────────────────────────────────────────────────────
 builder.Services.AddControllers();
 
@@ -92,18 +110,22 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-    // MigrateAsync requires at least one migration file to exist.
-    // EnsureCreatedAsync is used before the first migration is added (Phase 1).
-    // After running `dotnet ef migrations add InitialCreate`, MigrateAsync takes over.
-    if (db.Database.GetMigrations().Any())
-        await db.Database.MigrateAsync();
-    else
-        await db.Database.EnsureCreatedAsync();
+    await db.Database.MigrateAsync();
 
     await DataSeeder.SeedAsync(db);
 }
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        context.Response.StatusCode  = 500;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(new { message = "An unexpected error occurred." });
+    });
+});
+
 // if (app.Environment.IsDevelopment())
 //{
     app.UseSwagger();
