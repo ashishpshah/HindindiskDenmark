@@ -1,5 +1,7 @@
 namespace HindIndisk.Api.Application.DTOs.Admin;
 
+public record AdminOrderItemDto(string Name, int Quantity, decimal PriceAtPurchase);
+
 public record AdminOrderDto(
     long     Id,
     string   CustomerName,
@@ -15,10 +17,10 @@ public record AdminOrderDto(
     DateTime CreatedAt,
     int      ItemCount,
     string?  CouponCode,
-    // Contact & delivery — captured at order time, needed for COD dispatch
     string   ContactName,
     string   ContactPhone,
     string?  ContactEmail,
     string?  DeliveryAddress,
-    string   PaymentMethod
+    string   PaymentMethod,
+    IReadOnlyList<AdminOrderItemDto> Items
 );

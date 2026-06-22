@@ -9,6 +9,29 @@ function getToken(): string | null {
   }
 }
 
+export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+  const token = getToken();
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    body: formData,
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (res.status === 401) {
+    localStorage.removeItem("hind-token");
+    localStorage.removeItem("hind-user");
+    window.dispatchEvent(new Event("hind:session-expired"));
+    throw new Error("Your session has expired. Please log in again.");
+  }
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error((body as { message?: string }).message ?? res.statusText);
+  }
+
+  return res.json() as Promise<T>;
+}
+
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {

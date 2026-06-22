@@ -18,19 +18,18 @@ public class CreateReservationRequest
     [Range(1, 20)]
     public int GuestCount { get; set; } = 2;
 
-    [Required]
-    [MaxLength(200)]
-    public string ContactName { get; set; } = string.Empty;
+    // Customer identity — used to find or create a customer record (RoleId = 3)
+    [Required, MaxLength(60)]
+    public string Firstname { get; set; } = string.Empty;
 
-    [Required]
-    [Phone]
-    [MaxLength(50)]
-    public string ContactPhone { get; set; } = string.Empty;
+    [Required, MaxLength(60)]
+    public string Lastname { get; set; } = string.Empty;
 
-    [Required]
-    [EmailAddress]
-    [MaxLength(200)]
-    public string ContactEmail { get; set; } = string.Empty;
+    [Required, Phone, MaxLength(50)]
+    public string Phone { get; set; } = string.Empty;
+
+    [EmailAddress, MaxLength(200)]
+    public string? Email { get; set; }
 
     [MaxLength(1000)]
     public string? SpecialRequests { get; set; }

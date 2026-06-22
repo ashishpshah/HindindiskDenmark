@@ -10,7 +10,9 @@ export type AdminBranchPriceDto = {
 export type AdminMenuItemDto = {
   id: number;
   name: string;
+  nameDa: string;
   description: string;
+  descriptionDa: string;
   imageUrl: string;
   spicyLevel: number;
   labels: string[];

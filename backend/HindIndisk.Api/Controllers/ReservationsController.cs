@@ -2,7 +2,7 @@ using HindIndisk.Api.Application.DTOs.Reservation;
 using HindIndisk.Api.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+using System.Security.Claims; // still used for MyReservations
 
 namespace HindIndisk.Api.Controllers;
 
@@ -14,19 +14,14 @@ public class ReservationsController : ControllerBase
 
     public ReservationsController(IReservationService reservations) => _reservations = reservations;
 
-    /// <summary>Create a reservation. Auth optional — authenticated users get it linked to their account.</summary>
+    /// <summary>Create a reservation — always links to a customer record found/created by phone.</summary>
     [HttpPost]
     [AllowAnonymous]
     public async Task<IActionResult> Create([FromBody] CreateReservationRequest request)
     {
-        long? userId = null;
-        var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (claim is not null && long.TryParse(claim, out var id))
-            userId = id;
-
         try
         {
-            var reservation = await _reservations.CreateAsync(userId, request);
+            var reservation = await _reservations.CreateAsync(request);
             return Ok(reservation);
         }
         catch (InvalidOperationException ex)

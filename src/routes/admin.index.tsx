@@ -1,5 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ShoppingBag, CalendarCheck, TrendingUp, Clock, Loader2, DollarSign } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  ShoppingBag, CalendarCheck, TrendingUp, Clock, Loader2, DollarSign,
+  UtensilsCrossed, Tag, Users, GitBranch, ArrowRight,
+} from "lucide-react";
 import { useAdminDashboard } from "@/hooks/useAdminDashboard";
 
 export const Route = createFileRoute("/admin/")({
@@ -30,6 +33,16 @@ function StatCard({ label, value, icon: Icon, sub, color = "primary" }:
   );
 }
 
+// F5 fixed: actual navigation cards replace static text
+const QUICK_LINKS = [
+  { label: "Orders",       to: "/admin/orders",       icon: ShoppingBag,     desc: "View & update order status"    },
+  { label: "Reservations", to: "/admin/reservations", icon: CalendarCheck,   desc: "Manage table bookings"          },
+  { label: "Menu Items",   to: "/admin/menu",         icon: UtensilsCrossed, desc: "Add & edit menu items"          },
+  { label: "Menus",        to: "/admin/menus",        icon: GitBranch,       desc: "Organise menu categories"       },
+  { label: "Offers",       to: "/admin/offers",       icon: Tag,             desc: "Coupons & promotions"           },
+  { label: "Customers",    to: "/admin/customers",    icon: Users,           desc: "Browse registered customers"    },
+];
+
 function AdminDashboard() {
   const { data, isLoading } = useAdminDashboard();
 
@@ -48,50 +61,35 @@ function AdminDashboard() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <StatCard
-            label="Orders Today"
-            value={data?.todayOrders ?? 0}
-            icon={ShoppingBag}
-            color="primary"
-          />
-          <StatCard
-            label="Revenue Today"
-            value={`${(data?.todayRevenue ?? 0).toFixed(0)} DKK`}
-            icon={TrendingUp}
-            color="green"
-          />
-          <StatCard
-            label="Pending Orders"
-            value={data?.pendingOrders ?? 0}
-            icon={Clock}
-            sub="Placed / Accepted / Preparing"
-            color="orange"
-          />
-          <StatCard
-            label="Reservations Today"
-            value={data?.todayReservations ?? 0}
-            icon={CalendarCheck}
-            color="blue"
-          />
-          <StatCard
-            label="All-Time Orders"
-            value={data?.totalOrders ?? 0}
-            icon={ShoppingBag}
-          />
-          <StatCard
-            label="All-Time Revenue"
-            value={`${(data?.totalRevenue ?? 0).toFixed(0)} DKK`}
-            icon={DollarSign}
-            color="green"
-          />
+          <StatCard label="Orders Today"        value={data?.todayOrders ?? 0}                    icon={ShoppingBag}   color="primary" />
+          <StatCard label="Revenue Today"       value={`${(data?.todayRevenue ?? 0).toFixed(0)} DKK`} icon={TrendingUp} color="green" />
+          <StatCard label="Pending Orders"      value={data?.pendingOrders ?? 0}                  icon={Clock}         color="orange" sub="Placed / Accepted / Preparing" />
+          <StatCard label="Reservations Today"  value={data?.todayReservations ?? 0}              icon={CalendarCheck} color="blue" />
+          <StatCard label="All-Time Orders"     value={data?.totalOrders ?? 0}                    icon={ShoppingBag} />
+          <StatCard label="All-Time Revenue"    value={`${(data?.totalRevenue ?? 0).toFixed(0)} DKK`} icon={DollarSign} color="green" />
         </div>
       )}
 
-      <div className="rounded-2xl border bg-card p-6 shadow-soft">
-        <h2 className="font-display text-lg font-semibold mb-2">Quick Links</h2>
-        <p className="text-sm text-muted-foreground">
-          Use the sidebar to manage Orders, Reservations, Menu Items, Offers, and Customers.
-        </p>
+      <div>
+        <h2 className="font-display text-lg font-semibold mb-3">Quick Links</h2>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {QUICK_LINKS.map(({ label, to, icon: Icon, desc }) => (
+            <Link
+              key={to}
+              to={to}
+              className="group flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-soft transition hover:border-primary/40 hover:shadow-md"
+            >
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
+                <Icon className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold">{label}</div>
+                <div className="truncate text-xs text-muted-foreground">{desc}</div>
+              </div>
+              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-primary" />
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );

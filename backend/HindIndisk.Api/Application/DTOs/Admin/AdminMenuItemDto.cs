@@ -3,7 +3,9 @@ namespace HindIndisk.Api.Application.DTOs.Admin;
 public record AdminMenuItemDto(
     long   Id,
     string Name,
+    string NameDa,
     string Description,
+    string DescriptionDa,
     string ImageUrl,
     int    SpicyLevel,
     IReadOnlyList<string>              Labels,

@@ -9,15 +9,22 @@ public class OrderService : IOrderService
 {
     private readonly ApplicationDbContext _db;
     private readonly IEmailService _email;
+    private readonly ICustomerService _customers;
 
-    public OrderService(ApplicationDbContext db, IEmailService email)
+    public OrderService(ApplicationDbContext db, IEmailService email, ICustomerService customers)
     {
-        _db    = db;
-        _email = email;
+        _db        = db;
+        _email     = email;
+        _customers = customers;
     }
 
-    public async Task<OrderDto> CreateOrderAsync(long userId, CreateOrderRequest request)
+    public async Task<OrderDto> CreateOrderAsync(CreateOrderRequest request)
     {
+        // Resolve (or create) the customer — UserId always comes from phone lookup
+        var customer = await _customers.FindOrCreateAsync(
+            request.Firstname, request.Lastname, request.Phone, request.Email);
+        var userId = customer.Id;
+
         if (request.OrderType == "Delivery" && string.IsNullOrWhiteSpace(request.DeliveryAddress))
             throw new InvalidOperationException("Delivery address is required for delivery orders.");
 
@@ -94,9 +101,9 @@ public class OrderService : IOrderService
             Discount        = discount,
             Total           = total,
             Status          = "Placed",
-            ContactName     = request.ContactName.Trim(),
-            ContactPhone    = request.ContactPhone.Trim(),
-            ContactEmail    = string.IsNullOrWhiteSpace(request.ContactEmail) ? null : request.ContactEmail.Trim(),
+            ContactName     = $"{request.Firstname.Trim()} {request.Lastname.Trim()}",
+            ContactPhone    = request.Phone.Trim(),
+            ContactEmail    = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim(),
             DeliveryAddress = string.IsNullOrWhiteSpace(request.DeliveryAddress) ? null : request.DeliveryAddress.Trim(),
             PaymentMethod   = "CashOnDelivery",
             CreatedAt       = DateTime.UtcNow,

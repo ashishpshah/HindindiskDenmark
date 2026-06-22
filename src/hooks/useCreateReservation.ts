@@ -6,9 +6,10 @@ export type CreateReservationRequest = {
   date: string;       // yyyy-MM-dd
   timeSlot: string;   // HH:mm
   guestCount: number;
-  contactName: string;
-  contactPhone: string;
-  contactEmail: string;
+  firstname: string;
+  lastname: string;
+  phone: string;
+  email?: string;
   specialRequests?: string;
 };
 

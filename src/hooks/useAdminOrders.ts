@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api/client";
 
+export type AdminOrderItemDto = {
+  name: string;
+  quantity: number;
+  priceAtPurchase: number;
+};
+
 export type AdminOrderDto = {
   id: number;
   customerName: string;
@@ -21,6 +27,7 @@ export type AdminOrderDto = {
   contactEmail?: string;
   deliveryAddress?: string;
   paymentMethod: string;
+  items: AdminOrderItemDto[];
 };
 
 export function useAdminOrders(params?: { status?: string; branchId?: number }) {

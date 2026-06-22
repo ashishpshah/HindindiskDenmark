@@ -4,11 +4,14 @@ import { apiFetch } from "@/lib/api/client";
 export type MenuItemDto = {
   id: number;
   name: string;
+  nameDa: string;
   description: string;
+  descriptionDa: string;
   imageUrl: string;
   spicyLevel: number;
   price: number;
   category: string;
+  categoryDa: string;
   categoryId: number;
   isVegetarian: boolean;
   labels: string[];

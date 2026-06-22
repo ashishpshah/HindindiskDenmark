@@ -28,13 +28,27 @@ import { Route as MenuNameRouteImport } from './routes/menu.$name'
 import { Route as AdminReservationsRouteImport } from './routes/admin.reservations'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 import { Route as AdminOffersRouteImport } from './routes/admin.offers'
+import { Route as AdminMenusRouteImport } from './routes/admin.menus'
 import { Route as AdminMenuRouteImport } from './routes/admin.menu'
 import { Route as AdminCustomersRouteImport } from './routes/admin.customers'
+import { Route as AdminBranchesRouteImport } from './routes/admin.branches'
 import { Route as AccountReservationsRouteImport } from './routes/account.reservations'
 import { Route as AccountProfileRouteImport } from './routes/account.profile'
 import { Route as AccountOrdersRouteImport } from './routes/account.orders'
 import { Route as AccountCouponsRouteImport } from './routes/account.coupons'
 import { Route as AccountAddressesRouteImport } from './routes/account.addresses'
+import { Route as AdminOffersIndexRouteImport } from './routes/admin.offers.index'
+import { Route as AdminMenusIndexRouteImport } from './routes/admin.menus.index'
+import { Route as AdminMenuIndexRouteImport } from './routes/admin.menu.index'
+import { Route as AdminBranchesIndexRouteImport } from './routes/admin.branches.index'
+import { Route as AdminOffersNewRouteImport } from './routes/admin.offers.new'
+import { Route as AdminOffersOfferIdRouteImport } from './routes/admin.offers.$offerId'
+import { Route as AdminMenusNewRouteImport } from './routes/admin.menus.new'
+import { Route as AdminMenusMenuIdRouteImport } from './routes/admin.menus.$menuId'
+import { Route as AdminMenuNewRouteImport } from './routes/admin.menu.new'
+import { Route as AdminMenuItemIdRouteImport } from './routes/admin.menu.$itemId'
+import { Route as AdminBranchesNewRouteImport } from './routes/admin.branches.new'
+import { Route as AdminBranchesBranchIdRouteImport } from './routes/admin.branches.$branchId'
 
 const ReservationRoute = ReservationRouteImport.update({
   id: '/reservation',
@@ -131,6 +145,11 @@ const AdminOffersRoute = AdminOffersRouteImport.update({
   path: '/offers',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminMenusRoute = AdminMenusRouteImport.update({
+  id: '/menus',
+  path: '/menus',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminMenuRoute = AdminMenuRouteImport.update({
   id: '/menu',
   path: '/menu',
@@ -139,6 +158,11 @@ const AdminMenuRoute = AdminMenuRouteImport.update({
 const AdminCustomersRoute = AdminCustomersRouteImport.update({
   id: '/customers',
   path: '/customers',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminBranchesRoute = AdminBranchesRouteImport.update({
+  id: '/branches',
+  path: '/branches',
   getParentRoute: () => AdminRoute,
 } as any)
 const AccountReservationsRoute = AccountReservationsRouteImport.update({
@@ -166,6 +190,66 @@ const AccountAddressesRoute = AccountAddressesRouteImport.update({
   path: '/addresses',
   getParentRoute: () => AccountRoute,
 } as any)
+const AdminOffersIndexRoute = AdminOffersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminOffersRoute,
+} as any)
+const AdminMenusIndexRoute = AdminMenusIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminMenusRoute,
+} as any)
+const AdminMenuIndexRoute = AdminMenuIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminMenuRoute,
+} as any)
+const AdminBranchesIndexRoute = AdminBranchesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminBranchesRoute,
+} as any)
+const AdminOffersNewRoute = AdminOffersNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AdminOffersRoute,
+} as any)
+const AdminOffersOfferIdRoute = AdminOffersOfferIdRouteImport.update({
+  id: '/$offerId',
+  path: '/$offerId',
+  getParentRoute: () => AdminOffersRoute,
+} as any)
+const AdminMenusNewRoute = AdminMenusNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AdminMenusRoute,
+} as any)
+const AdminMenusMenuIdRoute = AdminMenusMenuIdRouteImport.update({
+  id: '/$menuId',
+  path: '/$menuId',
+  getParentRoute: () => AdminMenusRoute,
+} as any)
+const AdminMenuNewRoute = AdminMenuNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AdminMenuRoute,
+} as any)
+const AdminMenuItemIdRoute = AdminMenuItemIdRouteImport.update({
+  id: '/$itemId',
+  path: '/$itemId',
+  getParentRoute: () => AdminMenuRoute,
+} as any)
+const AdminBranchesNewRoute = AdminBranchesNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AdminBranchesRoute,
+} as any)
+const AdminBranchesBranchIdRoute = AdminBranchesBranchIdRouteImport.update({
+  id: '/$branchId',
+  path: '/$branchId',
+  getParentRoute: () => AdminBranchesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -185,15 +269,29 @@ export interface FileRoutesByFullPath {
   '/account/orders': typeof AccountOrdersRoute
   '/account/profile': typeof AccountProfileRoute
   '/account/reservations': typeof AccountReservationsRoute
+  '/admin/branches': typeof AdminBranchesRouteWithChildren
   '/admin/customers': typeof AdminCustomersRoute
-  '/admin/menu': typeof AdminMenuRoute
-  '/admin/offers': typeof AdminOffersRoute
+  '/admin/menu': typeof AdminMenuRouteWithChildren
+  '/admin/menus': typeof AdminMenusRouteWithChildren
+  '/admin/offers': typeof AdminOffersRouteWithChildren
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/reservations': typeof AdminReservationsRoute
   '/menu/$name': typeof MenuNameRoute
   '/account/': typeof AccountIndexRoute
   '/admin/': typeof AdminIndexRoute
   '/menu/': typeof MenuIndexRoute
+  '/admin/branches/$branchId': typeof AdminBranchesBranchIdRoute
+  '/admin/branches/new': typeof AdminBranchesNewRoute
+  '/admin/menu/$itemId': typeof AdminMenuItemIdRoute
+  '/admin/menu/new': typeof AdminMenuNewRoute
+  '/admin/menus/$menuId': typeof AdminMenusMenuIdRoute
+  '/admin/menus/new': typeof AdminMenusNewRoute
+  '/admin/offers/$offerId': typeof AdminOffersOfferIdRoute
+  '/admin/offers/new': typeof AdminOffersNewRoute
+  '/admin/branches/': typeof AdminBranchesIndexRoute
+  '/admin/menu/': typeof AdminMenuIndexRoute
+  '/admin/menus/': typeof AdminMenusIndexRoute
+  '/admin/offers/': typeof AdminOffersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -211,14 +309,24 @@ export interface FileRoutesByTo {
   '/account/profile': typeof AccountProfileRoute
   '/account/reservations': typeof AccountReservationsRoute
   '/admin/customers': typeof AdminCustomersRoute
-  '/admin/menu': typeof AdminMenuRoute
-  '/admin/offers': typeof AdminOffersRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/reservations': typeof AdminReservationsRoute
   '/menu/$name': typeof MenuNameRoute
   '/account': typeof AccountIndexRoute
   '/admin': typeof AdminIndexRoute
   '/menu': typeof MenuIndexRoute
+  '/admin/branches/$branchId': typeof AdminBranchesBranchIdRoute
+  '/admin/branches/new': typeof AdminBranchesNewRoute
+  '/admin/menu/$itemId': typeof AdminMenuItemIdRoute
+  '/admin/menu/new': typeof AdminMenuNewRoute
+  '/admin/menus/$menuId': typeof AdminMenusMenuIdRoute
+  '/admin/menus/new': typeof AdminMenusNewRoute
+  '/admin/offers/$offerId': typeof AdminOffersOfferIdRoute
+  '/admin/offers/new': typeof AdminOffersNewRoute
+  '/admin/branches': typeof AdminBranchesIndexRoute
+  '/admin/menu': typeof AdminMenuIndexRoute
+  '/admin/menus': typeof AdminMenusIndexRoute
+  '/admin/offers': typeof AdminOffersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -239,15 +347,29 @@ export interface FileRoutesById {
   '/account/orders': typeof AccountOrdersRoute
   '/account/profile': typeof AccountProfileRoute
   '/account/reservations': typeof AccountReservationsRoute
+  '/admin/branches': typeof AdminBranchesRouteWithChildren
   '/admin/customers': typeof AdminCustomersRoute
-  '/admin/menu': typeof AdminMenuRoute
-  '/admin/offers': typeof AdminOffersRoute
+  '/admin/menu': typeof AdminMenuRouteWithChildren
+  '/admin/menus': typeof AdminMenusRouteWithChildren
+  '/admin/offers': typeof AdminOffersRouteWithChildren
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/reservations': typeof AdminReservationsRoute
   '/menu/$name': typeof MenuNameRoute
   '/account/': typeof AccountIndexRoute
   '/admin/': typeof AdminIndexRoute
   '/menu/': typeof MenuIndexRoute
+  '/admin/branches/$branchId': typeof AdminBranchesBranchIdRoute
+  '/admin/branches/new': typeof AdminBranchesNewRoute
+  '/admin/menu/$itemId': typeof AdminMenuItemIdRoute
+  '/admin/menu/new': typeof AdminMenuNewRoute
+  '/admin/menus/$menuId': typeof AdminMenusMenuIdRoute
+  '/admin/menus/new': typeof AdminMenusNewRoute
+  '/admin/offers/$offerId': typeof AdminOffersOfferIdRoute
+  '/admin/offers/new': typeof AdminOffersNewRoute
+  '/admin/branches/': typeof AdminBranchesIndexRoute
+  '/admin/menu/': typeof AdminMenuIndexRoute
+  '/admin/menus/': typeof AdminMenusIndexRoute
+  '/admin/offers/': typeof AdminOffersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -269,8 +391,10 @@ export interface FileRouteTypes {
     | '/account/orders'
     | '/account/profile'
     | '/account/reservations'
+    | '/admin/branches'
     | '/admin/customers'
     | '/admin/menu'
+    | '/admin/menus'
     | '/admin/offers'
     | '/admin/orders'
     | '/admin/reservations'
@@ -278,6 +402,18 @@ export interface FileRouteTypes {
     | '/account/'
     | '/admin/'
     | '/menu/'
+    | '/admin/branches/$branchId'
+    | '/admin/branches/new'
+    | '/admin/menu/$itemId'
+    | '/admin/menu/new'
+    | '/admin/menus/$menuId'
+    | '/admin/menus/new'
+    | '/admin/offers/$offerId'
+    | '/admin/offers/new'
+    | '/admin/branches/'
+    | '/admin/menu/'
+    | '/admin/menus/'
+    | '/admin/offers/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -295,14 +431,24 @@ export interface FileRouteTypes {
     | '/account/profile'
     | '/account/reservations'
     | '/admin/customers'
-    | '/admin/menu'
-    | '/admin/offers'
     | '/admin/orders'
     | '/admin/reservations'
     | '/menu/$name'
     | '/account'
     | '/admin'
     | '/menu'
+    | '/admin/branches/$branchId'
+    | '/admin/branches/new'
+    | '/admin/menu/$itemId'
+    | '/admin/menu/new'
+    | '/admin/menus/$menuId'
+    | '/admin/menus/new'
+    | '/admin/offers/$offerId'
+    | '/admin/offers/new'
+    | '/admin/branches'
+    | '/admin/menu'
+    | '/admin/menus'
+    | '/admin/offers'
   id:
     | '__root__'
     | '/'
@@ -322,8 +468,10 @@ export interface FileRouteTypes {
     | '/account/orders'
     | '/account/profile'
     | '/account/reservations'
+    | '/admin/branches'
     | '/admin/customers'
     | '/admin/menu'
+    | '/admin/menus'
     | '/admin/offers'
     | '/admin/orders'
     | '/admin/reservations'
@@ -331,6 +479,18 @@ export interface FileRouteTypes {
     | '/account/'
     | '/admin/'
     | '/menu/'
+    | '/admin/branches/$branchId'
+    | '/admin/branches/new'
+    | '/admin/menu/$itemId'
+    | '/admin/menu/new'
+    | '/admin/menus/$menuId'
+    | '/admin/menus/new'
+    | '/admin/offers/$offerId'
+    | '/admin/offers/new'
+    | '/admin/branches/'
+    | '/admin/menu/'
+    | '/admin/menus/'
+    | '/admin/offers/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -483,6 +643,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminOffersRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/menus': {
+      id: '/admin/menus'
+      path: '/menus'
+      fullPath: '/admin/menus'
+      preLoaderRoute: typeof AdminMenusRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/menu': {
       id: '/admin/menu'
       path: '/menu'
@@ -495,6 +662,13 @@ declare module '@tanstack/react-router' {
       path: '/customers'
       fullPath: '/admin/customers'
       preLoaderRoute: typeof AdminCustomersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/branches': {
+      id: '/admin/branches'
+      path: '/branches'
+      fullPath: '/admin/branches'
+      preLoaderRoute: typeof AdminBranchesRouteImport
       parentRoute: typeof AdminRoute
     }
     '/account/reservations': {
@@ -532,6 +706,90 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountAddressesRouteImport
       parentRoute: typeof AccountRoute
     }
+    '/admin/offers/': {
+      id: '/admin/offers/'
+      path: '/'
+      fullPath: '/admin/offers/'
+      preLoaderRoute: typeof AdminOffersIndexRouteImport
+      parentRoute: typeof AdminOffersRoute
+    }
+    '/admin/menus/': {
+      id: '/admin/menus/'
+      path: '/'
+      fullPath: '/admin/menus/'
+      preLoaderRoute: typeof AdminMenusIndexRouteImport
+      parentRoute: typeof AdminMenusRoute
+    }
+    '/admin/menu/': {
+      id: '/admin/menu/'
+      path: '/'
+      fullPath: '/admin/menu/'
+      preLoaderRoute: typeof AdminMenuIndexRouteImport
+      parentRoute: typeof AdminMenuRoute
+    }
+    '/admin/branches/': {
+      id: '/admin/branches/'
+      path: '/'
+      fullPath: '/admin/branches/'
+      preLoaderRoute: typeof AdminBranchesIndexRouteImport
+      parentRoute: typeof AdminBranchesRoute
+    }
+    '/admin/offers/new': {
+      id: '/admin/offers/new'
+      path: '/new'
+      fullPath: '/admin/offers/new'
+      preLoaderRoute: typeof AdminOffersNewRouteImport
+      parentRoute: typeof AdminOffersRoute
+    }
+    '/admin/offers/$offerId': {
+      id: '/admin/offers/$offerId'
+      path: '/$offerId'
+      fullPath: '/admin/offers/$offerId'
+      preLoaderRoute: typeof AdminOffersOfferIdRouteImport
+      parentRoute: typeof AdminOffersRoute
+    }
+    '/admin/menus/new': {
+      id: '/admin/menus/new'
+      path: '/new'
+      fullPath: '/admin/menus/new'
+      preLoaderRoute: typeof AdminMenusNewRouteImport
+      parentRoute: typeof AdminMenusRoute
+    }
+    '/admin/menus/$menuId': {
+      id: '/admin/menus/$menuId'
+      path: '/$menuId'
+      fullPath: '/admin/menus/$menuId'
+      preLoaderRoute: typeof AdminMenusMenuIdRouteImport
+      parentRoute: typeof AdminMenusRoute
+    }
+    '/admin/menu/new': {
+      id: '/admin/menu/new'
+      path: '/new'
+      fullPath: '/admin/menu/new'
+      preLoaderRoute: typeof AdminMenuNewRouteImport
+      parentRoute: typeof AdminMenuRoute
+    }
+    '/admin/menu/$itemId': {
+      id: '/admin/menu/$itemId'
+      path: '/$itemId'
+      fullPath: '/admin/menu/$itemId'
+      preLoaderRoute: typeof AdminMenuItemIdRouteImport
+      parentRoute: typeof AdminMenuRoute
+    }
+    '/admin/branches/new': {
+      id: '/admin/branches/new'
+      path: '/new'
+      fullPath: '/admin/branches/new'
+      preLoaderRoute: typeof AdminBranchesNewRouteImport
+      parentRoute: typeof AdminBranchesRoute
+    }
+    '/admin/branches/$branchId': {
+      id: '/admin/branches/$branchId'
+      path: '/$branchId'
+      fullPath: '/admin/branches/$branchId'
+      preLoaderRoute: typeof AdminBranchesBranchIdRouteImport
+      parentRoute: typeof AdminBranchesRoute
+    }
   }
 }
 
@@ -556,19 +814,87 @@ const AccountRouteChildren: AccountRouteChildren = {
 const AccountRouteWithChildren =
   AccountRoute._addFileChildren(AccountRouteChildren)
 
+interface AdminBranchesRouteChildren {
+  AdminBranchesBranchIdRoute: typeof AdminBranchesBranchIdRoute
+  AdminBranchesNewRoute: typeof AdminBranchesNewRoute
+  AdminBranchesIndexRoute: typeof AdminBranchesIndexRoute
+}
+
+const AdminBranchesRouteChildren: AdminBranchesRouteChildren = {
+  AdminBranchesBranchIdRoute: AdminBranchesBranchIdRoute,
+  AdminBranchesNewRoute: AdminBranchesNewRoute,
+  AdminBranchesIndexRoute: AdminBranchesIndexRoute,
+}
+
+const AdminBranchesRouteWithChildren = AdminBranchesRoute._addFileChildren(
+  AdminBranchesRouteChildren,
+)
+
+interface AdminMenuRouteChildren {
+  AdminMenuItemIdRoute: typeof AdminMenuItemIdRoute
+  AdminMenuNewRoute: typeof AdminMenuNewRoute
+  AdminMenuIndexRoute: typeof AdminMenuIndexRoute
+}
+
+const AdminMenuRouteChildren: AdminMenuRouteChildren = {
+  AdminMenuItemIdRoute: AdminMenuItemIdRoute,
+  AdminMenuNewRoute: AdminMenuNewRoute,
+  AdminMenuIndexRoute: AdminMenuIndexRoute,
+}
+
+const AdminMenuRouteWithChildren = AdminMenuRoute._addFileChildren(
+  AdminMenuRouteChildren,
+)
+
+interface AdminMenusRouteChildren {
+  AdminMenusMenuIdRoute: typeof AdminMenusMenuIdRoute
+  AdminMenusNewRoute: typeof AdminMenusNewRoute
+  AdminMenusIndexRoute: typeof AdminMenusIndexRoute
+}
+
+const AdminMenusRouteChildren: AdminMenusRouteChildren = {
+  AdminMenusMenuIdRoute: AdminMenusMenuIdRoute,
+  AdminMenusNewRoute: AdminMenusNewRoute,
+  AdminMenusIndexRoute: AdminMenusIndexRoute,
+}
+
+const AdminMenusRouteWithChildren = AdminMenusRoute._addFileChildren(
+  AdminMenusRouteChildren,
+)
+
+interface AdminOffersRouteChildren {
+  AdminOffersOfferIdRoute: typeof AdminOffersOfferIdRoute
+  AdminOffersNewRoute: typeof AdminOffersNewRoute
+  AdminOffersIndexRoute: typeof AdminOffersIndexRoute
+}
+
+const AdminOffersRouteChildren: AdminOffersRouteChildren = {
+  AdminOffersOfferIdRoute: AdminOffersOfferIdRoute,
+  AdminOffersNewRoute: AdminOffersNewRoute,
+  AdminOffersIndexRoute: AdminOffersIndexRoute,
+}
+
+const AdminOffersRouteWithChildren = AdminOffersRoute._addFileChildren(
+  AdminOffersRouteChildren,
+)
+
 interface AdminRouteChildren {
+  AdminBranchesRoute: typeof AdminBranchesRouteWithChildren
   AdminCustomersRoute: typeof AdminCustomersRoute
-  AdminMenuRoute: typeof AdminMenuRoute
-  AdminOffersRoute: typeof AdminOffersRoute
+  AdminMenuRoute: typeof AdminMenuRouteWithChildren
+  AdminMenusRoute: typeof AdminMenusRouteWithChildren
+  AdminOffersRoute: typeof AdminOffersRouteWithChildren
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminReservationsRoute: typeof AdminReservationsRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminBranchesRoute: AdminBranchesRouteWithChildren,
   AdminCustomersRoute: AdminCustomersRoute,
-  AdminMenuRoute: AdminMenuRoute,
-  AdminOffersRoute: AdminOffersRoute,
+  AdminMenuRoute: AdminMenuRouteWithChildren,
+  AdminMenusRoute: AdminMenusRouteWithChildren,
+  AdminOffersRoute: AdminOffersRouteWithChildren,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminReservationsRoute: AdminReservationsRoute,
   AdminIndexRoute: AdminIndexRoute,

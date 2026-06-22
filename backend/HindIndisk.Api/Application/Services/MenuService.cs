@@ -15,7 +15,7 @@ public class MenuService : IMenuService
         return await _db.Menus
             .Where(m => m.IsActive && m.MenuItemsMappings.Any())
             .OrderBy(m => m.Id)
-            .Select(m => new MenuCategoryDto(m.Id, m.Name, m.Description, m.MenuItemsMappings.Count))
+            .Select(m => new MenuCategoryDto(m.Id, m.Name, m.NameDa, m.Description, m.DescriptionDa, m.MenuItemsMappings.Count))
             .AsNoTracking()
             .ToListAsync();
     }
@@ -36,7 +36,9 @@ public class MenuService : IMenuService
         if (!string.IsNullOrWhiteSpace(q))
             query = query.Where(m =>
                 m.MenuItem.Name.Contains(q) ||
-                m.MenuItem.Description.Contains(q));
+                m.MenuItem.NameDa.Contains(q) ||
+                m.MenuItem.Description.Contains(q) ||
+                m.MenuItem.DescriptionDa.Contains(q));
 
         if (veg == true)
             query = query.Where(m =>
@@ -47,10 +49,13 @@ public class MenuService : IMenuService
             {
                 m.MenuItem.Id,
                 m.MenuItem.Name,
+                m.MenuItem.NameDa,
                 m.MenuItem.Description,
+                m.MenuItem.DescriptionDa,
                 m.MenuItem.ImageUrl,
                 m.MenuItem.SpicyLevel,
                 CategoryName = m.Menu.Name,
+                CategoryDa   = m.Menu.NameDa,
                 CategoryId   = m.Menu.Id,
             })
             .Distinct()
@@ -80,8 +85,8 @@ public class MenuService : IMenuService
             var labels  = labelsByItem.GetValueOrDefault(r.Id, []);
             var isVeg   = labels.Contains("Vegetarian");
             var price   = priceMap.GetValueOrDefault(r.Id, 0m);
-            return new MenuItemDto(r.Id, r.Name, r.Description, r.ImageUrl,
-                r.SpicyLevel, price, r.CategoryName, r.CategoryId, isVeg, labels);
+            return new MenuItemDto(r.Id, r.Name, r.NameDa, r.Description, r.DescriptionDa,
+                r.ImageUrl, r.SpicyLevel, price, r.CategoryName, r.CategoryDa, r.CategoryId, isVeg, labels);
         }).ToList();
     }
 
@@ -95,10 +100,13 @@ public class MenuService : IMenuService
             {
                 m.MenuItem.Id,
                 m.MenuItem.Name,
+                m.MenuItem.NameDa,
                 m.MenuItem.Description,
+                m.MenuItem.DescriptionDa,
                 m.MenuItem.ImageUrl,
                 m.MenuItem.SpicyLevel,
                 CategoryName = m.Menu.Name,
+                CategoryDa   = m.Menu.NameDa,
                 CategoryId   = m.Menu.Id,
             })
             .AsNoTracking()
@@ -114,10 +122,13 @@ public class MenuService : IMenuService
             {
                 m.MenuItem.Id,
                 m.MenuItem.Name,
+                m.MenuItem.NameDa,
                 m.MenuItem.Description,
+                m.MenuItem.DescriptionDa,
                 m.MenuItem.ImageUrl,
                 m.MenuItem.SpicyLevel,
                 CategoryName = m.Menu.Name,
+                CategoryDa   = m.Menu.NameDa,
                 CategoryId   = m.Menu.Id,
             })
             .AsNoTracking()
@@ -144,9 +155,12 @@ public class MenuService : IMenuService
         MenuItemDto ToDto(dynamic r)
         {
             var labels = labelsByItem.GetValueOrDefault((long)r.Id, []);
-            return new MenuItemDto((long)r.Id, (string)r.Name, (string)r.Description,
-                (string)r.ImageUrl, (int)r.SpicyLevel, priceMap.GetValueOrDefault((long)r.Id, 0m),
-                (string)r.CategoryName, (long)r.CategoryId,
+            return new MenuItemDto(
+                (long)r.Id, (string)r.Name, (string)r.NameDa,
+                (string)r.Description, (string)r.DescriptionDa,
+                (string)r.ImageUrl, (int)r.SpicyLevel,
+                priceMap.GetValueOrDefault((long)r.Id, 0m),
+                (string)r.CategoryName, (string)r.CategoryDa, (long)r.CategoryId,
                 labels.Contains("Vegetarian"), labels);
         }
 

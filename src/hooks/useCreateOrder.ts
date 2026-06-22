@@ -6,9 +6,10 @@ export type CreateOrderRequest = {
   orderType: "Pickup" | "Delivery";
   couponCode?: string;
   items: { menuItemId: number; quantity: number }[];
-  contactName: string;
-  contactPhone: string;
-  contactEmail?: string;
+  firstname: string;
+  lastname: string;
+  phone: string;
+  email?: string;
   deliveryAddress?: string;
 };
 

@@ -4,7 +4,9 @@ import { apiFetch } from "@/lib/api/client";
 export type MenuCategoryDto = {
   id: number;
   name: string;
+  nameDa: string;
   description: string;
+  descriptionDa: string;
   itemCount: number;
 };
 

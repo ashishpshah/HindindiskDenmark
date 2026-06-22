@@ -5,10 +5,12 @@ import { ChevronLeft, Plus, Minus, Leaf, Flame, Star, MapPin, ShoppingBag } from
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
+import { MenuItemPhoto } from "@/components/MenuItemPhoto";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useMenuItem } from "@/hooks/useMenuItem";
 import { useBranches } from "@/hooks/useBranches";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export const Route = createFileRoute("/menu/$name")({
   head: ({ params }) => {
@@ -28,6 +30,9 @@ function DishDetailsPage() {
   const decodedName   = decodeURIComponent(name);
 
   const { add, totalQty, total, setOpen: setCartOpen, branch, setBranch } = useCart();
+  const { lang } = useI18n();
+  const da = lang === "da";
+  const loc = (en: string, daVal?: string | null) => (da && daVal) ? daVal : en;
 
   const { data: branchesData = [] }                 = useBranches();
   const currentBranchId                             = branchesData.find((b) => b.name === branch)?.id;
@@ -72,7 +77,7 @@ function DishDetailsPage() {
       setShowLocationPrompt(true);
     } else {
       add(dish, qty);
-      toast.success(`${qty}× ${dish.name} added to cart`);
+      toast.success(`${qty}× ${loc(dish.name, dish.nameDa)} added to cart`);
     }
   };
 
@@ -80,7 +85,7 @@ function DishDetailsPage() {
     setBranch(selectedBranch);
     setShowLocationPrompt(false);
     add(dish, qty);
-    toast.success(`${qty}× ${dish.name} added to cart from ${selectedBranch}`);
+    toast.success(`${qty}× ${loc(dish.name, dish.nameDa)} added to cart from ${selectedBranch}`);
   };
 
   return (
@@ -92,7 +97,7 @@ function DishDetailsPage() {
 
         <div className="grid gap-12 md:grid-cols-2 items-center">
           <div className="relative aspect-[4/3] overflow-hidden rounded-3xl shadow-elegant bg-accent">
-            <img src={dish.imageUrl} alt={dish.name} className="h-full w-full object-cover" />
+            <MenuItemPhoto src={dish.imageUrl} alt={dish.name} className="h-full w-full object-cover" />
             <div className="absolute left-4 top-4 flex gap-1.5">
               {dish.isVegetarian && (
                 <span className="rounded-full bg-green-600/95 px-3 py-1 text-xs font-semibold uppercase text-white flex items-center gap-1 shadow-md">
@@ -107,8 +112,8 @@ function DishDetailsPage() {
 
           <div className="space-y-6">
             <div>
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{dish.category}</span>
-              <h1 className="mt-2 font-display text-4xl sm:text-5xl font-bold">{dish.name}</h1>
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{loc(dish.category, dish.categoryDa)}</span>
+              <h1 className="mt-2 font-display text-4xl sm:text-5xl font-bold">{loc(dish.name, dish.nameDa)}</h1>
               <div className="mt-3 inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1 text-sm text-foreground/80">
                 <Star className="h-4 w-4 fill-primary text-primary" /> 4.9 · Recommended
               </div>
@@ -116,7 +121,7 @@ function DishDetailsPage() {
 
             <div className="font-display text-3xl font-bold text-primary">{dish.price} DKK</div>
 
-            <p className="text-muted-foreground text-lg leading-relaxed">{dish.description}</p>
+            <p className="text-muted-foreground text-lg leading-relaxed">{loc(dish.description, dish.descriptionDa)}</p>
 
             <div className="border-t pt-6">
               <div className="flex flex-wrap items-center gap-4">
@@ -158,7 +163,7 @@ function DishDetailsPage() {
               {related.map((m) => (
                 <div key={m.id} className="group overflow-hidden rounded-3xl border bg-card shadow-soft transition hover:shadow-elegant flex flex-col">
                   <Link to="/menu/$name" params={{ name: m.name }} className="relative h-48 overflow-hidden block">
-                    <img src={m.imageUrl} alt={m.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-110" />
+                    <MenuItemPhoto src={m.imageUrl} alt={m.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-110" />
                     <div className="absolute left-3 top-3 flex gap-1.5">
                       {m.isVegetarian && (
                         <span className="rounded-full bg-green-600/95 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
@@ -174,11 +179,11 @@ function DishDetailsPage() {
                     <div>
                       <div className="flex items-start justify-between gap-3">
                         <Link to="/menu/$name" params={{ name: m.name }} className="hover:text-primary transition">
-                          <div className="font-display text-xl font-semibold">{m.name}</div>
+                          <div className="font-display text-xl font-semibold">{loc(m.name, m.nameDa)}</div>
                         </Link>
                         <div className="font-display text-lg text-primary">{m.price} DKK</div>
                       </div>
-                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{m.description}</p>
+                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{loc(m.description, m.descriptionDa)}</p>
                     </div>
                     <div className="mt-4 pt-3 border-t">
                       <Button asChild variant="outline" size="sm" className="w-full rounded-full cursor-pointer hover:bg-primary hover:text-white transition-colors">

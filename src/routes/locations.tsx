@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { MapPin, Phone, Clock, Star, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { MapPin, Phone, Clock, Star, ArrowRight, CheckCircle2, Loader2, UserCheck } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { PageHero } from "@/components/PageHero";
 import { Button } from "@/components/ui/button";
 import { useBranches } from "@/hooks/useBranches";
 import { useCreateReservation } from "@/hooks/useCreateReservation";
+import { useCustomerLookup } from "@/hooks/useCustomerLookup";
 import { useCart } from "@/context/CartContext";
 import {
   Dialog,
@@ -46,18 +47,24 @@ function LocationsPage() {
   const [bookingBranch, setBookingBranch] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [form, setForm] = useState({
-    branch: "",
-    guests: "2",
-    date: "",
-    time: "19:00",
-    name: "",
-    phone: "",
-    email: "",
-    note: "",
+    branch: "", guests: "2", date: "", time: "19:00",
+    firstname: "", lastname: "", phone: "", email: "", note: "",
   });
 
+  const { data: customer, isFetching: lookingUp } = useCustomerLookup(form.phone);
+
+  useEffect(() => {
+    if (!customer) return;
+    setForm(prev => ({
+      ...prev,
+      firstname: prev.firstname || customer.firstname,
+      lastname:  prev.lastname  || customer.lastname,
+      email:     prev.email     || customer.email || "",
+    }));
+  }, [customer]);
+
   const openBookingModal = (branchName: string) => {
-    setForm({ branch: branchName, guests: "2", date: "", time: "19:00", name: "", phone: "", email: "", note: "" });
+    setForm({ branch: branchName, guests: "2", date: "", time: "19:00", firstname: "", lastname: "", phone: "", email: "", note: "" });
     setBookingBranch(branchName);
     setDone(false);
   };
@@ -68,13 +75,14 @@ function LocationsPage() {
     if (!selectedBranch) return;
     try {
       await createReservation.mutateAsync({
-        branchId:       selectedBranch.id,
-        date:           form.date,
-        timeSlot:       form.time,
-        guestCount:     Number(form.guests),
-        contactName:    form.name,
-        contactPhone:   form.phone,
-        contactEmail:   form.email,
+        branchId:        selectedBranch.id,
+        date:            form.date,
+        timeSlot:        form.time,
+        guestCount:      Number(form.guests),
+        firstname:       form.firstname,
+        lastname:        form.lastname,
+        phone:           form.phone,
+        email:           form.email || undefined,
         specialRequests: form.note || undefined,
       });
       setDone(true);
@@ -186,15 +194,28 @@ function LocationsPage() {
                   <Field label="Time">
                     <Input type="time" required value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
                   </Field>
-                  <Field label="Full Name">
-                    <Input required placeholder="Your name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                  <div className="sm:col-span-2">
+                    <div className="relative">
+                      <Field label="Phone *">
+                        <Input required type="tel" placeholder="+45 …" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                      </Field>
+                      {lookingUp && <Loader2 className="absolute right-3 top-9 h-4 w-4 animate-spin text-muted-foreground" />}
+                      {customer && !lookingUp && (
+                        <div className="mt-1 flex items-center gap-1.5 text-xs text-green-600">
+                          <UserCheck className="h-3.5 w-3.5" /> Customer found — details filled in
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <Field label="First name *">
+                    <Input required placeholder="First name" value={form.firstname} onChange={(e) => setForm({ ...form, firstname: e.target.value })} />
                   </Field>
-                  <Field label="Phone">
-                    <Input required type="tel" placeholder="+45 …" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                  <Field label="Last name *">
+                    <Input required placeholder="Last name" value={form.lastname} onChange={(e) => setForm({ ...form, lastname: e.target.value })} />
                   </Field>
                   <div className="sm:col-span-2">
-                    <Field label="Email">
-                      <Input required type="email" placeholder="you@email.dk" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                    <Field label="Email (optional)">
+                      <Input type="email" placeholder="you@email.dk" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                     </Field>
                   </div>
                   <div className="sm:col-span-2">

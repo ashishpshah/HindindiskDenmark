@@ -1,138 +1,135 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Fragment, useEffect, useState } from "react";
-import { Loader2, Search, ChevronDown, ChevronUp, ShoppingBag, CalendarCheck } from "lucide-react";
-import { useAdminCustomers, useAdminCustomerDetail } from "@/hooks/useAdminCustomers";
+import { useState } from "react";
+import { Loader2, Search } from "lucide-react";
+import { useAdminCustomers, useAdminCustomerDetail, type AdminCustomerDto } from "@/hooks/useAdminCustomers";
+import { DataTable, type ColumnDef, type Row } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 
-export const Route = createFileRoute("/admin/customers")({
-  component: AdminCustomers,
-});
+export const Route = createFileRoute("/admin/customers")({ component: AdminCustomers });
+
+const ORDER_STATUS_COLORS: Record<string, string> = {
+  Completed:  "bg-green-100 text-green-700",
+  Cancelled:  "bg-red-100 text-red-700",
+  Preparing:  "bg-amber-100 text-amber-700",
+};
+
+function CustomerExpandedRow({ customerId }: { customerId: number }) {
+  const { data: detail, isLoading } = useAdminCustomerDetail(customerId);
+  if (isLoading) return (
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <Loader2 className="h-4 w-4 animate-spin" /> Loading orders…
+    </div>
+  );
+  if (!detail || detail.orders.length === 0) return (
+    <p className="text-xs text-muted-foreground">No orders yet.</p>
+  );
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Order History</p>
+      {detail.orders.map(o => (
+        <div key={o.id} className="flex items-center justify-between rounded-lg border bg-card px-4 py-2 text-sm">
+          <div className="flex items-center gap-4">
+            <span className="font-mono text-xs text-muted-foreground">#{o.id}</span>
+            <span className="text-muted-foreground">{o.branchName.replace("Hind Indisk ", "")}</span>
+            <span className="text-muted-foreground">{o.orderType}</span>
+            <span className="text-xs text-muted-foreground">{o.itemCount} item{o.itemCount !== 1 ? "s" : ""}</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${ORDER_STATUS_COLORS[o.status] ?? "bg-blue-100 text-blue-700"}`}>
+              {o.status}
+            </span>
+            <span className="font-semibold">{o.total.toFixed(0)} DKK</span>
+            {/* B6 fixed: da-DK locale */}
+            <span className="text-xs text-muted-foreground">
+              {new Date(o.createdAt).toLocaleDateString("da-DK", { day: "2-digit", month: "short" })}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function AdminCustomers() {
-  const [search,         setSearch]         = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [expanded,       setExpanded]       = useState<number | null>(null);
+  // F2 fixed: server-side search wired to useAdminCustomers(q)
+  const [q, setQ] = useState("");
+  const { data: customers = [], isLoading, refetch } = useAdminCustomers(q || undefined);
 
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search), 300);
-    return () => clearTimeout(t);
-  }, [search]);
+  const columns: ColumnDef<AdminCustomerDto, unknown>[] = [
+    {
+      accessorKey: "name",
+      header: "Name",
+      cell: info => <span className="font-medium">{info.getValue<string>()}</span>,
+    },
+    {
+      accessorKey: "email",
+      header: "Email",
+      cell: info => <span className="text-muted-foreground">{info.getValue<string>()}</span>,
+    },
+    {
+      accessorKey: "phone",
+      header: "Phone",
+      cell: info => <span className="text-muted-foreground">{info.getValue<string>() || "—"}</span>,
+    },
+    {
+      accessorKey: "createdAt",
+      header: "Joined",
+      // B6 fixed: da-DK locale
+      cell: info => (
+        <span className="text-xs text-muted-foreground">
+          {new Date(info.getValue<string>()).toLocaleDateString("da-DK", { day: "2-digit", month: "short", year: "numeric" })}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "orderCount",
+      header: "Orders",
+      cell: info => <span className="tabular-nums">{info.getValue<number>()}</span>,
+    },
+    {
+      accessorKey: "reservationCount",
+      header: "Reservations",
+      cell: info => <span className="tabular-nums">{info.getValue<number>()}</span>,
+    },
+    {
+      accessorKey: "totalSpend",
+      header: "Total Spend",
+      cell: info => (
+        <span className="font-semibold tabular-nums text-primary">
+          {info.getValue<number>().toFixed(0)} DKK
+        </span>
+      ),
+    },
+    // W1 fixed: removed always-active Status column (no real isActive field in DTO)
+  ];
 
-  const { data: customers = [], isLoading } = useAdminCustomers(debouncedSearch || undefined);
-  const { data: detail, isLoading: detailLoading } = useAdminCustomerDetail(expanded);
-
-  const toggle = (id: number) => setExpanded((prev) => (prev === id ? null : id));
+  const toolbar = (
+    <div className="relative">
+      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+      <Input
+        placeholder="Search customers…"
+        value={q}
+        onChange={e => setQ(e.target.value)}
+        className="pl-8 h-8 w-52 text-sm"
+      />
+    </div>
+  );
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-display text-3xl font-bold">Customers</h1>
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name or email…"
-            className="pl-9"
-          />
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div className="flex items-center gap-2 text-muted-foreground py-10">
-          <Loader2 className="h-5 w-5 animate-spin" /> Loading customers…
-        </div>
-      ) : customers.length === 0 ? (
-        <div className="rounded-2xl border bg-card p-10 text-center text-muted-foreground">
-          No customers found.
-        </div>
-      ) : (
-        <div className="overflow-hidden rounded-2xl border bg-card shadow-soft">
-          <table className="w-full text-sm">
-            <thead className="border-b bg-muted/50">
-              <tr>
-                {["Name", "Email", "Phone", "Joined", "Orders", "Reservations", "Total Spend", ""].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left font-medium text-muted-foreground">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {customers.map((c) => (
-                <Fragment key={c.id}>
-                  <tr className="hover:bg-muted/30 transition">
-                    <td className="px-4 py-3 font-medium">{c.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{c.email}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{c.phone || "—"}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {new Date(c.createdAt).toLocaleDateString("en-DK", { day: "2-digit", month: "short", year: "numeric" })}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <ShoppingBag className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{c.orderCount}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <CalendarCheck className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{c.reservationCount}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 font-semibold text-primary">{c.totalSpend.toFixed(0)} DKK</td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => toggle(c.id)}
-                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition"
-                      >
-                        {expanded === c.id ? <><ChevronUp className="h-3.5 w-3.5" /> Hide</> : <><ChevronDown className="h-3.5 w-3.5" /> Orders</>}
-                      </button>
-                    </td>
-                  </tr>
-
-                  {expanded === c.id && (
-                    <tr className="bg-muted/10">
-                      <td colSpan={8} className="px-8 py-4">
-                        {detailLoading ? (
-                          <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                            <Loader2 className="h-4 w-4 animate-spin" /> Loading orders…
-                          </div>
-                        ) : !detail || detail.orders.length === 0 ? (
-                          <div className="text-xs text-muted-foreground">No orders yet.</div>
-                        ) : (
-                          <div className="space-y-2">
-                            {detail.orders.map((o) => (
-                              <div key={o.id} className="flex items-center justify-between rounded-lg border bg-card px-4 py-2 text-sm">
-                                <div className="flex items-center gap-4">
-                                  <span className="font-mono text-xs text-muted-foreground">#{o.id}</span>
-                                  <span className="text-muted-foreground">{o.branchName.replace("Hind Indisk ", "")}</span>
-                                  <span className="text-muted-foreground">{o.orderType}</span>
-                                  <span className="text-xs text-muted-foreground">{o.itemCount} item{o.itemCount !== 1 ? "s" : ""}</span>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                                    o.status === "Completed"  ? "bg-green-100 text-green-700"  :
-                                    o.status === "Cancelled"  ? "bg-red-100 text-red-700"      :
-                                    o.status === "Preparing"  ? "bg-amber-100 text-amber-700"  :
-                                    "bg-blue-100 text-blue-700"
-                                  }`}>{o.status}</span>
-                                  <span className="font-semibold">{o.total.toFixed(0)} DKK</span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {new Date(o.createdAt).toLocaleDateString("en-DK", { day: "2-digit", month: "short" })}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+    <div className="space-y-4">
+      <h1 className="font-display text-3xl font-bold">Customers</h1>
+      <DataTable
+        title="Customers"
+        columns={columns}
+        data={customers}
+        isLoading={isLoading}
+        getRowId={row => String(row.id)}
+        toolbar={toolbar}
+        onRefresh={refetch}
+        expandedRow={(row: Row<AdminCustomerDto>) => (
+          <CustomerExpandedRow customerId={row.original.id} />
+        )}
+      />
     </div>
   );
 }

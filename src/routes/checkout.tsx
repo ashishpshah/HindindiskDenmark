@@ -1,18 +1,20 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronLeft, ChevronRight, Truck, Store, MapPin, CheckCircle2, Loader2, Banknote } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Truck, Store, MapPin, CheckCircle2, Loader2, Banknote, UserCheck } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { PageHero } from "@/components/PageHero";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/FormField";
 import { OrderSummary } from "@/components/OrderSummary";
+import { AddressSelectDialog } from "@/components/AddressSelectDialog";
 import { useCart } from "@/context/CartContext";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
 import { useBranches } from "@/hooks/useBranches";
 import { useCreateOrder, type OrderDto } from "@/hooks/useCreateOrder";
+import { useCustomerLookup, type CustomerAddress } from "@/hooks/useCustomerLookup";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({
@@ -23,6 +25,16 @@ export const Route = createFileRoute("/checkout")({
   }),
   component: CheckoutPage,
 });
+
+type Details = {
+  firstname: string;
+  lastname: string;
+  phone: string;
+  email: string;
+  street: string;
+  city: string;
+  postal: string;
+};
 
 function CheckoutPage() {
   const { t }     = useI18n();
@@ -35,11 +47,31 @@ function CheckoutPage() {
   const [step, setStep]                     = useState(1);
   const [done, setDone]                     = useState(false);
   const [confirmedOrder, setConfirmedOrder] = useState<OrderDto | null>(null);
-  const [details, setDetails]               = useState({ name: "", phone: "", email: "", street: "", city: "", postal: "" });
+  const [details, setDetails]               = useState<Details>({
+    firstname: "", lastname: "", phone: "", email: "",
+    street: "", city: "", postal: "",
+  });
+  const [addressDialogOpen, setAddressDialogOpen] = useState(false);
+  const [savedAddresses, setSavedAddresses]         = useState<CustomerAddress[]>([]);
 
   const { data: branchesData = [] } = useBranches();
   const currentBranch               = branchesData.find((b) => b.name === branch);
   const createOrder                 = useCreateOrder();
+
+  // Customer lookup — fires 600ms after phone stops changing
+  const { data: customer, isFetching: lookingUp } = useCustomerLookup(details.phone);
+
+  // Auto-fill fields when a matching customer is found
+  useEffect(() => {
+    if (!customer) { setSavedAddresses([]); return; }
+    setSavedAddresses(customer.addresses);
+    setDetails(prev => ({
+      ...prev,
+      firstname: prev.firstname || customer.firstname,
+      lastname:  prev.lastname  || customer.lastname,
+      email:     prev.email     || customer.email || "",
+    }));
+  }, [customer]);
 
   const ALL_STEPS = [
     { id: 1, label: t("checkout.step1") },
@@ -57,19 +89,38 @@ function CheckoutPage() {
       if (!branch) { toast.error("Please select a branch."); return; }
     }
     if (step === 3) {
-      if (!details.name.trim())  { toast.error("Please enter your name.");          return; }
-      if (!details.phone.trim()) { toast.error("Please enter your phone number.");  return; }
+      if (!details.firstname.trim()) { toast.error("Please enter your first name.");   return; }
+      if (!details.lastname.trim())  { toast.error("Please enter your last name.");    return; }
+      if (!details.phone.trim())     { toast.error("Please enter your phone number."); return; }
     }
     if (step === 4) {
       if (!details.street.trim()) { toast.error("Please enter your street address."); return; }
       if (!details.city.trim())   { toast.error("Please enter your city.");           return; }
       if (!details.postal.trim()) { toast.error("Please enter your postal code.");    return; }
     }
-    if (currentIdx < activeSteps.length - 1) setStep(activeSteps[currentIdx + 1].id);
+
+    const nextStep = activeSteps[currentIdx + 1];
+    if (!nextStep) return;
+
+    // Open address selection dialog when entering delivery-address step and customer has saved addresses
+    if (nextStep.id === 4 && orderType === "delivery" && savedAddresses.length > 0) {
+      setAddressDialogOpen(true);
+    }
+
+    if (currentIdx < activeSteps.length - 1) setStep(nextStep.id);
   };
 
   const back = () => {
     if (currentIdx > 0) setStep(activeSteps[currentIdx - 1].id);
+  };
+
+  const handleAddressSelect = (addr: CustomerAddress) => {
+    setDetails(prev => ({
+      ...prev,
+      street: [addr.addressLine1, addr.addressLine2].filter(Boolean).join(", "),
+      city:   addr.city,
+      postal: addr.postalCode,
+    }));
   };
 
   const place = async () => {
@@ -86,13 +137,14 @@ function CheckoutPage() {
 
     try {
       const order = await createOrder.mutateAsync({
-        branchId:        currentBranch.id,
-        orderType:       orderType === "delivery" ? "Delivery" : "Pickup",
-        couponCode:      coupon ?? undefined,
-        items:           orderItems,
-        contactName:     details.name.trim(),
-        contactPhone:    details.phone.trim(),
-        contactEmail:    details.email.trim() || undefined,
+        branchId:       currentBranch.id,
+        orderType:      orderType === "delivery" ? "Delivery" : "Pickup",
+        couponCode:     coupon ?? undefined,
+        items:          orderItems,
+        firstname:      details.firstname.trim(),
+        lastname:       details.lastname.trim(),
+        phone:          details.phone.trim(),
+        email:          details.email.trim() || undefined,
         deliveryAddress,
       });
       setConfirmedOrder(order);
@@ -142,6 +194,8 @@ function CheckoutPage() {
           <div className="rounded-3xl border bg-card p-6 sm:p-8 shadow-soft">
             <AnimatePresence mode="wait">
               <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+
+                {/* Step 1 — Branch */}
                 {step === 1 && (
                   <div className="space-y-4">
                     <h2 className="font-display text-2xl font-semibold">{t("checkout.step1")}</h2>
@@ -157,6 +211,8 @@ function CheckoutPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Step 2 — Order type */}
                 {step === 2 && (
                   <div className="space-y-4">
                     <h2 className="font-display text-2xl font-semibold">{t("checkout.step2")}</h2>
@@ -174,30 +230,113 @@ function CheckoutPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Step 3 — Contact details */}
                 {step === 3 && (
                   <div className="space-y-4">
                     <h2 className="font-display text-2xl font-semibold">{t("checkout.step3")}</h2>
+
+                    {/* Phone first — triggers customer lookup */}
+                    <div className="relative">
+                      <FormField label="Phone *">
+                        <Input
+                          required
+                          type="tel"
+                          placeholder="+45 …"
+                          value={details.phone}
+                          onChange={(e) => setDetails({ ...details, phone: e.target.value })}
+                        />
+                      </FormField>
+                      {lookingUp && (
+                        <Loader2 className="absolute right-3 top-9 h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                      {customer && !lookingUp && (
+                        <div className="mt-1 flex items-center gap-1.5 text-xs text-green-600">
+                          <UserCheck className="h-3.5 w-3.5" />
+                          Customer found — details filled in
+                        </div>
+                      )}
+                    </div>
+
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <FormField label="Name *"><Input required value={details.name} onChange={(e) => setDetails({ ...details, name: e.target.value })} /></FormField>
-                      <FormField label="Phone *"><Input required type="tel" value={details.phone} onChange={(e) => setDetails({ ...details, phone: e.target.value })} placeholder="+45 …" /></FormField>
+                      <FormField label="First name *">
+                        <Input
+                          required
+                          value={details.firstname}
+                          onChange={(e) => setDetails({ ...details, firstname: e.target.value })}
+                        />
+                      </FormField>
+                      <FormField label="Last name *">
+                        <Input
+                          required
+                          value={details.lastname}
+                          onChange={(e) => setDetails({ ...details, lastname: e.target.value })}
+                        />
+                      </FormField>
                       <div className="sm:col-span-2">
                         <FormField label="Email (for confirmation)">
-                          <Input type="email" value={details.email} onChange={(e) => setDetails({ ...details, email: e.target.value })} placeholder="optional" />
+                          <Input
+                            type="email"
+                            value={details.email}
+                            onChange={(e) => setDetails({ ...details, email: e.target.value })}
+                            placeholder="optional"
+                          />
                         </FormField>
                       </div>
                     </div>
                   </div>
                 )}
+
+                {/* Step 4 — Delivery address */}
                 {step === 4 && orderType === "delivery" && (
                   <div className="space-y-4">
                     <h2 className="font-display text-2xl font-semibold">{t("checkout.step4")}</h2>
+
+                    {/* Saved address pills — quick re-select without re-opening dialog */}
+                    {savedAddresses.length > 0 && (
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Saved addresses
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {savedAddresses.map((addr) => {
+                            const label = `${addr.addressLine1}, ${addr.postalCode} ${addr.city}`;
+                            const isActive = details.street.startsWith(addr.addressLine1);
+                            return (
+                              <button
+                                key={addr.id}
+                                type="button"
+                                onClick={() => handleAddressSelect(addr)}
+                                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition
+                                  ${isActive ? "gradient-primary text-primary-foreground border-transparent" : "bg-muted text-muted-foreground hover:bg-accent"}`}
+                              >
+                                <MapPin className="inline-block h-3 w-3 mr-1" />
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <p className="text-xs text-muted-foreground">Or enter a new address below:</p>
+                      </div>
+                    )}
+
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="sm:col-span-2"><FormField label="Street *"><Input required value={details.street} onChange={(e) => setDetails({ ...details, street: e.target.value })} /></FormField></div>
-                      <FormField label="City *"><Input required value={details.city} onChange={(e) => setDetails({ ...details, city: e.target.value })} /></FormField>
-                      <FormField label="Postal code *"><Input required value={details.postal} onChange={(e) => setDetails({ ...details, postal: e.target.value })} /></FormField>
+                      <div className="sm:col-span-2">
+                        <FormField label="Street *">
+                          <Input required value={details.street} onChange={(e) => setDetails({ ...details, street: e.target.value })} />
+                        </FormField>
+                      </div>
+                      <FormField label="City *">
+                        <Input required value={details.city} onChange={(e) => setDetails({ ...details, city: e.target.value })} />
+                      </FormField>
+                      <FormField label="Postal code *">
+                        <Input required value={details.postal} onChange={(e) => setDetails({ ...details, postal: e.target.value })} />
+                      </FormField>
                     </div>
                   </div>
                 )}
+
+                {/* Step 5 — Payment */}
                 {step === 5 && (
                   <div className="space-y-4">
                     <h2 className="font-display text-2xl font-semibold">Payment</h2>
@@ -217,18 +356,22 @@ function CheckoutPage() {
                     </p>
                   </div>
                 )}
+
+                {/* Step 6 — Review */}
                 {step === 6 && (
                   <div className="space-y-4">
                     <h2 className="font-display text-2xl font-semibold">{t("checkout.step6")}</h2>
                     <ReviewRow label="Branch"  value={branch || "—"} />
                     <ReviewRow label="Type"    value={orderType === "delivery" ? t("checkout.delivery") : t("checkout.pickup")} />
-                    <ReviewRow label="Contact" value={`${details.name} · ${details.phone}`} />
+                    <ReviewRow label="Name"    value={`${details.firstname} ${details.lastname}`.trim()} />
+                    <ReviewRow label="Phone"   value={details.phone} />
                     {details.email && <ReviewRow label="Email" value={details.email} />}
                     {orderType === "delivery" && <ReviewRow label="Address" value={`${details.street}, ${details.postal} ${details.city}`} />}
                     <ReviewRow label="Payment" value="Cash on Delivery" />
                     {coupon && <ReviewRow label="Coupon" value={coupon} />}
                   </div>
                 )}
+
               </motion.div>
             </AnimatePresence>
 
@@ -265,6 +408,15 @@ function CheckoutPage() {
           </aside>
         </div>
       </section>
+
+      {/* Address selection dialog — opens when entering delivery step with saved addresses */}
+      <AddressSelectDialog
+        open={addressDialogOpen}
+        onOpenChange={setAddressDialogOpen}
+        addresses={savedAddresses}
+        onSelect={handleAddressSelect}
+        onNew={() => {}}
+      />
 
       <AnimatePresence>
         {done && confirmedOrder && (

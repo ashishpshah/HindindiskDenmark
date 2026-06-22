@@ -5,7 +5,9 @@ import type { AdminMenuItemDto } from "./useAdminMenuItems";
 export type UpdateMenuItemInput = {
   id: number;
   name: string;
+  nameDa?: string;
   description: string;
+  descriptionDa?: string;
   imageUrl: string;
   spicyLevel: number;
 };

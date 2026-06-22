@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Stop-Process -Id 39228 -Force)",
+      "PowerShell(Stop-Process -Id 35676 -Force)",
+      "PowerShell(cd \"d:\\\\VK\\\\Projects\\\\Personal\\\\AI\\\\PracticalApps\\\\taste-of-denmark-main\\\\backend\\\\HindIndisk.Api\"; $env:ASPNETCORE_ENVIRONMENT = \"Development\"; $env:ASPNETCORE_URLS = \"http://localhost:5000\"; Start-Process -FilePath \"dotnet\" -ArgumentList \"run --no-build\" -PassThru | Select-Object Id, Name)",
+      "PowerShell($dll = Get-ChildItem -Path \"d:\\\\VK\\\\Projects\\\\Personal\\\\AI\\\\PracticalApps\\\\taste-of-denmark-main\\\\backend\" -Recurse -Filter \"BCrypt.Net.dll\" | Select-Object -First 1 -ExpandProperty FullName; if \\(-not $dll\\) { $dll = Get-ChildItem -Path \"d:\\\\VK\\\\Projects\\\\Personal\\\\AI\\\\PracticalApps\\\\taste-of-denmark-main\\\\backend\" -Recurse -Filter \"BCrypt.Net-Next.dll\" | Select-Object -First 1 -ExpandProperty FullName }; Write-Host \"BCrypt DLL: $dll\")",
+      "PowerShell(Add-Type -Path \"D:\\\\VK\\\\Projects\\\\Personal\\\\AI\\\\PracticalApps\\\\taste-of-denmark-main\\\\backend\\\\HindIndisk.Api\\\\bin\\\\Debug\\\\net8.0\\\\BCrypt.Net-Next.dll\"; $hash = [BCrypt.Net.BCrypt]::HashPassword\\(\"Test@1234\"\\); Write-Host $hash)",
+      "PowerShell($code = 'using System; class P { static void Main\\(\\) { var dll = System.Reflection.Assembly.LoadFrom\\(@\"D:\\\\VK\\\\Projects\\\\Personal\\\\AI\\\\PracticalApps\\\\taste-of-denmark-main\\\\backend\\\\HindIndisk.Api\\\\bin\\\\Debug\\\\net8.0\\\\BCrypt.Net-Next.dll\"\\); var t = dll.GetType\\(\"BCrypt.Net.BCrypt\"\\); var m = t.GetMethod\\(\"HashPassword\", new[]{typeof\\(string\\)}\\); Console.WriteLine\\(m.Invoke\\(null, new object[]{\"Test@1234\"}\\)\\); } }'; $tmp = \"$env:TEMP\\\\bcrypthash.cs\"; Set-Content -Path $tmp -Value $code -Encoding utf8; dotnet-csc $tmp 2>&1; $exe = $tmp -replace '\\\\.cs$', '.exe'; if \\(Test-Path $exe\\) { & $exe } else { Write-Host \"compile failed\" })",
+      "PowerShell($dir = \"$env:TEMP\\\\bcryptgen\"; New-Item -ItemType Directory -Path $dir -Force | Out-Null; Set-Content \"$dir\\\\Program.cs\" 'using BCrypt.Net; Console.WriteLine\\(BCrypt.HashPassword\\(\"Test@1234\"\\)\\);' -Encoding utf8; Set-Content \"$dir\\\\bcryptgen.csproj\" '<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework></PropertyGroup><ItemGroup><PackageReference Include=\"BCrypt.Net-Next\" Version=\"4.0.3\"/></ItemGroup></Project>' -Encoding utf8; dotnet run --project \"$dir\\\\bcryptgen.csproj\" 2>&1)",
+      "PowerShell($dir = \"$env:TEMP\\\\bcryptgen\"; Set-Content \"$dir\\\\Program.cs\" 'using BCrypt.Net; System.Console.WriteLine\\(BCrypt.Net.BCrypt.HashPassword\\(\"Test@1234\"\\)\\);' -Encoding utf8; dotnet run --project \"$dir\\\\bcryptgen.csproj\" 2>&1)",
+      "PowerShell($conn = \\(Get-Content \"d:\\\\VK\\\\Projects\\\\Personal\\\\AI\\\\PracticalApps\\\\taste-of-denmark-main\\\\backend\\\\HindIndisk.Api\\\\appsettings.json\" | ConvertFrom-Json\\).ConnectionStrings.Default; Write-Host \"Connection: $conn\")",
+      "PowerShell(sqlcmd -S \"\\(localdb\\)\\\\MSSQLLocalDB\" -d \"dbHindInDisk\" -E -i \"d:\\\\VK\\\\Projects\\\\Personal\\\\AI\\\\PracticalApps\\\\taste-of-denmark-main\\\\backend\\\\seed_test_data.sql\" 2>&1)",
+      "PowerShell(sqlcmd -S \"\\(localdb\\)\\\\MSSQLLocalDB\" -d \"dbHindInDisk\" -E -Q \"SELECT COLUMN_NAME, IS_NULLABLE, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME IN \\('Orders','OrderAppliedOffers'\\) ORDER BY TABLE_NAME, ORDINAL_POSITION\" 2>&1)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'{len\\(d\\)} records, statuses: {set\\(o[\\\\\"status\\\\\"] for o in d\\)}'\\)\")",
+      "PowerShell(Stop-Process -Name \"HindIndisk.Api\" -Force -ErrorAction SilentlyContinue)",
+      "Bash(curl -s \"http://localhost:5000/api/customers/lookup?phone=%2B45+20+11+22+33\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Found:', d['firstname'], d['lastname'], '| addresses:', len\\(d['addresses']\\)\\)\")",
+      "Bash(curl -s \"http://localhost:5000/api/customers/lookup?phone=notexist999\" -o /dev/null -w \"%{http_code}\")"
+    ]
+  }
+}

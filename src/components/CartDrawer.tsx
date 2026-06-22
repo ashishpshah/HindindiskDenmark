@@ -9,6 +9,7 @@ import { useCart } from "@/context/CartContext";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
 import { usePublicOffers } from "@/hooks/usePublicOffers";
+import { MenuItemPhoto } from "@/components/MenuItemPhoto";
 
 // Known local coupon codes for preview discount calculation
 const LOCAL_COUPONS = new Set(["WELCOME10", "FAMILY20", "FREEDELIVERY"]);
@@ -46,7 +47,7 @@ export function CartDrawer() {
               )}
               {lines.map((l) => (
                 <div key={l.name} className="flex gap-3 rounded-2xl border bg-background p-3">
-                  <img src={l.image} className="h-16 w-16 rounded-xl object-cover" alt={l.name} />
+                  <MenuItemPhoto src={l.image} alt={l.name} className="h-16 w-16 rounded-xl object-cover shrink-0" />
                   <div className="flex-1">
                     <div className="font-semibold">{l.name}</div>
                     <div className="text-sm text-muted-foreground">{l.price} DKK</div>

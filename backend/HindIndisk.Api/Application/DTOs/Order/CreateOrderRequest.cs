@@ -16,16 +16,18 @@ public class CreateOrderRequest
     [Required, MinLength(1, ErrorMessage = "At least one item is required.")]
     public List<OrderItemRequest> Items { get; set; } = [];
 
-    // Contact details
-    [Required, MaxLength(120)]
-    public string ContactName { get; set; } = string.Empty;
+    // Customer identity — used to find or create a customer record (RoleId = 3)
+    [Required, MaxLength(60)]
+    public string Firstname { get; set; } = string.Empty;
+
+    [Required, MaxLength(60)]
+    public string Lastname { get; set; } = string.Empty;
 
     [Required, MaxLength(30)]
-    public string ContactPhone { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
 
-    [MaxLength(200)]
-    [EmailAddress]
-    public string? ContactEmail { get; set; }
+    [MaxLength(200), EmailAddress]
+    public string? Email { get; set; }
 
     // Required for Delivery orders
     [MaxLength(300)]

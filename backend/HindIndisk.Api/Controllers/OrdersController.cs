@@ -24,11 +24,12 @@ public class OrdersController : ControllerBase
     }
 
     [HttpPost]
+    [AllowAnonymous]
     public async Task<IActionResult> Create([FromBody] CreateOrderRequest request)
     {
         try
         {
-            var order = await _orders.CreateOrderAsync(GetUserId(), request);
+            var order = await _orders.CreateOrderAsync(request);
             return Ok(order);
         }
         catch (InvalidOperationException ex)

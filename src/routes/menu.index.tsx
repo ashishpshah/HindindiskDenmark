@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, Leaf, Flame, ShoppingBag, MapPin, ChevronLeft } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { PageHero } from "@/components/PageHero";
+import { MenuItemPhoto } from "@/components/MenuItemPhoto";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useMenuItems, type MenuItemDto } from "@/hooks/useMenuItems";
 import { useMenuCategories } from "@/hooks/useMenuCategories";
 import { useBranches } from "@/hooks/useBranches";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export const Route = createFileRoute("/menu/")({
   head: () => ({
@@ -31,6 +33,9 @@ function MenuPage() {
   const [q, setQ]             = useState("");
   const [vegOnly, setVegOnly] = useState(false);
   const { add, totalQty, total, setOpen: setCartOpen, branch, setBranch } = useCart();
+  const { lang } = useI18n();
+  const da = lang === "da";
+  const loc = (en: string, daVal?: string | null) => (da && daVal) ? daVal : en;
 
   const { data: branchesData = [] }    = useBranches();
   const { data: categoriesData = [] }  = useMenuCategories();
@@ -53,7 +58,7 @@ function MenuPage() {
       setShowLocationPrompt(true);
     } else {
       add(item);
-      toast.success(`${item.name} added`);
+      toast.success(`${loc(item.name, item.nameDa)} added`);
     }
   };
 
@@ -111,10 +116,16 @@ function MenuPage() {
           ><Leaf className="h-4 w-4" /> Vegetarian only</button>
         </div>
 
-        <div className="mt-6 -mx-6 flex gap-2 overflow-x-auto px-6 pb-2 no-scrollbar">
-          {["All", ...categoriesData.map((c) => c.name)].map((c) => (
-            <button key={c} onClick={() => setCat(c)}
-              className={`shrink-0 rounded-full border px-5 py-2 text-sm font-medium transition ${cat === c ? "gradient-primary border-transparent text-primary-foreground shadow-elegant" : "hover:bg-accent"}`}>{c}</button>
+        <div className="mt-6 flex flex-wrap gap-2">
+          <button onClick={() => setCat("All")}
+            className={`rounded-full border px-5 py-2 text-sm font-medium transition ${cat === "All" ? "gradient-primary border-transparent text-primary-foreground shadow-elegant" : "hover:bg-accent"}`}>
+            {da ? "Alle" : "All"}
+          </button>
+          {categoriesData.map((c) => (
+            <button key={c.name} onClick={() => setCat(c.name)}
+              className={`rounded-full border px-5 py-2 text-sm font-medium transition ${cat === c.name ? "gradient-primary border-transparent text-primary-foreground shadow-elegant" : "hover:bg-accent"}`}>
+              {loc(c.name, c.nameDa)}
+            </button>
           ))}
         </div>
 
@@ -135,7 +146,7 @@ function MenuPage() {
                   className="group overflow-hidden rounded-3xl border bg-card shadow-soft transition hover:shadow-elegant"
                 >
                   <Link to="/menu/$name" params={{ name: m.name }} className="relative h-48 overflow-hidden block">
-                    <img src={m.imageUrl} alt={m.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-110" />
+                    <MenuItemPhoto src={m.imageUrl} alt={m.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-110" />
                     <div className="absolute left-3 top-3 flex gap-1.5">
                       {m.isVegetarian && <span className="rounded-full bg-green-600/95 px-2 py-0.5 text-[10px] font-semibold uppercase text-white"><Leaf className="inline h-3 w-3" /></span>}
                       {Array.from({ length: m.spicyLevel }).map((_, i) => <Flame key={i} className="h-4 w-4 fill-red-500 text-red-500 drop-shadow" />)}
@@ -145,13 +156,13 @@ function MenuPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <Link to="/menu/$name" params={{ name: m.name }} className="hover:text-primary transition">
-                          <div className="font-display text-xl font-semibold">{m.name}</div>
+                          <div className="font-display text-xl font-semibold">{loc(m.name, m.nameDa)}</div>
                         </Link>
-                        <div className="mt-0.5 text-xs uppercase tracking-wider text-muted-foreground">{m.category}</div>
+                        <div className="mt-0.5 text-xs uppercase tracking-wider text-muted-foreground">{loc(m.category, m.categoryDa)}</div>
                       </div>
                       <div className="font-display text-lg text-primary">{m.price} DKK</div>
                     </div>
-                    <p className="mt-3 text-sm text-muted-foreground">{m.description}</p>
+                    <p className="mt-3 text-sm text-muted-foreground">{loc(m.description, m.descriptionDa)}</p>
                     <div className="mt-4 flex items-center justify-between">
                       <Button
                         onClick={() => onAdd(m)}

@@ -74,6 +74,8 @@ builder.Services.AddScoped<HindIndisk.Api.Application.Services.IAdminService,
                            HindIndisk.Api.Application.Services.AdminService>();
 builder.Services.AddScoped<HindIndisk.Api.Application.Services.IAddressService,
                            HindIndisk.Api.Application.Services.AddressService>();
+builder.Services.AddScoped<HindIndisk.Api.Application.Services.ICustomerService,
+                           HindIndisk.Api.Application.Services.CustomerService>();
 
 // ── Rate limiting (auth endpoints) ───────────────────────────────────────────
 builder.Services.AddRateLimiter(options =>
@@ -167,8 +169,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Hind Indisk API v1"));
 }
 
-app.UseHttpsRedirection();
 app.UseCors("Frontend");
+app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

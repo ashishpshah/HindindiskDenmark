@@ -9,15 +9,21 @@ public class ReservationService : IReservationService
 {
     private readonly ApplicationDbContext _db;
     private readonly IEmailService _email;
+    private readonly ICustomerService _customers;
 
-    public ReservationService(ApplicationDbContext db, IEmailService email)
+    public ReservationService(ApplicationDbContext db, IEmailService email, ICustomerService customers)
     {
-        _db    = db;
-        _email = email;
+        _db        = db;
+        _email     = email;
+        _customers = customers;
     }
 
-    public async Task<ReservationDto> CreateAsync(long? userId, CreateReservationRequest request)
+    public async Task<ReservationDto> CreateAsync(CreateReservationRequest request)
     {
+        // Resolve (or create) the customer
+        var customer = await _customers.FindOrCreateAsync(
+            request.Firstname, request.Lastname, request.Phone, request.Email);
+
         if (!DateTime.TryParse(request.Date, out var date))
             throw new InvalidOperationException($"Invalid date format: '{request.Date}'. Expected yyyy-MM-dd.");
 
@@ -26,14 +32,14 @@ public class ReservationService : IReservationService
 
         var reservation = new Reservation
         {
-            UserId         = userId,
+            UserId         = customer.Id,
             BranchId       = request.BranchId,
             Date           = date,
             TimeSlot       = request.TimeSlot,
             GuestCount     = request.GuestCount,
-            ContactName    = request.ContactName,
-            ContactPhone   = request.ContactPhone,
-            ContactEmail   = request.ContactEmail,
+            ContactName    = $"{request.Firstname.Trim()} {request.Lastname.Trim()}",
+            ContactPhone   = request.Phone.Trim(),
+            ContactEmail   = string.IsNullOrWhiteSpace(request.Email) ? string.Empty : request.Email.Trim(),
             SpecialRequests = request.SpecialRequests,
             Status         = "Confirmed",
             CreatedAt      = DateTime.UtcNow,

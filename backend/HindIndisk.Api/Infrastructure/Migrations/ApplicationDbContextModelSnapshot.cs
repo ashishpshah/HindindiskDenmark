@@ -136,10 +136,18 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("DescriptionDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NameDa")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -160,11 +168,19 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("DescriptionDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NameDa")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -198,6 +214,9 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.Property<long>("MenuItemId")
                         .HasColumnType("bigint");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
 
                     b.HasKey("MenuId", "MenuItemId");
 
