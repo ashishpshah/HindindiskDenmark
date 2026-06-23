@@ -23,11 +23,12 @@ public class CreateOrderRequest
     [Required, MaxLength(60)]
     public string Lastname { get; set; } = string.Empty;
 
-    [Required, MaxLength(30)]
+    [Required, MaxLength(20), RegularExpression(@"^\+?[0-9]{8,15}$",
+        ErrorMessage = "Phone must contain only digits with an optional + prefix and no spaces (e.g. +4512345678).")]
     public string Phone { get; set; } = string.Empty;
 
-    [MaxLength(200), EmailAddress]
-    public string? Email { get; set; }
+    [Required, MaxLength(200), EmailAddress]
+    public string Email { get; set; } = string.Empty;
 
     // Required for Delivery orders
     [MaxLength(300)]

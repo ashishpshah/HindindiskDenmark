@@ -39,7 +39,7 @@ public class ReservationService : IReservationService
             GuestCount     = request.GuestCount,
             ContactName    = $"{request.Firstname.Trim()} {request.Lastname.Trim()}",
             ContactPhone   = request.Phone.Trim(),
-            ContactEmail   = string.IsNullOrWhiteSpace(request.Email) ? string.Empty : request.Email.Trim(),
+            ContactEmail   = request.Email.Trim(),
             SpecialRequests = request.SpecialRequests,
             Status         = "Confirmed",
             CreatedAt      = DateTime.UtcNow,
@@ -56,8 +56,11 @@ public class ReservationService : IReservationService
 
         var dto = ToDto(reservation, branchName);
 
-        if (!string.IsNullOrWhiteSpace(reservation.ContactEmail))
-            _ = _email.SendReservationConfirmationAsync(reservation.ContactEmail, dto);
+        // Customer confirmation
+        _ = _email.SendReservationConfirmationAsync(reservation.ContactEmail, dto);
+
+        // Admin notification (always — goes to AdminToMail + BCC list)
+        _ = _email.SendAdminReservationNotificationAsync(dto);
 
         return dto;
     }
@@ -72,6 +75,35 @@ public class ReservationService : IReservationService
             .ToListAsync();
 
         return list.Select(r => ToDto(r, r.Branch.Name)).ToList();
+    }
+
+    public async Task<IReadOnlyList<ReservationDto>> CheckDuplicateAsync(
+        string phone, string? email, string date, string timeSlot)
+    {
+        if (!DateTime.TryParse(date, out var parsedDate))
+            return Array.Empty<ReservationDto>();
+
+        var normalizedPhone = new string(phone.Where(char.IsDigit).ToArray());
+        var emailLower      = email?.Trim().ToLowerInvariant() ?? "";
+
+        var dateStart = parsedDate.Date;
+        var dateEnd   = dateStart.AddDays(1);
+
+        var matches = await _db.Reservations
+            .Include(r => r.Branch)
+            .Where(r =>
+                r.Date >= dateStart &&
+                r.Date <  dateEnd   &&
+                r.TimeSlot == timeSlot &&
+                r.Status   != "Cancelled" &&
+                (r.ContactPhone == phone.Trim() ||
+                 r.ContactPhone == normalizedPhone ||
+                 (!string.IsNullOrWhiteSpace(emailLower) &&
+                  r.ContactEmail.ToLower() == emailLower)))
+            .AsNoTracking()
+            .ToListAsync();
+
+        return matches.Select(r => ToDto(r, r.Branch.Name)).ToList();
     }
 
     private static ReservationDto ToDto(Reservation r, string branchName) =>

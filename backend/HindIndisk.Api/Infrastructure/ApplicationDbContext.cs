@@ -42,7 +42,8 @@ public class ApplicationDbContext : DbContext
         // ── Unique indexes ────────────────────────────────────────────────────
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Email)
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("[Email] IS NOT NULL");
 
         modelBuilder.Entity<Offer>()
             .HasIndex(o => o.CouponCode)

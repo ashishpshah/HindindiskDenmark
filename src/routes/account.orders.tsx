@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ShoppingBag, Loader2, MapPin, Banknote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMyOrders } from "@/hooks/useMyOrders";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export const Route = createFileRoute("/account/orders")({ component: OrdersPage });
 
@@ -15,12 +16,19 @@ const STATUS_COLORS: Record<string, string> = {
   Cancelled:      "bg-red-100 text-red-700",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  OutForDelivery: "Out For Delivery",
+const STATUS_KEY_MAP: Record<string, string> = {
+  Placed:         "status.placed",
+  Accepted:       "status.accepted",
+  Preparing:      "status.preparing",
+  Ready:          "status.ready",
+  OutForDelivery: "status.outForDelivery",
+  Completed:      "status.completed",
+  Cancelled:      "status.cancelled",
 };
 
 function OrdersPage() {
-  const { data: orders = [], isLoading, isError } = useMyOrders();
+  const { t } = useI18n();
+  const { data: orders = [], isLoading, isError } = useMyOrders(true);
 
   if (isLoading) {
     return (
@@ -33,20 +41,20 @@ function OrdersPage() {
   if (isError) {
     return (
       <div className="rounded-3xl border bg-card p-10 text-center shadow-soft">
-        <p className="text-muted-foreground">Could not load orders. Please try again later.</p>
+        <p className="text-muted-foreground">{t("orders.errorLoad")}</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <h2 className="font-display text-2xl font-semibold">My Orders</h2>
+      <h2 className="font-display text-2xl font-semibold">{t("orders.title")}</h2>
       {orders.length === 0 && (
         <div className="rounded-3xl border bg-card p-10 text-center shadow-soft">
           <ShoppingBag className="mx-auto h-10 w-10 text-muted-foreground" />
-          <div className="mt-3 text-muted-foreground">No orders yet.</div>
+          <div className="mt-3 text-muted-foreground">{t("orders.noOrders")}</div>
           <Button asChild className="mt-4 gradient-primary text-primary-foreground">
-            <Link to="/menu">Browse menu</Link>
+            <Link to="/menu">{t("orders.browseMenu")}</Link>
           </Button>
         </div>
       )}
@@ -61,17 +69,15 @@ function OrdersPage() {
             <div className="text-right shrink-0">
               <div className="font-display text-xl">{o.total.toFixed(0)} DKK</div>
               <span className={`mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLORS[o.status] ?? "bg-primary/10 text-primary"}`}>
-                {STATUS_LABELS[o.status] ?? o.status}
+                {STATUS_KEY_MAP[o.status] ? t(STATUS_KEY_MAP[o.status]) : o.status}
               </span>
             </div>
           </div>
 
-          {/* Items */}
           <div className="mt-3 text-sm text-muted-foreground">
             {o.items.map((i) => `${i.quantity}× ${i.name}`).join(" · ")}
           </div>
 
-          {/* Delivery address */}
           {o.deliveryAddress && (
             <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
               <MapPin className="h-3.5 w-3.5 shrink-0" />
@@ -79,7 +85,6 @@ function OrdersPage() {
             </div>
           )}
 
-          {/* Payment method */}
           <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
             <Banknote className="h-3.5 w-3.5 shrink-0" />
             <span>{o.paymentMethod.replace(/([A-Z])/g, " $1").trim()}</span>
@@ -87,7 +92,7 @@ function OrdersPage() {
 
           <div className="mt-3">
             <Button asChild size="sm" variant="outline">
-              <Link to="/order-tracking" search={{ id: String(o.id) }}>Track</Link>
+              <Link to="/order-tracking" search={{ id: String(o.id) }}>{t("orders.track")}</Link>
             </Button>
           </div>
         </div>

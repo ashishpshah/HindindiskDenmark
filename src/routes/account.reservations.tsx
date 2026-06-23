@@ -2,11 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { CalendarCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMyReservations } from "@/hooks/useMyReservations";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export const Route = createFileRoute("/account/reservations")({ component: ReservationsPage });
 
 function ReservationsPage() {
-  const { data: list = [], isLoading, isError } = useMyReservations();
+  const { t } = useI18n();
+  const { data: list = [], isLoading, isError } = useMyReservations(true);
 
   if (isLoading) {
     return (
@@ -19,7 +21,7 @@ function ReservationsPage() {
   if (isError) {
     return (
       <div className="rounded-3xl border bg-card p-10 text-center shadow-soft">
-        <p className="text-muted-foreground">Could not load reservations. Please try again later.</p>
+        <p className="text-muted-foreground">{t("reservations.errorLoad")}</p>
       </div>
     );
   }
@@ -27,18 +29,18 @@ function ReservationsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-display text-2xl font-semibold">My Reservations</h2>
+        <h2 className="font-display text-2xl font-semibold">{t("reservations.title")}</h2>
         <Button asChild size="sm" className="gradient-primary text-primary-foreground">
-          <Link to="/reservation">New Reservation</Link>
+          <Link to="/reservation">{t("reservations.newReservation")}</Link>
         </Button>
       </div>
 
       {list.length === 0 && (
         <div className="rounded-3xl border bg-card p-10 text-center shadow-soft">
           <CalendarCheck className="mx-auto h-10 w-10 text-muted-foreground" />
-          <div className="mt-3 text-muted-foreground">No reservations yet.</div>
+          <div className="mt-3 text-muted-foreground">{t("reservations.noReservations")}</div>
           <Button asChild className="mt-4 gradient-primary text-primary-foreground">
-            <Link to="/reservation">Book a Table</Link>
+            <Link to="/reservation">{t("reservations.bookTable")}</Link>
           </Button>
         </div>
       )}
@@ -49,7 +51,7 @@ function ReservationsPage() {
             <div>
               <div className="font-semibold text-foreground">{r.branchName}</div>
               <div className="mt-0.5 text-sm text-muted-foreground">
-                {r.date} · {r.timeSlot} · {r.guestCount} {r.guestCount === 1 ? "guest" : "guests"}
+                {r.date} · {r.timeSlot} · {r.guestCount} {r.guestCount === 1 ? t("reservations.guest") : t("reservations.guests")}
               </div>
               {r.specialRequests && (
                 <div className="mt-1 text-xs text-muted-foreground italic">"{r.specialRequests}"</div>
@@ -61,7 +63,11 @@ function ReservationsPage() {
                   ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                   : "bg-muted text-muted-foreground"
               }`}>
-                {r.status}
+                {r.status === "Confirmed"
+                  ? t("status.confirmed")
+                  : r.status === "Pending"
+                    ? t("status.pending")
+                    : r.status}
               </span>
             </div>
           </div>

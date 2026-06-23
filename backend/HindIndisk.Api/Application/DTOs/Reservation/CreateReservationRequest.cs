@@ -25,11 +25,12 @@ public class CreateReservationRequest
     [Required, MaxLength(60)]
     public string Lastname { get; set; } = string.Empty;
 
-    [Required, Phone, MaxLength(50)]
+    [Required, MaxLength(20), RegularExpression(@"^\+?[0-9]{8,15}$",
+        ErrorMessage = "Phone must contain only digits with an optional + prefix and no spaces (e.g. +4512345678).")]
     public string Phone { get; set; } = string.Empty;
 
-    [EmailAddress, MaxLength(200)]
-    public string? Email { get; set; }
+    [Required, EmailAddress, MaxLength(200)]
+    public string Email { get; set; } = string.Empty;
 
     [MaxLength(1000)]
     public string? SpecialRequests { get; set; }

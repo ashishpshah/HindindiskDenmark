@@ -129,8 +129,8 @@ export function Header() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild><Link to="/account">{t("nav.account")}</Link></DropdownMenuItem>
-                <DropdownMenuItem asChild><Link to="/account/orders">My Orders</Link></DropdownMenuItem>
-                <DropdownMenuItem asChild><Link to="/account/reservations">My Reservations</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link to="/account/orders">{t("account.myOrders")}</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link to="/account/reservations">{t("account.myReservations")}</Link></DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout}><LogOut className="mr-2 h-4 w-4" /> {t("actions.logout")}</DropdownMenuItem>
               </DropdownMenuContent>

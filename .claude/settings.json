@@ -16,7 +16,21 @@
       "PowerShell(Stop-Process -Name \"HindIndisk.Api\" -Force -ErrorAction SilentlyContinue)",
       "Bash(curl -s \"http://localhost:5000/api/customers/lookup?phone=%2B45+20+11+22+33\")",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Found:', d['firstname'], d['lastname'], '| addresses:', len\\(d['addresses']\\)\\)\")",
-      "Bash(curl -s \"http://localhost:5000/api/customers/lookup?phone=notexist999\" -o /dev/null -w \"%{http_code}\")"
+      "Bash(curl -s \"http://localhost:5000/api/customers/lookup?phone=notexist999\" -o /dev/null -w \"%{http_code}\")",
+      "PowerShell(Get-Process -Name \"HindIndisk.Api\" -ErrorAction SilentlyContinue)",
+      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:5000/health\" -ErrorAction SilentlyContinue 2>&1)",
+      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:5000/api/customers/lookup?email=admin@hindindisk.dk\" -ErrorAction Stop)",
+      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:5000/api/customers/lookup?email=notfound@example.com\" -ErrorAction SilentlyContinue; Write-Host \"Status: $\\($error[0].Exception.Response.StatusCode\\)\")",
+      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:5000/api/customers/lookup?phone=%2B4586123456\")",
+      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:5000/api/customers/lookup?phone=4586123456\")",
+      "PowerShell(sqlcmd -S \"\\(localdb\\)\\\\MSSQLLocalDB\" -d dbHindInDisk -Q \"SELECT Id, Firstname, Lastname, Phone FROM Users WHERE Id IN \\(1,2,20014\\)\" 2>&1)",
+      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:5000/api/customers/lookup?phone=%2B45+20+11+22+33\")",
+      "PowerShell(sqlcmd -S \"\\(localdb\\)\\\\MSSQLLocalDB\" -d dbHindInDisk -Q \"SELECT MigrationId FROM __EFMigrationsHistory WHERE MigrationId LIKE '%MakeEmail%';\" 2>&1)",
+      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:5000/api/locations\" -ErrorAction SilentlyContinue)",
+      "PowerShell(Invoke-RestMethod -Uri \"http://localhost:5000/api/menuitems\" -ErrorAction SilentlyContinue)",
+      "PowerShell(cd \"d:\\\\VK\\\\Projects\\\\Personal\\\\AI\\\\PracticalApps\\\\taste-of-denmark-main\\\\backend\\\\HindIndisk.Api\"; dotnet build 2>&1 | Where-Object { $_ -match \"error CS\" })",
+      "PowerShell(Stop-Process -Id 44100 -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2; cd \"d:\\\\VK\\\\Projects\\\\Personal\\\\AI\\\\PracticalApps\\\\taste-of-denmark-main\\\\backend\\\\HindIndisk.Api\"; dotnet build --no-restore -v quiet 2>&1 | Where-Object { $_ -match \"error|Error|warning CS\" } | Select-Object -First 15)",
+      "PowerShell(Get-Process -Name \"HindIndisk.Api\" -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Seconds 1; cd \"d:\\\\VK\\\\Projects\\\\Personal\\\\AI\\\\PracticalApps\\\\taste-of-denmark-main\\\\backend\\\\HindIndisk.Api\"; dotnet build --no-restore -v quiet 2>&1 | Select-String \"error|warning\" | Where-Object { $_ -notmatch \"0 Warning\" } | Select-Object -First 20)"
     ]
   }
 }

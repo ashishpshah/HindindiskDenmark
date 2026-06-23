@@ -16,7 +16,7 @@ public class CustomerService : ICustomerService
     {
         var normalized = NormalizePhone(phone);
 
-        // 1. Look up by phone (both raw and normalized to cover formatting differences)
+        // 1. Look up by phone (raw and normalized to cover formatting differences)
         var user = await _db.Users
             .Include(u => u.UserAddresses)
             .FirstOrDefaultAsync(u => u.Phone == phone || u.Phone == normalized);
@@ -28,7 +28,8 @@ public class CustomerService : ICustomerService
             { user.Firstname = firstname.Trim(); dirty = true; }
             if (string.IsNullOrWhiteSpace(user.Lastname) && !string.IsNullOrWhiteSpace(lastname))
             { user.Lastname = lastname.Trim(); dirty = true; }
-            if (IsAutoEmail(user.Email) && !string.IsNullOrWhiteSpace(email))
+            // Fill in email only if the user has none yet
+            if (string.IsNullOrWhiteSpace(user.Email) && !string.IsNullOrWhiteSpace(email))
             { user.Email = email.Trim(); dirty = true; }
             if (dirty) await _db.SaveChangesAsync();
             return user;
@@ -46,16 +47,12 @@ public class CustomerService : ICustomerService
             }
         }
 
-        // 3. Create new customer
-        var resolvedEmail = !string.IsNullOrWhiteSpace(email)
-            ? email.Trim()
-            : $"guest.{normalized}@auto.hindindisk.dk";
-
+        // 3. Create new guest customer — Email is null when none was provided
         var newUser = new User
         {
             Firstname    = firstname.Trim(),
             Lastname     = lastname.Trim(),
-            Email        = resolvedEmail,
+            Email        = string.IsNullOrWhiteSpace(email) ? null : email.Trim(),
             Phone        = normalized,
             PasswordHash = $"GUEST_{Guid.NewGuid():N}", // not a valid BCrypt hash — login impossible
             RoleId       = 3,
@@ -83,16 +80,32 @@ public class CustomerService : ICustomerService
                 a.City, a.PostalCode, a.Country))
             .ToList();
 
-        // Don't expose auto-generated placeholder emails to the frontend
-        var email = IsAutoEmail(user.Email) ? null : user.Email;
+        return new CustomerLookupDto(
+            user.Id, user.Firstname, user.Lastname, user.Email, user.Phone, addresses);
+    }
+
+    public async Task<CustomerLookupDto?> LookupByEmailAsync(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return null;
+
+        var user = await _db.Users
+            .Include(u => u.UserAddresses)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Email == email.Trim());
+
+        if (user is null) return null;
+
+        var addresses = user.UserAddresses
+            .Select(a => new CustomerAddressDto(
+                a.Id, a.Type, a.AddressLine1, a.AddressLine2,
+                a.City, a.PostalCode, a.Country))
+            .ToList();
 
         return new CustomerLookupDto(
-            user.Id, user.Firstname, user.Lastname, email, user.Phone, addresses);
+            user.Id, user.Firstname, user.Lastname, user.Email, user.Phone, addresses);
     }
 
     private static string NormalizePhone(string phone) =>
         new string(phone.Where(char.IsDigit).ToArray());
-
-    private static bool IsAutoEmail(string email) =>
-        email.EndsWith("@auto.hindindisk.dk", StringComparison.OrdinalIgnoreCase);
 }

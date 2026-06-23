@@ -30,6 +30,19 @@ public class ReservationsController : ControllerBase
         }
     }
 
+    /// <summary>Check for duplicate reservations by phone/email at the same date &amp; time slot.</summary>
+    [HttpGet("check-duplicate")]
+    [AllowAnonymous]
+    public async Task<IActionResult> CheckDuplicate(
+        [FromQuery] string  phone,
+        [FromQuery] string? email,
+        [FromQuery] string  date,
+        [FromQuery] string  timeSlot)
+    {
+        var results = await _reservations.CheckDuplicateAsync(phone, email, date, timeSlot);
+        return Ok(results);
+    }
+
     /// <summary>Returns reservations linked to the authenticated user's account.</summary>
     [HttpGet("my")]
     [Authorize]

@@ -13,4 +13,7 @@ public interface ICustomerService
 
     /// <summary>Phone-based lookup for form auto-fill. Returns null when no match.</summary>
     Task<CustomerLookupDto?> LookupByPhoneAsync(string phone);
+
+    /// <summary>Email-based lookup for form auto-fill. Returns null when no match or auto-generated email.</summary>
+    Task<CustomerLookupDto?> LookupByEmailAsync(string email);
 }

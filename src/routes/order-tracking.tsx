@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { z } from "zod";
 import { useOrder } from "@/hooks/useOrder";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const search = z.object({ id: z.string().optional() });
 
@@ -17,13 +18,13 @@ export const Route = createFileRoute("/order-tracking")({
   component: TrackPage,
 });
 
-const STAGES = [
-  { label: "Order Placed",      icon: ClipboardList  },
-  { label: "Accepted",          icon: ClipboardCheck },
-  { label: "Preparing",         icon: ChefHat        },
-  { label: "Ready",             icon: Package        },
-  { label: "Out For Delivery",  icon: Bike           },
-  { label: "Completed",         icon: Check          },
+const STAGE_KEYS = [
+  { key: "status.placed",         icon: ClipboardList  },
+  { key: "status.accepted",       icon: ClipboardCheck },
+  { key: "status.preparing",      icon: ChefHat        },
+  { key: "status.ready",          icon: Package        },
+  { key: "status.outForDelivery", icon: Bike           },
+  { key: "status.completed",      icon: Check          },
 ];
 
 const STATUS_TO_STAGE: Record<string, number> = {
@@ -47,8 +48,11 @@ function loadLegacyOrder(id: string): LegacyOrder | null {
 function TrackPage() {
   const { id }            = Route.useSearch();
   const navigate          = useNavigate();
+  const { t }             = useI18n();
   const [stage, setStage] = useState(0);
   const [code, setCode]   = useState(id || "");
+
+  const STAGES = STAGE_KEYS.map((s) => ({ label: t(s.key), icon: s.icon }));
 
   const isNumericId = id !== undefined && /^\d+$/.test(id);
 

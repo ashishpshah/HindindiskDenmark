@@ -22,9 +22,9 @@ export function OrderSummary({ subtotal, discount, tax, delivery, total }: Props
     <>
       <div className="space-y-1">
         <Row label={t("cart.subtotal")} value={`${subtotal} DKK`} />
-        {discount > 0 && <Row label="Discount" value={`-${discount} DKK`} highlight />}
+        {discount > 0 && <Row label={t("cart.discount")} value={`-${discount} DKK`} highlight />}
         <Row label={t("cart.tax")} value={`${tax} DKK`} />
-        <Row label={t("cart.delivery")} value={delivery === 0 ? "Free" : `${delivery} DKK`} />
+        <Row label={t("cart.delivery")} value={delivery === 0 ? t("cart.free") : `${delivery} DKK`} />
       </div>
       <div className="mt-3 flex justify-between border-t pt-3 font-display text-xl">
         <span>{t("cart.total")}</span>

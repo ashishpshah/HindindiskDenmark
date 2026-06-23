@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ShoppingBag, CalendarCheck, Ticket, MapPin } from "lucide-react";
+import { ShoppingBag, CalendarCheck, Ticket, MapPin, ChevronRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useI18n } from "@/i18n/I18nProvider";
 import { useMyOrders } from "@/hooks/useMyOrders";
 import { useMyReservations } from "@/hooks/useMyReservations";
 import { usePublicOffers } from "@/hooks/usePublicOffers";
@@ -10,8 +11,19 @@ export const Route = createFileRoute("/account/")({
   component: Dashboard,
 });
 
+const STATUS_COLORS: Record<string, string> = {
+  Placed:         "bg-blue-100 text-blue-700",
+  Accepted:       "bg-indigo-100 text-indigo-700",
+  Preparing:      "bg-amber-100 text-amber-700",
+  Ready:          "bg-cyan-100 text-cyan-700",
+  OutForDelivery: "bg-purple-100 text-purple-700",
+  Completed:      "bg-green-100 text-green-700",
+  Cancelled:      "bg-red-100 text-red-700",
+};
+
 function Dashboard() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const { data: orders       = [] } = useMyOrders(!!user);
   const { data: reservations = [] } = useMyReservations(!!user);
   const { data: offers       = [] } = usePublicOffers();
@@ -19,35 +31,153 @@ function Dashboard() {
 
   if (!user) return null;
 
-  const cards = [
-    { to: "/account/orders",       label: "My Orders",    icon: ShoppingBag,    value: orders.length },
-    { to: "/account/reservations", label: "Reservations", icon: CalendarCheck,  value: reservations.length },
-    { to: "/account/coupons",      label: "Coupons",      icon: Ticket,         value: offers.length },
-    { to: "/account/addresses",    label: "Addresses",    icon: MapPin,         value: addresses.length },
+  const stats = [
+    {
+      to:    "/account/orders",
+      label: t("account.myOrders"),
+      icon:  ShoppingBag,
+      value: orders.length,
+      color: "bg-blue-50 text-blue-600",
+    },
+    {
+      to:    "/account/reservations",
+      label: t("account.myReservations"),
+      icon:  CalendarCheck,
+      value: reservations.length,
+      color: "bg-green-50 text-green-600",
+    },
+    {
+      to:    "/account/coupons",
+      label: t("account.coupons"),
+      icon:  Ticket,
+      value: offers.length,
+      color: "bg-amber-50 text-amber-600",
+    },
+    {
+      to:    "/account/addresses",
+      label: t("account.savedAddresses"),
+      icon:  MapPin,
+      value: addresses.length,
+      color: "bg-purple-50 text-purple-600",
+    },
   ];
+
+  const lastOrder = orders[0];
+  const todayIso  = new Date().toISOString().split("T")[0];
+  const nextResv  = reservations.find((r) => r.date >= todayIso);
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border bg-card p-6 shadow-soft">
-        <div className="font-display text-2xl font-semibold">Welcome back, {user.name}</div>
-        <p className="mt-1 text-muted-foreground">Here's a snapshot of your activity at Hind Indisk.</p>
-      </div>
+
+      {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2">
-        {cards.map((c) => {
-          const Icon = c.icon;
+        {stats.map((s) => {
+          const Icon = s.icon;
           return (
-            <Link key={c.to} to={c.to as any} className="rounded-3xl border bg-card p-6 shadow-soft transition hover:shadow-elegant">
-              <div className="flex items-center justify-between">
-                <div className="grid h-12 w-12 place-items-center rounded-2xl gradient-primary text-primary-foreground">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div className="font-display text-3xl font-bold">{c.value}</div>
+            <Link
+              key={s.to}
+              to={s.to as any}
+              className="group flex items-center gap-4 rounded-2xl border bg-card p-5 shadow-soft transition hover:shadow-elegant hover:-translate-y-0.5"
+            >
+              <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${s.color}`}>
+                <Icon className="h-5 w-5" />
               </div>
-              <div className="mt-3 font-semibold">{c.label}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-2xl font-display font-bold leading-none">{s.value}</div>
+                <div className="mt-1 text-sm text-muted-foreground truncate">{s.label}</div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition" />
             </Link>
           );
         })}
       </div>
+
+      {/* Recent activity */}
+      {(lastOrder || nextResv) && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-0.5">
+            Recent Activity
+          </h3>
+
+          {lastOrder && (
+            <Link
+              to="/account/orders"
+              className="group flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-soft transition hover:shadow-elegant"
+            >
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-600">
+                <ShoppingBag className="h-4 w-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-sm">Order #{lastOrder.id}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_COLORS[lastOrder.status] ?? "bg-primary/10 text-primary"}`}>
+                    {lastOrder.status}
+                  </span>
+                </div>
+                <div className="mt-0.5 text-xs text-muted-foreground truncate">
+                  {lastOrder.branchName} · {lastOrder.total.toFixed(0)} DKK ·{" "}
+                  {new Date(lastOrder.createdAt).toLocaleDateString()}
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition shrink-0" />
+            </Link>
+          )}
+
+          {nextResv && (
+            <Link
+              to="/account/reservations"
+              className="group flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-soft transition hover:shadow-elegant"
+            >
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-green-50 text-green-600">
+                <CalendarCheck className="h-4 w-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm">Upcoming Reservation</div>
+                <div className="mt-0.5 text-xs text-muted-foreground truncate">
+                  {nextResv.branchName} · {nextResv.date} at {nextResv.timeSlot} · {nextResv.guestCount} guests
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition shrink-0" />
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* Quick links */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-0.5">
+          Quick Actions
+        </h3>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Link
+            to="/menu"
+            className="flex items-center gap-3 rounded-2xl border bg-card p-4 shadow-soft transition hover:shadow-elegant group"
+          >
+            <div className="grid h-9 w-9 place-items-center rounded-xl gradient-primary text-primary-foreground shrink-0">
+              <ShoppingBag className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium">Browse Menu</div>
+              <div className="text-xs text-muted-foreground">Place a new order</div>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition shrink-0" />
+          </Link>
+          <Link
+            to="/reservation"
+            className="flex items-center gap-3 rounded-2xl border bg-card p-4 shadow-soft transition hover:shadow-elegant group"
+          >
+            <div className="grid h-9 w-9 place-items-center rounded-xl gradient-primary text-primary-foreground shrink-0">
+              <CalendarCheck className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium">Book a Table</div>
+              <div className="text-xs text-muted-foreground">Reserve your seat</div>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition shrink-0" />
+          </Link>
+        </div>
+      </div>
+
     </div>
   );
 }

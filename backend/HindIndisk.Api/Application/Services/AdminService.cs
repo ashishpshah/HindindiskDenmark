@@ -125,6 +125,15 @@ public class AdminService : IAdminService
 
         r.Status = status;
         await _db.SaveChangesAsync();
+
+        // Notify customer of status change
+        if (!string.IsNullOrWhiteSpace(r.ContactEmail))
+            _ = _email.SendReservationStatusUpdateAsync(
+                r.ContactEmail, r.ContactName,
+                r.Id, r.Branch.Name,
+                r.Date.ToString("yyyy-MM-dd"), r.TimeSlot, r.GuestCount,
+                status);
+
         return ToAdminReservationDto(r);
     }
 
@@ -648,7 +657,7 @@ public class AdminService : IAdminService
             query = query.Where(u =>
                 u.Firstname.ToLower().Contains(lower) ||
                 u.Lastname.ToLower().Contains(lower)  ||
-                u.Email.ToLower().Contains(lower));
+                (u.Email ?? "").ToLower().Contains(lower));
         }
 
         var users = await query.AsNoTracking().OrderByDescending(u => u.CreatedAt).ToListAsync();
@@ -680,7 +689,7 @@ public class AdminService : IAdminService
             return new AdminCustomerDto(
                 u.Id,
                 $"{u.Firstname} {u.Lastname}".Trim(),
-                u.Email,
+                u.Email ?? "",
                 u.Phone,
                 u.CreatedAt,
                 os?.Count ?? 0,
@@ -700,14 +709,18 @@ public class AdminService : IAdminService
 
         var orders = await _db.Orders
             .Include(o => o.Branch)
-            .Include(o => o.OrderItems)
+            .Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem)
             .Where(o => o.UserId == customerId)
             .OrderByDescending(o => o.CreatedAt)
             .AsNoTracking()
             .ToListAsync();
 
-        var reservationCount = await _db.Reservations
-            .CountAsync(r => r.UserId == customerId);
+        var reservations = await _db.Reservations
+            .Include(r => r.Branch)
+            .Where(r => r.UserId == customerId)
+            .OrderByDescending(r => r.CreatedAt)
+            .AsNoTracking()
+            .ToListAsync();
 
         var totalSpend = orders
             .Where(o => o.Status != "Cancelled")
@@ -716,19 +729,28 @@ public class AdminService : IAdminService
         var customerDto = new AdminCustomerDto(
             user.Id,
             $"{user.Firstname} {user.Lastname}".Trim(),
-            user.Email,
+            user.Email ?? "",
             user.Phone,
             user.CreatedAt,
             orders.Count,
-            reservationCount,
+            reservations.Count,
             totalSpend
         );
 
         var orderDtos = orders.Select(o => new AdminCustomerOrderDto(
             o.Id, o.Branch.Name, o.OrderType, o.Total, o.Status, o.CreatedAt,
-            o.OrderItems.Sum(i => i.Quantity)
+            o.OrderItems.Sum(i => i.Quantity),
+            o.OrderItems.Select(oi => new AdminCustomerOrderItemDto(
+                oi.MenuItem.Name, oi.Quantity, oi.PriceAtPurchase
+            )).ToList()
         )).ToList();
 
-        return new AdminCustomerDetailDto(customerDto, orderDtos);
+        var reservationDtos = reservations.Select(r => new AdminCustomerReservationDto(
+            r.Id, r.Branch.Name,
+            r.Date.ToString("yyyy-MM-dd"), r.TimeSlot,
+            r.GuestCount, r.Status, r.CreatedAt, r.SpecialRequests
+        )).ToList();
+
+        return new AdminCustomerDetailDto(customerDto, orderDtos, reservationDtos);
     }
 }

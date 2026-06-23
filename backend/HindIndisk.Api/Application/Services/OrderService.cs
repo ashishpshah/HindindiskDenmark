@@ -103,7 +103,7 @@ public class OrderService : IOrderService
             Status          = "Placed",
             ContactName     = $"{request.Firstname.Trim()} {request.Lastname.Trim()}",
             ContactPhone    = request.Phone.Trim(),
-            ContactEmail    = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim(),
+            ContactEmail    = request.Email.Trim(),
             DeliveryAddress = string.IsNullOrWhiteSpace(request.DeliveryAddress) ? null : request.DeliveryAddress.Trim(),
             PaymentMethod   = "CashOnDelivery",
             CreatedAt       = DateTime.UtcNow,
@@ -178,9 +178,11 @@ public class OrderService : IOrderService
             order.ContactName, order.ContactPhone, order.ContactEmail,
             order.DeliveryAddress, order.PaymentMethod);
 
-        // Send confirmation email if contact email provided
-        if (!string.IsNullOrWhiteSpace(order.ContactEmail))
-            _ = _email.SendOrderConfirmationAsync(order.ContactEmail, order.ContactName, dto);
+        // Customer confirmation
+        _ = _email.SendOrderConfirmationAsync(order.ContactEmail!, order.ContactName, dto);
+
+        // Admin notification (always — goes to AdminToMail + BCC list)
+        _ = _email.SendAdminOrderNotificationAsync(dto);
 
         return dto;
     }

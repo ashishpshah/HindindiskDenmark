@@ -54,6 +54,9 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowAnyMethod()));
 
+// ── In-memory cache (OTP storage for password reset) ─────────────────────────
+builder.Services.AddMemoryCache();
+
 // ── AutoMapper ────────────────────────────────────────────────────────────────
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
 

@@ -58,8 +58,8 @@ function CheckoutPage() {
   const currentBranch               = branchesData.find((b) => b.name === branch);
   const createOrder                 = useCreateOrder();
 
-  // Customer lookup — fires 600ms after phone stops changing
-  const { data: customer, isFetching: lookingUp } = useCustomerLookup(details.phone);
+  // Customer lookup — fires on phone (600ms, 8+ digits) or email (800ms) as fallback
+  const { data: customer, isFetching: lookingUp, matchedBy } = useCustomerLookup(details.phone, details.email);
 
   // Auto-fill fields when a matching customer is found
   useEffect(() => {
@@ -78,7 +78,7 @@ function CheckoutPage() {
     { id: 2, label: t("checkout.step2") },
     { id: 3, label: t("checkout.step3") },
     { id: 4, label: t("checkout.step4") },
-    { id: 5, label: "Payment" },
+    { id: 5, label: t("checkout.payment") },
     { id: 6, label: t("checkout.step6") },
   ];
   const activeSteps = ALL_STEPS.filter((s) => !(s.id === 4 && orderType === "pickup"));
@@ -92,6 +92,13 @@ function CheckoutPage() {
       if (!details.firstname.trim()) { toast.error("Please enter your first name.");   return; }
       if (!details.lastname.trim())  { toast.error("Please enter your last name.");    return; }
       if (!details.phone.trim())     { toast.error("Please enter your phone number."); return; }
+      if (!/^\+?[0-9]{8,15}$/.test(details.phone.trim())) {
+        toast.error("Phone must contain only digits with an optional + prefix and no spaces (e.g. +4512345678)."); return;
+      }
+      if (!details.email.trim())     { toast.error("Please enter your email.");        return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(details.email.trim())) {
+        toast.error("Please enter a valid email address."); return;
+      }
     }
     if (step === 4) {
       if (!details.street.trim()) { toast.error("Please enter your street address."); return; }
@@ -144,7 +151,7 @@ function CheckoutPage() {
         firstname:      details.firstname.trim(),
         lastname:       details.lastname.trim(),
         phone:          details.phone.trim(),
-        email:          details.email.trim() || undefined,
+        email:          details.email.trim(),
         deliveryAddress,
       });
       setConfirmedOrder(order);
@@ -236,7 +243,7 @@ function CheckoutPage() {
                   <div className="space-y-4">
                     <h2 className="font-display text-2xl font-semibold">{t("checkout.step3")}</h2>
 
-                    {/* Phone first — triggers customer lookup */}
+                    {/* Phone — primary lookup trigger (8+ digits, 600ms debounce) */}
                     <div className="relative">
                       <FormField label="Phone *">
                         <Input
@@ -247,10 +254,10 @@ function CheckoutPage() {
                           onChange={(e) => setDetails({ ...details, phone: e.target.value })}
                         />
                       </FormField>
-                      {lookingUp && (
+                      {lookingUp && matchedBy !== "email" && (
                         <Loader2 className="absolute right-3 top-9 h-4 w-4 animate-spin text-muted-foreground" />
                       )}
-                      {customer && !lookingUp && (
+                      {customer && !lookingUp && matchedBy === "phone" && (
                         <div className="mt-1 flex items-center gap-1.5 text-xs text-green-600">
                           <UserCheck className="h-3.5 w-3.5" />
                           Customer found — details filled in
@@ -274,14 +281,27 @@ function CheckoutPage() {
                         />
                       </FormField>
                       <div className="sm:col-span-2">
-                        <FormField label="Email (for confirmation)">
-                          <Input
-                            type="email"
-                            value={details.email}
-                            onChange={(e) => setDetails({ ...details, email: e.target.value })}
-                            placeholder="optional"
-                          />
-                        </FormField>
+                        {/* Email — fallback lookup trigger when phone has < 8 digits */}
+                        <div className="relative">
+                          <FormField label="Email *">
+                            <Input
+                              type="email"
+                              required
+                              value={details.email}
+                              onChange={(e) => setDetails({ ...details, email: e.target.value })}
+                              placeholder="you@email.dk"
+                            />
+                          </FormField>
+                          {lookingUp && matchedBy !== "phone" && (
+                            <Loader2 className="absolute right-3 top-9 h-4 w-4 animate-spin text-muted-foreground" />
+                          )}
+                          {customer && !lookingUp && matchedBy === "email" && (
+                            <div className="mt-1 flex items-center gap-1.5 text-xs text-green-600">
+                              <UserCheck className="h-3.5 w-3.5" />
+                              Customer found — details filled in
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -339,13 +359,13 @@ function CheckoutPage() {
                 {/* Step 5 — Payment */}
                 {step === 5 && (
                   <div className="space-y-4">
-                    <h2 className="font-display text-2xl font-semibold">Payment</h2>
+                    <h2 className="font-display text-2xl font-semibold">{t("checkout.payment")}</h2>
                     <div className="flex items-start gap-4 rounded-2xl border-2 border-primary bg-primary/5 p-6">
                       <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl gradient-primary text-primary-foreground">
                         <Banknote className="h-5 w-5" />
                       </div>
                       <div>
-                        <div className="font-semibold">Cash on Delivery</div>
+                        <div className="font-semibold">{t("checkout.cashOnDelivery")}</div>
                         <p className="mt-1 text-sm text-muted-foreground">
                           Pay with cash when your order arrives. Please have the exact amount ready.
                         </p>
@@ -365,9 +385,9 @@ function CheckoutPage() {
                     <ReviewRow label="Type"    value={orderType === "delivery" ? t("checkout.delivery") : t("checkout.pickup")} />
                     <ReviewRow label="Name"    value={`${details.firstname} ${details.lastname}`.trim()} />
                     <ReviewRow label="Phone"   value={details.phone} />
-                    {details.email && <ReviewRow label="Email" value={details.email} />}
+                    <ReviewRow label="Email" value={details.email} />
                     {orderType === "delivery" && <ReviewRow label="Address" value={`${details.street}, ${details.postal} ${details.city}`} />}
-                    <ReviewRow label="Payment" value="Cash on Delivery" />
+                    <ReviewRow label={t("checkout.payment")} value={t("checkout.cashOnDelivery")} />
                     {coupon && <ReviewRow label="Coupon" value={coupon} />}
                   </div>
                 )}
@@ -394,7 +414,7 @@ function CheckoutPage() {
           </div>
 
           <aside className="h-fit rounded-3xl border bg-card p-6 shadow-soft">
-            <h3 className="mb-4 font-display text-xl font-semibold">Order summary</h3>
+            <h3 className="mb-4 font-display text-xl font-semibold">{t("checkout.step6")}</h3>
             <div className="space-y-2">
               {lines.map((l) => (
                 <div key={l.name} className="flex justify-between text-sm">

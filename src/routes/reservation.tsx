@@ -8,10 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormField } from "@/components/ui/FormField";
-import { CheckCircle2, Loader2, Users, UserCheck } from "lucide-react";
+import { CheckCircle2, Loader2, Users, UserCheck, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 import { useBranches } from "@/hooks/useBranches";
 import { useCreateReservation, type ReservationDto } from "@/hooks/useCreateReservation";
 import { useCustomerLookup } from "@/hooks/useCustomerLookup";
+import { apiFetch } from "@/lib/api/client";
 
 const QUICK_CHIPS = [1, 2, 3, 4, 5];
 const MAX_GUESTS  = 30;
@@ -117,23 +119,25 @@ function ReservationPage() {
 
   const defaultBranch = branchesData[0]?.name ?? "";
 
-  const [confirmed, setConfirmed] = useState<ReservationDto | null>(null);
+  const [confirmed,         setConfirmed]         = useState<ReservationDto | null>(null);
+  const [pendingDuplicates, setPendingDuplicates] = useState<ReservationDto[] | null>(null);
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+
   const [form, setForm] = useState({
-    branch:     defaultBranch,
-    guests:     "2",
-    date:       "",
-    time:       "19:00",
-    firstname:  "",
-    lastname:   "",
-    phone:      "",
-    email:      "",
-    note:       "",
+    branch:    defaultBranch,
+    guests:    "2",
+    date:      "",
+    time:      "19:00",
+    firstname: "",
+    lastname:  "",
+    phone:     "",
+    email:     "",
+    note:      "",
   });
 
   const branchValue = form.branch || branchesData[0]?.name || "";
 
-  // Phone-based customer lookup for auto-fill
-  const { data: customer, isFetching: lookingUp } = useCustomerLookup(form.phone);
+  const { data: customer, isFetching: lookingUp, matchedBy } = useCustomerLookup(form.phone, form.email);
 
   useEffect(() => {
     if (!customer) return;
@@ -145,12 +149,11 @@ function ReservationPage() {
     }));
   }, [customer]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // ── Shared submit (called directly or after "Book Anyway") ────────────────
 
+  const submitReservation = async () => {
     const selectedBranch = branchesData.find((b) => b.name === branchValue);
     if (!selectedBranch) return;
-
     const res = await createReservation.mutateAsync({
       branchId:        selectedBranch.id,
       date:            form.date,
@@ -158,17 +161,76 @@ function ReservationPage() {
       guestCount:      Number(form.guests),
       firstname:       form.firstname,
       lastname:        form.lastname,
-      phone:           form.phone,
-      email:           form.email || undefined,
+      phone:           form.phone.trim(),
+      email:           form.email.trim(),
       specialRequests: form.note || undefined,
     });
-
+    setPendingDuplicates(null);
     setConfirmed(res);
+  };
+
+  // ── Primary submit handler ─────────────────────────────────────────────────
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const selectedBranch = branchesData.find((b) => b.name === branchValue);
+    if (!selectedBranch) return;
+
+    if (!form.phone.trim()) {
+      toast.error("Please enter your phone number."); return;
+    }
+    if (!/^\+?[0-9]{8,15}$/.test(form.phone.trim())) {
+      toast.error("Phone must contain only digits with an optional + prefix and no spaces (e.g. +4512345678)."); return;
+    }
+    if (!form.email.trim()) {
+      toast.error("Please enter your email."); return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      toast.error("Please enter a valid email address."); return;
+    }
+
+    // Duplicate check
+    setCheckingDuplicate(true);
+    try {
+      const qs = new URLSearchParams({
+        phone:    form.phone.trim(),
+        email:    form.email.trim(),
+        date:     form.date,
+        timeSlot: form.time,
+      });
+      const dupes = await apiFetch<ReservationDto[]>(`/api/reservations/check-duplicate?${qs}`);
+      if (dupes.length > 0) {
+        setPendingDuplicates(dupes);
+        return;
+      }
+    } catch {
+      // if check fails, proceed anyway
+    } finally {
+      setCheckingDuplicate(false);
+    }
+
+    await submitReservation();
+  };
+
+  // ── Reset form after confirmation ──────────────────────────────────────────
+
+  const handleDone = () => {
+    setConfirmed(null);
     setForm({
-      branch: branchValue, guests: "2", date: "", time: "19:00",
-      firstname: "", lastname: "", phone: "", email: "", note: "",
+      branch:    branchesData[0]?.name ?? "",
+      guests:    "2",
+      date:      "",
+      time:      "19:00",
+      firstname: "",
+      lastname:  "",
+      phone:     "",
+      email:     "",
+      note:      "",
     });
   };
+
+  const isPending = createReservation.isPending || checkingDuplicate;
 
   return (
     <Layout>
@@ -207,7 +269,7 @@ function ReservationPage() {
                 onChange={(e) => setForm({ ...form, time: e.target.value })} />
             </FormField>
 
-            {/* Phone first — triggers lookup */}
+            {/* Phone — primary lookup trigger (8+ digits, 600ms debounce) */}
             <div className="sm:col-span-2">
               <div className="relative">
                 <FormField label="Phone *">
@@ -219,10 +281,10 @@ function ReservationPage() {
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   />
                 </FormField>
-                {lookingUp && (
+                {lookingUp && matchedBy !== "email" && (
                   <Loader2 className="absolute right-3 top-9 h-4 w-4 animate-spin text-muted-foreground" />
                 )}
-                {customer && !lookingUp && (
+                {customer && !lookingUp && matchedBy === "phone" && (
                   <div className="mt-1 flex items-center gap-1.5 text-xs text-green-600">
                     <UserCheck className="h-3.5 w-3.5" />
                     Customer found — details filled in
@@ -241,11 +303,23 @@ function ReservationPage() {
                 onChange={(e) => setForm({ ...form, lastname: e.target.value })} />
             </FormField>
 
+            {/* Email — fallback lookup trigger when phone has < 8 digits */}
             <div className="sm:col-span-2">
-              <FormField label="Email (optional)">
-                <Input type="email" placeholder="you@email.dk" value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })} />
-              </FormField>
+              <div className="relative">
+                <FormField label="Email *">
+                  <Input type="email" required placeholder="you@email.dk" value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                </FormField>
+                {lookingUp && matchedBy !== "phone" && (
+                  <Loader2 className="absolute right-3 top-9 h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+                {customer && !lookingUp && matchedBy === "email" && (
+                  <div className="mt-1 flex items-center gap-1.5 text-xs text-green-600">
+                    <UserCheck className="h-3.5 w-3.5" />
+                    Customer found — details filled in
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="sm:col-span-2">
@@ -257,10 +331,10 @@ function ReservationPage() {
             </div>
           </div>
 
-          <Button size="lg" type="submit" disabled={createReservation.isPending}
+          <Button size="lg" type="submit" disabled={isPending}
             className="w-full gradient-primary text-primary-foreground">
-            {createReservation.isPending
-              ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Confirming…</>
+            {isPending
+              ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {checkingDuplicate ? "Checking…" : "Confirming…"}</>
               : "Confirm Reservation"}
           </Button>
 
@@ -273,11 +347,68 @@ function ReservationPage() {
       </section>
 
       <AnimatePresence>
+
+        {/* ── Duplicate warning dialog ─────────────────────────────────────── */}
+        {pendingDuplicates && pendingDuplicates.length > 0 && (
+          <>
+            <motion.div className="fixed inset-0 z-50 bg-black/60"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setPendingDuplicates(null)} />
+            <motion.div
+              className="fixed left-1/2 top-1/2 z-50 w-[92%] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-3xl bg-card p-8 shadow-elegant"
+              initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+            >
+              <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-amber-100 text-amber-600 mb-4">
+                <AlertTriangle className="h-7 w-7" />
+              </div>
+              <h3 className="font-display text-xl font-bold text-center">Reservation Already Exists</h3>
+              <p className="mt-2 text-sm text-muted-foreground text-center">
+                We found {pendingDuplicates.length === 1 ? "a reservation" : `${pendingDuplicates.length} reservations`} matching
+                the phone, email, date &amp; time you entered:
+              </p>
+
+              <div className="mt-4 space-y-2">
+                {pendingDuplicates.map(r => (
+                  <div key={r.id} className="rounded-xl border bg-accent/40 px-4 py-3 text-sm space-y-0.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{r.contactName}</span>
+                      <span className="font-mono text-xs text-muted-foreground">#{r.id}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {r.branchName} · {r.date} at {r.timeSlot} · {r.guestCount} guest{r.guestCount !== 1 ? "s" : ""}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setPendingDuplicates(null)}
+                >
+                  Go Back
+                </Button>
+                <Button
+                  className="flex-1 gradient-primary text-primary-foreground"
+                  disabled={createReservation.isPending}
+                  onClick={submitReservation}
+                >
+                  {createReservation.isPending
+                    ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Booking…</>
+                    : "Book Anyway"}
+                </Button>
+              </div>
+            </motion.div>
+          </>
+        )}
+
+        {/* ── Confirmation dialog ───────────────────────────────────────────── */}
         {confirmed && (
           <>
             <motion.div className="fixed inset-0 z-50 bg-black/60"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setConfirmed(null)} />
+              onClick={handleDone} />
             <motion.div
               className="fixed left-1/2 top-1/2 z-50 w-[92%] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-3xl bg-card p-8 text-center shadow-elegant"
               initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
@@ -294,10 +425,11 @@ function ReservationPage() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Guests</span><span className="font-medium">{confirmed.guestCount}</span></div>
               </div>
               <p className="mt-3 text-sm text-muted-foreground">We can't wait to welcome you!</p>
-              <Button className="mt-6 gradient-primary text-primary-foreground" onClick={() => setConfirmed(null)}>Done</Button>
+              <Button className="mt-6 gradient-primary text-primary-foreground" onClick={handleDone}>Done</Button>
             </motion.div>
           </>
         )}
+
       </AnimatePresence>
     </Layout>
   );

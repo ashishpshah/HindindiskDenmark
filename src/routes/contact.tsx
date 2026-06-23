@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Mail, Phone, MapPin, Facebook, Instagram, Twitter } from "lucide-react";
+import { useState } from "react";
+import { Mail, Phone, MapPin, Facebook, Instagram, Twitter, Loader2 } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { PageHero } from "@/components/PageHero";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useBranches } from "@/hooks/useBranches";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/api/client";
 import { lazy, Suspense } from "react";
 
 const WorldMap = lazy(() =>
@@ -26,23 +28,60 @@ export const Route = createFileRoute("/contact")({
   component: ContactPage,
 });
 
+const EMPTY = { name: "", email: "", subject: "", message: "" };
+
 function ContactPage() {
   const { data: branchesData = [] } = useBranches();
+  const [form,    setForm]    = useState(EMPTY);
+  const [loading, setLoading] = useState(false);
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm({ ...form, [k]: e.target.value });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await apiFetch("/api/contact", {
+        method: "POST",
+        body: JSON.stringify(form),
+      });
+      toast.success("Message sent! We'll reply within 24 hours.");
+      setForm(EMPTY);
+    } catch {
+      toast.error("Failed to send message. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Layout>
       <PageHero eyebrow="Contact" title="Say Hello" subtitle="Questions, bookings, feedback — we read every message."
         image="https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1920&q=80" />
       <section className="mx-auto grid max-w-7xl gap-12 px-6 py-20 lg:grid-cols-2">
-        <form onSubmit={(e) => { e.preventDefault(); toast.success("Message sent. We'll reply within 24h."); }}
-          className="space-y-5 rounded-3xl border bg-card p-8 shadow-elegant">
+        <form onSubmit={handleSubmit} className="space-y-5 rounded-3xl border bg-card p-8 shadow-elegant">
           <h2 className="font-display text-3xl font-bold">Send a message</h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2"><Label>Name</Label><Input required placeholder="Your name" /></div>
-            <div className="space-y-2"><Label>Email</Label><Input required type="email" placeholder="you@email.dk" /></div>
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input required placeholder="Your name" value={form.name} onChange={set("name")} />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input required type="email" placeholder="you@email.dk" value={form.email} onChange={set("email")} />
+            </div>
           </div>
-          <div className="space-y-2"><Label>Subject</Label><Input placeholder="What's it about?" /></div>
-          <div className="space-y-2"><Label>Message</Label><Textarea rows={6} required placeholder="How can we help?" /></div>
-          <Button size="lg" type="submit" className="w-full gradient-primary text-primary-foreground">Send Message</Button>
+          <div className="space-y-2">
+            <Label>Subject</Label>
+            <Input placeholder="What's it about?" value={form.subject} onChange={set("subject")} />
+          </div>
+          <div className="space-y-2">
+            <Label>Message</Label>
+            <Textarea rows={6} required placeholder="How can we help?" value={form.message} onChange={set("message")} />
+          </div>
+          <Button size="lg" type="submit" disabled={loading} className="w-full gradient-primary text-primary-foreground">
+            {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending…</> : "Send Message"}
+          </Button>
         </form>
         <div className="space-y-6">
           <div className="rounded-3xl border bg-card p-6 shadow-soft">

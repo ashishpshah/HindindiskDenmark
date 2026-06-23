@@ -30,23 +30,68 @@ function useDebounce<T>(value: T, delayMs: number): T {
   return debounced;
 }
 
-export function useCustomerLookup(phone: string) {
-  const debouncedPhone = useDebounce(phone.trim(), 600);
-  const digitCount = debouncedPhone.replace(/\D/g, "").length;
+function isValidEmail(email: string) {
+  return email.includes("@") && email.length >= 5;
+}
 
-  return useQuery<CustomerLookupResult | null>({
-    queryKey: ["customer-lookup", debouncedPhone],
+type LookupResult = {
+  data: CustomerLookupResult | null | undefined;
+  isFetching: boolean;
+  /** Which field triggered the match — useful for showing the indicator near the right input. */
+  matchedBy: "phone" | "email" | null;
+};
+
+export function useCustomerLookup(phone: string, email?: string): LookupResult {
+  const debouncedPhone = useDebounce(phone.trim(), 600);
+  const debouncedEmail = useDebounce((email ?? "").trim(), 800);
+
+  const phoneDigits   = debouncedPhone.replace(/\D/g, "").length;
+  const phoneEnabled  = phoneDigits >= 8;
+  const emailEnabled  = !phoneEnabled && isValidEmail(debouncedEmail);
+
+  const phoneQuery = useQuery<CustomerLookupResult | null>({
+    queryKey: ["customer-lookup-phone", debouncedPhone],
     queryFn: async () => {
       try {
         return await apiFetch<CustomerLookupResult>(
           `/api/customers/lookup?phone=${encodeURIComponent(debouncedPhone)}`
         );
       } catch {
-        return null; // 404 or network error → no match
+        return null;
       }
     },
-    enabled: digitCount >= 8,
+    enabled: phoneEnabled,
     staleTime: 30_000,
     retry: false,
   });
+
+  const emailQuery = useQuery<CustomerLookupResult | null>({
+    queryKey: ["customer-lookup-email", debouncedEmail],
+    queryFn: async () => {
+      try {
+        return await apiFetch<CustomerLookupResult>(
+          `/api/customers/lookup?email=${encodeURIComponent(debouncedEmail)}`
+        );
+      } catch {
+        return null;
+      }
+    },
+    enabled: emailEnabled,
+    staleTime: 30_000,
+    retry: false,
+  });
+
+  if (phoneEnabled) {
+    return {
+      data:       phoneQuery.data,
+      isFetching: phoneQuery.isFetching,
+      matchedBy:  phoneQuery.data ? "phone" : null,
+    };
+  }
+
+  return {
+    data:       emailQuery.data,
+    isFetching: emailQuery.isFetching,
+    matchedBy:  emailQuery.data ? "email" : null,
+  };
 }

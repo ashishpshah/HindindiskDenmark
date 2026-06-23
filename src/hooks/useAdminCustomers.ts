@@ -12,6 +12,12 @@ export type AdminCustomerDto = {
   totalSpend: number;
 };
 
+export type AdminCustomerOrderItemDto = {
+  name: string;
+  quantity: number;
+  priceAtPurchase: number;
+};
+
 export type AdminCustomerOrderDto = {
   id: number;
   branchName: string;
@@ -20,11 +26,24 @@ export type AdminCustomerOrderDto = {
   status: string;
   createdAt: string;
   itemCount: number;
+  items: AdminCustomerOrderItemDto[];
+};
+
+export type AdminCustomerReservationDto = {
+  id: number;
+  branchName: string;
+  date: string;
+  timeSlot: string;
+  guestCount: number;
+  status: string;
+  createdAt: string;
+  specialRequests: string | null;
 };
 
 export type AdminCustomerDetailDto = {
   customer: AdminCustomerDto;
   orders: AdminCustomerOrderDto[];
+  reservations: AdminCustomerReservationDto[];
 };
 
 export function useAdminCustomers(q?: string) {

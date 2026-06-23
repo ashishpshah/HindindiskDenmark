@@ -11,6 +11,8 @@ public record AdminCustomerDto(
     decimal  TotalSpend
 );
 
+public record AdminCustomerOrderItemDto(string Name, int Quantity, decimal PriceAtPurchase);
+
 public record AdminCustomerOrderDto(
     long     Id,
     string   BranchName,
@@ -18,10 +20,23 @@ public record AdminCustomerOrderDto(
     decimal  Total,
     string   Status,
     DateTime CreatedAt,
-    int      ItemCount
+    int      ItemCount,
+    IReadOnlyList<AdminCustomerOrderItemDto> Items
+);
+
+public record AdminCustomerReservationDto(
+    long     Id,
+    string   BranchName,
+    string   Date,
+    string   TimeSlot,
+    int      GuestCount,
+    string   Status,
+    DateTime CreatedAt,
+    string?  SpecialRequests
 );
 
 public record AdminCustomerDetailDto(
-    AdminCustomerDto              Customer,
-    IReadOnlyList<AdminCustomerOrderDto> Orders
+    AdminCustomerDto                           Customer,
+    IReadOnlyList<AdminCustomerOrderDto>       Orders,
+    IReadOnlyList<AdminCustomerReservationDto> Reservations
 );

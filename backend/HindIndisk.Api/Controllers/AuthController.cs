@@ -91,4 +91,32 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
+
+    /// <summary>Send a 6-digit OTP to the supplied email for password reset.</summary>
+    [HttpPost("forgot-password")]
+    [EnableRateLimiting("auth")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        await _auth.ForgotPasswordAsync(request.Email);
+        // Always 200 — don't reveal whether the email is registered
+        return Ok(new { message = "If that email is registered, an OTP has been sent." });
+    }
+
+    /// <summary>Verify OTP and set a new password.</summary>
+    [HttpPost("reset-password")]
+    [EnableRateLimiting("auth")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        try
+        {
+            await _auth.ResetPasswordAsync(request);
+            return Ok(new { message = "Password reset successfully." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }

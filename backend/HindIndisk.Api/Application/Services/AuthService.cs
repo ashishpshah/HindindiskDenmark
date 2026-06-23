@@ -5,6 +5,7 @@ using HindIndisk.Api.Application.DTOs.Auth;
 using HindIndisk.Api.Domain.Entities;
 using HindIndisk.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 
 namespace HindIndisk.Api.Application.Services;
@@ -12,12 +13,20 @@ namespace HindIndisk.Api.Application.Services;
 public class AuthService : IAuthService
 {
     private readonly ApplicationDbContext _db;
-    private readonly IConfiguration _config;
+    private readonly IConfiguration      _config;
+    private readonly IMemoryCache         _cache;
+    private readonly IEmailService        _email;
 
-    public AuthService(ApplicationDbContext db, IConfiguration config)
+    public AuthService(
+        ApplicationDbContext db,
+        IConfiguration       config,
+        IMemoryCache         cache,
+        IEmailService        email)
     {
-        _db = db;
+        _db     = db;
         _config = config;
+        _cache  = cache;
+        _email  = email;
     }
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
@@ -41,6 +50,10 @@ public class AuthService : IAuthService
 
         // Load role for the token / DTO
         await _db.Entry(user).Reference(u => u.Role).LoadAsync();
+
+        // Welcome email — fire-and-forget
+        if (!string.IsNullOrWhiteSpace(user.Email))
+            _ = _email.SendWelcomeEmailAsync(user.Email, $"{user.Firstname} {user.Lastname}".Trim());
 
         return new AuthResponse(GenerateToken(user), ToDto(user));
     }
@@ -76,10 +89,40 @@ public class AuthService : IAuthService
 
         user.Firstname = request.Firstname;
         user.Lastname  = request.Lastname;
-        user.Phone     = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
+        user.Phone     = string.IsNullOrWhiteSpace(request.Phone) ? string.Empty : request.Phone.Trim();
         await _db.SaveChangesAsync();
         return ToDto(user);
     }
+
+    public async Task ForgotPasswordAsync(string email)
+    {
+        // Always return without error — don't reveal whether the email exists
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
+        if (user is null) return;
+
+        var otp = Random.Shared.Next(100_000, 1_000_000).ToString();
+        var key = OtpCacheKey(email);
+        _cache.Set(key, otp, TimeSpan.FromMinutes(10));
+
+        _ = _email.SendOtpEmailAsync(email, $"{user.Firstname} {user.Lastname}".Trim(), otp);
+    }
+
+    public async Task ResetPasswordAsync(ResetPasswordRequest request)
+    {
+        var key = OtpCacheKey(request.Email);
+        if (!_cache.TryGetValue<string>(key, out var stored) || stored != request.Otp)
+            throw new InvalidOperationException("Invalid or expired OTP. Please request a new one.");
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email)
+            ?? throw new InvalidOperationException("User not found.");
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        await _db.SaveChangesAsync();
+        _cache.Remove(key);
+    }
+
+    private static string OtpCacheKey(string email) =>
+        $"pwd-otp:{email.Trim().ToLowerInvariant()}";
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -93,7 +136,7 @@ public class AuthService : IAuthService
         var claims = new[]
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Email,          user.Email),
+            new Claim(ClaimTypes.Email,          user.Email ?? string.Empty),
             new Claim(ClaimTypes.Role,           user.Role.Name),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
         };
@@ -110,5 +153,7 @@ public class AuthService : IAuthService
     }
 
     private static UserDto ToDto(User user) =>
-        new(user.Id, user.Firstname, user.Lastname, user.Email, user.Phone, user.Role.Name);
+        new(user.Id, user.Firstname, user.Lastname, user.Email,
+            string.IsNullOrWhiteSpace(user.Phone) ? null : user.Phone,
+            user.Role.Name);
 }

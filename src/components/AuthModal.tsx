@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Mail, Lock, User as UserIcon, Phone } from "lucide-react";
+import { X, Mail, Lock, User as UserIcon, Phone, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,20 +8,23 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/context/AuthContext";
 import { useI18n } from "@/i18n/I18nProvider";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/api/client";
 
 export function AuthModal() {
   const { modalOpen, closeModal, modalMode, setModalMode, login, register } = useAuth();
   const { t } = useI18n();
-  const [loading, setLoading] = useState(false);
+  const [loading,    setLoading]    = useState(false);
   const [forgotStep, setForgotStep] = useState<1 | 2 | 3>(1);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirm: "", otp: "", newpwd: "" });
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value });
+  const [form, setForm] = useState({
+    name: "", email: "", phone: "", password: "", confirm: "", otp: "", newpwd: "", newpwdConfirm: "",
+  });
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm({ ...form, [k]: e.target.value });
 
-  // Task 1.4: reset forgot-password sub-step when modal closes or mode changes away
-  useEffect(() => { if (!modalOpen) setForgotStep(1); }, [modalOpen]);
-  useEffect(() => { if (modalMode !== "forgot") setForgotStep(1); }, [modalMode]);
+  useEffect(() => { if (!modalOpen)              setForgotStep(1); }, [modalOpen]);
+  useEffect(() => { if (modalMode !== "forgot")  setForgotStep(1); }, [modalMode]);
 
-  // Task 1.2: try/catch/finally so loading is always reset and errors are surfaced
+  // ── Login ──────────────────────────────────────────────────────────────────
   const onLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -35,9 +38,14 @@ export function AuthModal() {
       setLoading(false);
     }
   };
+
+  // ── Register ───────────────────────────────────────────────────────────────
   const onRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (form.password !== form.confirm) { toast.error("Passwords do not match"); return; }
+    if (form.phone && !/^\+?[0-9]{8,15}$/.test(form.phone.trim())) {
+      toast.error("Phone must contain only digits with an optional + prefix and no spaces (e.g. +4512345678)."); return;
+    }
     setLoading(true);
     try {
       await register({ name: form.name, email: form.email, phone: form.phone, password: form.password });
@@ -45,6 +53,59 @@ export function AuthModal() {
       closeModal();
     } catch {
       toast.error("Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Forgot: Step 1 — send OTP ──────────────────────────────────────────────
+  const onSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await apiFetch("/api/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email: form.email }),
+      });
+      toast.success(t("auth.otpSent"));
+      setForgotStep(2);
+    } catch {
+      toast.error("Could not send OTP. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Forgot: Step 2 — verify OTP (client-side, no round-trip) ──────────────
+  const onVerifyOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (form.otp.length !== 6 || !/^\d{6}$/.test(form.otp)) {
+      toast.error("Please enter the 6-digit OTP sent to your email."); return;
+    }
+    setForgotStep(3);
+  };
+
+  // ── Forgot: Step 3 — reset password ───────────────────────────────────────
+  const onResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (form.newpwd.length < 8) {
+      toast.error("Password must be at least 8 characters."); return;
+    }
+    if (form.newpwd !== form.newpwdConfirm) {
+      toast.error("Passwords do not match."); return;
+    }
+    setLoading(true);
+    try {
+      await apiFetch("/api/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({ email: form.email, otp: form.otp, newPassword: form.newpwd }),
+      });
+      toast.success(t("auth.resetSuccess"));
+      setForgotStep(1);
+      setModalMode("login");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to reset password.";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -60,16 +121,19 @@ export function AuthModal() {
             className="fixed left-1/2 top-1/2 z-[101] w-[94%] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-3xl bg-card shadow-elegant"
             initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
           >
+            {/* Header */}
             <div className="flex items-center justify-between border-b p-5">
               <div className="font-display text-xl font-semibold">
-                {modalMode === "login" && t("auth.loginTitle")}
+                {modalMode === "login"    && t("auth.loginTitle")}
                 {modalMode === "register" && t("auth.registerTitle")}
-                {modalMode === "forgot" && t("auth.forgotTitle")}
+                {modalMode === "forgot"   && t("auth.forgotTitle")}
               </div>
               <button onClick={closeModal} className="rounded-full p-2 hover:bg-accent"><X className="h-4 w-4" /></button>
             </div>
 
             <div className="p-6">
+
+              {/* ── Login ─────────────────────────────────────────────────── */}
               {modalMode === "login" && (
                 <form onSubmit={onLogin} className="space-y-4">
                   <Field icon={<Mail className="h-4 w-4" />} label={t("auth.email")}>
@@ -97,6 +161,7 @@ export function AuthModal() {
                 </form>
               )}
 
+              {/* ── Register ──────────────────────────────────────────────── */}
               {modalMode === "register" && (
                 <form onSubmit={onRegister} className="space-y-4">
                   <Field icon={<UserIcon className="h-4 w-4" />} label={t("auth.name")}>
@@ -123,40 +188,88 @@ export function AuthModal() {
                 </form>
               )}
 
+              {/* ── Forgot password ────────────────────────────────────────── */}
               {modalMode === "forgot" && (
                 <div className="space-y-4">
-                  <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
-                    {[1,2,3].map((n) => (
-                      <div key={n} className={`h-1 flex-1 rounded-full ${forgotStep >= n ? "bg-primary" : "bg-muted"}`} />
+                  {/* Progress bar */}
+                  <div className="mb-2 flex items-center gap-2">
+                    {([1, 2, 3] as const).map((n) => (
+                      <div key={n} className={`h-1 flex-1 rounded-full transition-colors ${forgotStep >= n ? "bg-primary" : "bg-muted"}`} />
                     ))}
                   </div>
+
+                  {/* Step 1: enter email */}
                   {forgotStep === 1 && (
-                    <form onSubmit={(e) => { e.preventDefault(); toast.success(t("auth.otpSent")); setForgotStep(2); }} className="space-y-4">
+                    <form onSubmit={onSendOtp} className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Enter the email address linked to your account. We'll send you a 6-digit OTP.
+                      </p>
                       <Field icon={<Mail className="h-4 w-4" />} label={t("auth.email")}>
-                        <Input required type="email" value={form.email} onChange={set("email")} />
+                        <Input required type="email" value={form.email} onChange={set("email")} placeholder="you@email.dk" />
                       </Field>
-                      <Button className="w-full gradient-primary text-primary-foreground">{t("actions.continue")}</Button>
+                      <Button disabled={loading} className="w-full gradient-primary text-primary-foreground">
+                        {loading ? "Sending…" : "Send OTP"}
+                      </Button>
                     </form>
                   )}
+
+                  {/* Step 2: enter OTP */}
                   {forgotStep === 2 && (
-                    <form onSubmit={(e) => { e.preventDefault(); setForgotStep(3); }} className="space-y-4">
+                    <form onSubmit={onVerifyOtp} className="space-y-4">
+                      <div className="rounded-xl bg-primary/5 border border-primary/20 px-4 py-3 flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                        <p className="text-sm text-muted-foreground">
+                          OTP sent to <strong className="text-foreground">{form.email}</strong>. Check your inbox (and spam folder).
+                        </p>
+                      </div>
                       <Field label={t("auth.otpCode")}>
-                        <Input required value={form.otp} onChange={set("otp")} maxLength={6} placeholder="123456" />
+                        <Input
+                          required
+                          inputMode="numeric"
+                          pattern="\d{6}"
+                          maxLength={6}
+                          value={form.otp}
+                          onChange={set("otp")}
+                          placeholder="6-digit code"
+                          className="text-center text-xl tracking-widest font-mono"
+                        />
                       </Field>
-                      <Button className="w-full gradient-primary text-primary-foreground">{t("actions.continue")}</Button>
+                      <Button className="w-full gradient-primary text-primary-foreground">Verify OTP</Button>
+                      <button
+                        type="button"
+                        className="block w-full text-center text-xs text-muted-foreground hover:text-primary transition"
+                        onClick={() => { setForgotStep(1); }}
+                      >
+                        Didn't receive it? Go back and resend
+                      </button>
                     </form>
                   )}
+
+                  {/* Step 3: new password */}
                   {forgotStep === 3 && (
-                    <form onSubmit={(e) => { e.preventDefault(); toast.success(t("auth.resetSuccess")); setForgotStep(1); setModalMode("login"); }} className="space-y-4">
+                    <form onSubmit={onResetPassword} className="space-y-4">
+                      <p className="text-sm text-muted-foreground">OTP verified. Enter your new password.</p>
                       <Field icon={<Lock className="h-4 w-4" />} label={t("auth.newPassword")}>
-                        <Input required type="password" value={form.newpwd} onChange={set("newpwd")} />
+                        <Input required type="password" value={form.newpwd} onChange={set("newpwd")} placeholder="At least 8 characters" />
                       </Field>
-                      <Button className="w-full gradient-primary text-primary-foreground">{t("actions.save")}</Button>
+                      <Field icon={<Lock className="h-4 w-4" />} label={t("auth.confirmPassword")}>
+                        <Input required type="password" value={form.newpwdConfirm} onChange={set("newpwdConfirm")} placeholder="Repeat new password" />
+                      </Field>
+                      <Button disabled={loading} className="w-full gradient-primary text-primary-foreground">
+                        {loading ? "Saving…" : t("actions.save")}
+                      </Button>
                     </form>
                   )}
-                  <button onClick={() => setModalMode("login")} className="block w-full text-center text-sm text-primary hover:underline">{t("actions.back")}</button>
+
+                  <button
+                    onClick={() => setModalMode("login")}
+                    className="block w-full text-center text-sm text-primary hover:underline"
+                  >
+                    {t("actions.back")}
+                  </button>
                 </div>
               )}
+
             </div>
           </motion.div>
         </>

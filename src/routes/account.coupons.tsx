@@ -41,7 +41,14 @@ function CouponsPage() {
                 Expires {new Date(o.endDate).toLocaleDateString("en-DK", { day: "2-digit", month: "short", year: "numeric" })}
               </div>
               <button
-                onClick={() => { navigator.clipboard.writeText(o.couponCode); toast.success("Copied!"); }}
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(o.couponCode);
+                    toast.success("Copied!");
+                  } catch {
+                    toast.error("Could not copy — please copy manually: " + o.couponCode);
+                  }
+                }}
                 className="mt-4 text-sm font-semibold text-primary hover:underline"
               >
                 Copy code

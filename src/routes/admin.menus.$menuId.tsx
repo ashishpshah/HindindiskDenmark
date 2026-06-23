@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
-  Loader2, Check, Plus, Unlink, Trash2, Pencil,
+  Loader2, Check, Plus, Trash2,
   ChevronUp, ChevronDown, Search, Flame,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -10,7 +10,6 @@ import { useAdminMenuItems } from "@/hooks/useAdminMenuItems";
 import { useUpdateMenu } from "@/hooks/useUpdateMenu";
 import { useAddItemToMenu } from "@/hooks/useAddItemToMenu";
 import { useRemoveItemFromMenu } from "@/hooks/useRemoveItemFromMenu";
-import { useDeleteMenuItem } from "@/hooks/useDeleteMenuItem";
 import { useReorderMenuItems } from "@/hooks/useReorderMenuItems";
 import { useBranches } from "@/hooks/useBranches";
 import { Button } from "@/components/ui/button";
@@ -46,7 +45,6 @@ function MenuEditPage() {
   const updateMenu  = useUpdateMenu();
   const addItem     = useAddItemToMenu();
   const removeItem  = useRemoveItemFromMenu();
-  const deleteItem  = useDeleteMenuItem();
   const reorder     = useReorderMenuItems();
 
   const menu = menus.find(m => String(m.id) === menuId);
@@ -66,7 +64,6 @@ function MenuEditPage() {
   const [pickerSearch, setPickerSearch] = useState("");
 
   // ── confirms ─────────────────────────────────────────────────────────
-  const [pendingDelete, setPendingDelete] = useState<AdminMenuItemSummary | null>(null);
   const [pendingUnlink, setPendingUnlink] = useState<AdminMenuItemSummary | null>(null);
 
   useEffect(() => {
@@ -134,15 +131,6 @@ function MenuEditPage() {
       toast.success("Item unlinked from this menu.");
     } catch { toast.error("Failed to unlink item."); }
     finally { setPendingUnlink(null); }
-  };
-
-  const handleDelete = async () => {
-    if (!pendingDelete) return;
-    try {
-      await deleteItem.mutateAsync(pendingDelete.id);
-      toast.success("Item deleted.");
-    } catch { toast.error("Failed to delete item."); }
-    finally { setPendingDelete(null); }
   };
 
   const linkedIds = new Set(menu.items.map(i => i.id));
@@ -323,32 +311,15 @@ function MenuEditPage() {
                         </div>
                       </td>
 
-                      {/* Actions: Edit | Delete | Unlink */}
+                      {/* Actions: Unlink from this menu */}
                       <td className="px-3 py-2">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => navigate({
-                              to: "/admin/menu/$itemId",
-                              params: { itemId: String(item.id) },
-                            })}
-                            className="rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition"
-                            title="Edit item"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => setPendingDelete(item)}
-                            className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition"
-                            title="Delete item from database"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                        <div className="flex items-center justify-end">
                           <button
                             onClick={() => setPendingUnlink(item)}
-                            className="rounded p-1.5 text-muted-foreground hover:bg-orange-50 hover:text-orange-600 transition"
+                            className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition"
                             title="Unlink from this menu only"
                           >
-                            <Unlink className="h-3.5 w-3.5" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </td>
@@ -377,20 +348,6 @@ function MenuEditPage() {
           </Button>
         </div>
       </div>
-
-      {/* ── Confirm: Delete item from DB ─────────────────────────────── */}
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        onOpenChange={open => { if (!open) setPendingDelete(null); }}
-        title="Delete item?"
-        description={
-          pendingDelete
-            ? `"${pendingDelete.name}" will be permanently deleted from the database and removed from all menus.`
-            : ""
-        }
-        confirmLabel="Delete"
-        onConfirm={handleDelete}
-      />
 
       {/* ── Confirm: Unlink from this menu ───────────────────────────── */}
       <ConfirmDialog

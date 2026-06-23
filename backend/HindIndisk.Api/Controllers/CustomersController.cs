@@ -13,17 +13,28 @@ public class CustomersController : ControllerBase
     public CustomersController(ICustomerService customers) => _customers = customers;
 
     /// <summary>
-    /// Look up a customer by phone number for form auto-fill.
-    /// Public endpoint — no auth required. Returns 404 when no customer matches.
+    /// Look up a customer by phone or email for form auto-fill.
+    /// Provide exactly one of: ?phone= or ?email=
+    /// Phone takes priority if both are supplied. Returns 404 when no match.
     /// </summary>
     [HttpGet("lookup")]
     [AllowAnonymous]
-    public async Task<IActionResult> Lookup([FromQuery] string phone)
+    public async Task<IActionResult> Lookup(
+        [FromQuery] string? phone,
+        [FromQuery] string? email)
     {
-        if (string.IsNullOrWhiteSpace(phone))
-            return BadRequest(new { message = "phone query parameter is required." });
+        if (!string.IsNullOrWhiteSpace(phone))
+        {
+            var byPhone = await _customers.LookupByPhoneAsync(phone);
+            return byPhone is null ? NotFound() : Ok(byPhone);
+        }
 
-        var result = await _customers.LookupByPhoneAsync(phone);
-        return result is null ? NotFound() : Ok(result);
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var byEmail = await _customers.LookupByEmailAsync(email);
+            return byEmail is null ? NotFound() : Ok(byEmail);
+        }
+
+        return BadRequest(new { message = "Provide either 'phone' or 'email' query parameter." });
     }
 }
