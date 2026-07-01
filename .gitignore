@@ -1,0 +1,19 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# .NET
+bin/
+obj/
+publish/
+*.user
+*.userosscache
+*.sln.docuser
+.vs/
+.vscode/
+wwwroot/assets/
