@@ -13,7 +13,7 @@ public class MenuService : IMenuService
     public async Task<IReadOnlyList<MenuCategoryDto>> GetCategoriesAsync()
     {
         return await _db.Menus
-            .Where(m => m.IsActive && m.MenuItemsMappings.Any())
+            .Where(m => m.IsActive && m.MenuItemsMappings.Any(mm => mm.MenuItem.Code > 0))
             .OrderBy(m => m.Id)
             .Select(m => new MenuCategoryDto(m.Id, m.Name, m.NameDa, m.Description, m.DescriptionDa, m.MenuItemsMappings.Count))
             .AsNoTracking()
@@ -27,7 +27,7 @@ public class MenuService : IMenuService
 
         // Pass 1 — project item + category columns (no collection navigation needed)
         var query = _db.MenuItemsMappings
-            .Where(m => m.Menu.IsActive)
+            .Where(m => m.Menu.IsActive && m.MenuItem.Code > 0)
             .AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(category))
@@ -95,7 +95,7 @@ public class MenuService : IMenuService
         var targetBranchId = branchId ?? 1L;
 
         var row = await _db.MenuItemsMappings
-            .Where(m => m.MenuItem.Name.ToLower() == name.ToLower() && m.Menu.IsActive)
+            .Where(m => m.MenuItem.Name.ToLower() == name.ToLower() && m.Menu.IsActive && m.MenuItem.Code > 0)
             .Select(m => new
             {
                 m.MenuItem.Id,
@@ -119,7 +119,8 @@ public class MenuService : IMenuService
         var relatedRows = await _db.MenuItemsMappings
             .Where(m => m.Menu.Id == row.CategoryId
                      && m.MenuItem.Id != row.Id
-                     && m.Menu.IsActive)
+                     && m.Menu.IsActive
+                     && m.MenuItem.Code > 0)
             .Select(m => new
             {
                 m.MenuItem.Id,

@@ -15,15 +15,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { formatDate, formatTime } from "@/lib/dateFormat";
 
-const TZ = "Europe/Copenhagen";
 function fmtDate(iso: string) {
-  const d = new Date(iso);
-  const day  = d.toLocaleDateString("en-GB", { timeZone: TZ, day: "2-digit" });
-  const mon  = d.toLocaleDateString("en-GB", { timeZone: TZ, month: "short" });
-  const yr   = d.toLocaleDateString("en-GB", { timeZone: TZ, year: "numeric" });
-  const time = d.toLocaleTimeString("en-US", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hour12: true });
-  return { date: `${day} - ${mon} - ${yr}`, time };
+  return { date: formatDate(iso), time: formatTime(iso) };
 }
 
 export const Route = createFileRoute("/admin/orders")({
@@ -379,7 +374,7 @@ function AdminOrders() {
     setUpdatingId(id);
     try {
       await updateStatus.mutateAsync({ id, status, cancellationReason });
-      const timeStr = new Date().toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" });
+      const timeStr = formatTime(new Date());
       setRecentlyUpdated(prev => ({ ...prev, [id]: timeStr }));
       setTimeout(() => {
         setRecentlyUpdated(prev => {

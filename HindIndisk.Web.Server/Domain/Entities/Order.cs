@@ -39,7 +39,11 @@ public class Order
 
     public DateTime CreatedAt { get; set; } = DenmarkTime.Now;
 
-    public virtual User User { get; set; } = null!;
+    // Populated when an admin/staff places the order on behalf of a customer
+    public long? PlacedByUserId { get; set; }
+
+    public virtual User  User         { get; set; } = null!;
+    public virtual User? PlacedByUser { get; set; }
     public virtual Branch Branch { get; set; } = null!;
     public virtual ICollection<OrderItem> OrderItems { get; set; } = [];
     public virtual ICollection<OrderAppliedOffer> AppliedOffers { get; set; } = [];

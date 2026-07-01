@@ -4,6 +4,7 @@ using HindIndisk.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HindIndisk.Api.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260701111035_AddPasswordOtpTable")]
+    partial class AddPasswordOtpTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -565,9 +568,6 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<long?>("PlacedByUserId")
-                        .HasColumnType("bigint");
-
                     b.Property<DateOnly?>("ScheduledDate")
                         .HasColumnType("date");
 
@@ -599,8 +599,6 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("BranchId");
-
-                    b.HasIndex("PlacedByUserId");
 
                     b.HasIndex("UserId");
 
@@ -712,13 +710,6 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(6)
                         .HasColumnType("nvarchar(6)");
-
-                    b.Property<string>("ResetToken")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<DateTime?>("TokenExpiresAt")
-                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -1063,11 +1054,6 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("HindIndisk.Api.Domain.Entities.User", "PlacedByUser")
-                        .WithMany()
-                        .HasForeignKey("PlacedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("HindIndisk.Api.Domain.Entities.User", "User")
                         .WithMany("Orders")
                         .HasForeignKey("UserId")
@@ -1075,8 +1061,6 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Branch");
-
-                    b.Navigation("PlacedByUser");
 
                     b.Navigation("User");
                 });

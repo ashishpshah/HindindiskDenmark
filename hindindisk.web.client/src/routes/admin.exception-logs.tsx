@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable, type ColumnDef } from "@/components/ui/data-table";
 import { useExceptionLogs, type ExceptionLogDto } from "@/hooks/useExceptionLogs";
 import { useAdminAuth } from "@/context/AdminAuthContext";
+import { formatDateTime } from "@/lib/dateFormat";
 
 export const Route = createFileRoute("/admin/exception-logs")({ component: ExceptionLogsPage });
 
@@ -103,11 +104,7 @@ function ExceptionLogsPage() {
       header: "Time",
       cell: info => (
         <span className="text-xs text-muted-foreground whitespace-nowrap">
-          {new Date(info.getValue<string>()).toLocaleString("da-DK", {
-            timeZone: "Europe/Copenhagen",
-            day: "2-digit", month: "short", year: "numeric",
-            hour: "2-digit", minute: "2-digit", second: "2-digit",
-          })}
+          {formatDateTime(info.getValue<string>())}
         </span>
       ),
     },

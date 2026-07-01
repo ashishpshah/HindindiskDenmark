@@ -1,11 +1,11 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using HindIndisk.Api.Application.DTOs.Auth;
 using HindIndisk.Api.Domain.Entities;
 using HindIndisk.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 
 namespace HindIndisk.Api.Application.Services;
@@ -14,18 +14,20 @@ public class AuthService : IAuthService
 {
     private readonly ApplicationDbContext _db;
     private readonly IConfiguration      _config;
-    private readonly IMemoryCache         _cache;
     private readonly IEmailService        _email;
+
+    const int OtpExpiryMinutes      = 10;
+    const int OtpCooldownSeconds    = 60;
+    const int OtpDailyLimit         = 3;
+    const int ResetTokenExpiryMinutes = 15;
 
     public AuthService(
         ApplicationDbContext db,
         IConfiguration       config,
-        IMemoryCache         cache,
         IEmailService        email)
     {
         _db     = db;
         _config = config;
-        _cache  = cache;
         _email  = email;
     }
 
@@ -98,32 +100,105 @@ public class AuthService : IAuthService
 
     public async Task ForgotPasswordAsync(string email)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email.ToLower())
-            ?? throw new InvalidOperationException("No account found with this email address.");
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail);
+        if (user is null) return; // silent — don't reveal whether email exists
+
+        var now        = DenmarkTime.Now;
+        var todayStart = now.Date;
+
+        // If a valid (non-expired, non-used) OTP already exists, tell the client to
+        // skip straight to the OTP input — regardless of daily limit or cooldown.
+        var activeOtp = await _db.PasswordOtps
+            .Where(o => o.Email == normalizedEmail && !o.IsUsed && o.ExpiresAt > now)
+            .OrderByDescending(o => o.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        if (activeOtp is not null)
+            throw new InvalidOperationException("OTP_ALREADY_ACTIVE");
+
+        // Max 3 OTPs per email per day
+        var countToday = await _db.PasswordOtps
+            .CountAsync(o => o.Email == normalizedEmail && o.CreatedAt >= todayStart);
+        if (countToday >= OtpDailyLimit)
+            throw new InvalidOperationException("Maximum OTP requests reached for today. Please try again tomorrow.");
+
+        // 1-minute cooldown between OTP requests
+        var lastOtp = await _db.PasswordOtps
+            .Where(o => o.Email == normalizedEmail)
+            .OrderByDescending(o => o.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        if (lastOtp is not null)
+        {
+            var secondsSinceLast = (now - lastOtp.CreatedAt).TotalSeconds;
+            if (secondsSinceLast < OtpCooldownSeconds)
+            {
+                var wait = (int)Math.Ceiling(OtpCooldownSeconds - secondsSinceLast);
+                throw new InvalidOperationException($"Please wait {wait} second{(wait == 1 ? "" : "s")} before requesting another OTP.");
+            }
+        }
 
         var otp = Random.Shared.Next(100_000, 1_000_000).ToString();
-        var key = OtpCacheKey(email);
-        _cache.Set(key, otp, TimeSpan.FromMinutes(10));
 
-        _ = _email.SendOtpEmailAsync(email, $"{user.Firstname} {user.Lastname}".Trim(), otp);
+        _db.PasswordOtps.Add(new PasswordOtp
+        {
+            Email     = normalizedEmail,
+            OtpCode   = otp,
+            CreatedAt = now,
+            ExpiresAt = now.AddMinutes(OtpExpiryMinutes),
+            IsUsed    = false,
+        });
+        await _db.SaveChangesAsync();
+
+        _ = _email.SendOtpEmailAsync(email.Trim(), $"{user.Firstname} {user.Lastname}".Trim(), otp);
+    }
+
+    public async Task<VerifyOtpResponse> VerifyOtpAsync(VerifyOtpRequest request)
+    {
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var now             = DenmarkTime.Now;
+
+        var otpRecord = await _db.PasswordOtps
+            .Where(o => o.Email    == normalizedEmail
+                     && o.OtpCode  == request.Otp
+                     && !o.IsUsed
+                     && o.ExpiresAt > now)
+            .OrderByDescending(o => o.CreatedAt)
+            .FirstOrDefaultAsync()
+            ?? throw new InvalidOperationException("Invalid or expired OTP. Please request a new one.");
+
+        var resetToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+        otpRecord.ResetToken     = resetToken;
+        otpRecord.TokenExpiresAt = now.AddMinutes(ResetTokenExpiryMinutes);
+        otpRecord.ExpiresAt      = now; // expire immediately — prevents re-verification and unblocks new OTP requests
+        await _db.SaveChangesAsync();
+
+        return new VerifyOtpResponse(resetToken);
     }
 
     public async Task ResetPasswordAsync(ResetPasswordRequest request)
     {
-        var key = OtpCacheKey(request.Email);
-        if (!_cache.TryGetValue<string>(key, out var stored) || stored != request.Otp)
-            throw new InvalidOperationException("Invalid or expired OTP. Please request a new one.");
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var now             = DenmarkTime.Now;
 
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email.Trim().ToLower())
+        var otpRecord = await _db.PasswordOtps
+            .Where(o => o.Email          == normalizedEmail
+                     && o.ResetToken     == request.ResetToken
+                     && !o.IsUsed
+                     && o.TokenExpiresAt > now)
+            .OrderByDescending(o => o.CreatedAt)
+            .FirstOrDefaultAsync()
+            ?? throw new InvalidOperationException("Invalid or expired reset token. Please start over.");
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail)
             ?? throw new InvalidOperationException("User not found.");
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        otpRecord.IsUsed  = true;
         await _db.SaveChangesAsync();
-        _cache.Remove(key);
     }
-
-    private static string OtpCacheKey(string email) =>
-        $"pwd-otp:{email.Trim().ToLowerInvariant()}";
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

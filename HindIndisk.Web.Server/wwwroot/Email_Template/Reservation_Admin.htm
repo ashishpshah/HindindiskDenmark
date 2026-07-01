@@ -1,97 +1,77 @@
-<!--<base href="#PCBPOWERHOSTNAME#">-->
-<div style="margin:0px;font-family:Verdana, Geneva, sans-serif;">
-    <div style="width:595px; margin:0 auto;padding:0px;">
-        <div style="width:100%;display:block;    margin-left: 175px;">
-            <a href="http://hindindisk.dk" target="_blank">
-                <img src="http://hindindisk.dk/assets/Client/img/main_logo.png" alt="" />
-            </a>
-        </div>
+<div style="margin:0;font-family:Verdana,Geneva,sans-serif;background:#f0f0f0;padding:20px 0;">
+<div style="max-width:600px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
 
-        <div style="text-align:center;">
-            <p style="background-image: url(http://hindindisk.dk/Content/assets/img/header_ack.png); padding: 20px 15px;margin: 0 auto;background-repeat: no-repeat;width: 265px;display: inline-block;color: #343131; font-family:Verdana, Geneva, sans-serif;font-weight:bold;font-size:15px;">
-                Reservation Details
-            </p>
-        </div>
-        <div style="margin-left:10px;font-family:Verdana, Geneva, sans-serif;font-size:13px;color:#343131;">
-            <br />
+  <!-- Logo -->
+  <div style="background:#fff;padding:20px 24px 12px;text-align:center;border-bottom:1px solid #f0f0f0;">
+    <a href="http://hindindisk.dk" target="_blank">
+      <img src="http://hindindisk.dk/assets/Client/img/main_logo.png" alt="Hind Indisk" style="height:48px;" />
+    </a>
+  </div>
 
-            <p style="margin:0;"> <span>Branch:  <b> [Branch]</b> </span>  <span style="float:right"> Reservation No : <b> [ReservationNumber]</b></span> </p>
+  <!-- Header -->
+  <div style="background:#343131;padding:20px 24px;">
+    <p style="margin:0;color:#fff;font-size:18px;font-weight:bold;">New Reservation</p>
+    <p style="margin:6px 0 0;color:#D9822B;font-size:13px;">Reservation #[ReservationNumber] &bull; Received [ReservationDate]</p>
+  </div>
 
-            <p style="margin:0;"><span>Reservation Date &amp; Time:  <b> [Time]</b></span> <span style="float:right">Received On : <b> [ReservationDate]</b> </span> </p>
+  <!-- Meta bar -->
+  <div style="background:#f5f2ee;padding:12px 24px;border-bottom:1px solid #e8e0d8;">
+    <table cellspacing="0" style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr>
+        <td style="padding:2px 0;color:#555;width:50%;"><strong style="color:#343131;">Branch:</strong> [Branch]</td>
+        <td style="padding:2px 0;color:#555;"><strong style="color:#343131;">Date &amp; Time:</strong> [Time]</td>
+      </tr>
+    </table>
+  </div>
 
-            <div style="width:100%;display:inline-block;margin-top:30px;">
+  <!-- Body -->
+  <div style="padding:24px;font-size:13px;color:#343131;line-height:1.6;">
 
-                <span><h3>Customer Details</h3></span>
-                <table id="reservationDetails" style="margin-bottom:25px;" cellspacing="0" width="570px" border="1">
-                    <tbody>
-                        <tr>
-                            <td style="font-weight: bold" align="left">
-                                Name :
-                            </td>
-                            <td>
-                                [Customername]
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: bold">
-                                <b>Mobile :</b>
-                            </td>
-                            <td colspan="3">
-                                [Mobile]
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: bold" align="left">
-                                Email :
-                            </td>
-                            <td>
-                                [Email]
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+    <!-- Customer details -->
+    <p style="margin:0 0 8px;color:#D9822B;font-size:13px;font-weight:bold;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #D9822B;padding-bottom:4px;">Customer Details</p>
+    <table cellspacing="0" style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+      <tr>
+        <td style="width:160px;padding:8px 12px;font-weight:bold;background:#fafafa;border:1px solid #e0e0e0;">Name</td>
+        <td style="padding:8px 12px;background:#fafafa;border:1px solid #e0e0e0;">[Customername]</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px;font-weight:bold;border:1px solid #e0e0e0;">Phone</td>
+        <td style="padding:8px 12px;border:1px solid #e0e0e0;">[Mobile]</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px;font-weight:bold;background:#fafafa;border:1px solid #e0e0e0;">Email</td>
+        <td style="padding:8px 12px;background:#fafafa;border:1px solid #e0e0e0;">[Email]</td>
+      </tr>
+    </table>
 
-                <span><h3>Reservation Details</h3></span>
-                <table id="reservationInfo" style="margin-bottom:25px;" cellspacing="0" width="570px" border="1">
-                    <tbody>
-                        <tr>
-                            <td style="font-weight: bold" align="left">
-                                No. of Guests :
-                            </td>
-                            <td>
-                                [Noperson]
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: bold" align="left">
-                                Date &amp; Time :
-                            </td>
-                            <td>
-                                [Time]
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight: bold" align="left">
-                                Special Requests :
-                            </td>
-                            <td>
-                                [Message]
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+    <!-- Reservation details -->
+    <p style="margin:0 0 8px;color:#D9822B;font-size:13px;font-weight:bold;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid #D9822B;padding-bottom:4px;">Reservation Details</p>
+    <table cellspacing="0" style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+      <tr>
+        <td style="width:160px;padding:8px 12px;font-weight:bold;background:#fafafa;border:1px solid #e0e0e0;">Branch</td>
+        <td style="padding:8px 12px;background:#fafafa;border:1px solid #e0e0e0;">[Branch]</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px;font-weight:bold;border:1px solid #e0e0e0;">Date &amp; Time</td>
+        <td style="padding:8px 12px;border:1px solid #e0e0e0;">[Time]</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px;font-weight:bold;background:#fafafa;border:1px solid #e0e0e0;">No. of Guests</td>
+        <td style="padding:8px 12px;background:#fafafa;border:1px solid #e0e0e0;">[Noperson]</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 12px;font-weight:bold;border:1px solid #e0e0e0;vertical-align:top;">Special Requests</td>
+        <td style="padding:8px 12px;border:1px solid #e0e0e0;">[Message]</td>
+      </tr>
+    </table>
 
-                <p style="margin:0px;margin-bottom:25px;">
-                    Thank you,<br />
-                    Hind Indisk Restaurant
-                </p>
-            </div>
-        </div>
-        <div>
-            <map name="image-map1">
-            </map>
-        </div>
-        <div>
-        </div>
-    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="background:#f5f5f5;padding:14px 24px;text-align:center;font-size:11px;color:#888;border-top:1px solid #e0e0e0;">
+    Hind Indisk Restaurant &bull; Admin Notification<br/>
+    <a href="http://hindindisk.dk" style="color:#D9822B;text-decoration:none;">hindindisk.dk</a>
+  </div>
+
+</div>
 </div>

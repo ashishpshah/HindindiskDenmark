@@ -203,6 +203,28 @@ export function Header() {
                   {l.label}
                 </Link>
               ))}
+              <div className="mt-4 border-t border-white/10 pt-4">
+                <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wider text-white/50">
+                  <MapPin className="h-3.5 w-3.5" /> {t("pages.menu.changeLocation")}
+                </div>
+                <div className="flex flex-col gap-1">
+                  {branchesData.map((b) => {
+                    const isSelected = branch === b.name;
+                    const isClosed = b.isCloseOrder || b.isCloseReservation;
+                    return (
+                      <button
+                        key={b.name}
+                        onClick={() => { setBranch(b.name); setOpen(false); }}
+                        className={`flex items-center justify-between rounded-xl px-4 py-3 text-left text-base transition ${isSelected ? "bg-primary text-primary-foreground" : "hover:bg-white/10 text-white/80"}`}
+                      >
+                        <span>{b.name}</span>
+                        {isClosed && <span className="h-2 w-2 rounded-full bg-orange-400 shrink-0" title="Some services suspended" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="mt-4 flex items-center gap-3 text-sm">
                 <button onClick={() => setLang("da")} className={`flex items-center gap-2 rounded-full border border-white/20 px-3 py-1.5 transition ${lang === "da" ? "bg-primary text-primary-foreground border-primary" : "text-white/80 hover:bg-white/5"}`}>
                   {DK_FLAG} <span>DA</span>

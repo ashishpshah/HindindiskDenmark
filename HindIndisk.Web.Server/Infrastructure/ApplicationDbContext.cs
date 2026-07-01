@@ -30,6 +30,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<OfferMenu> OfferMenus => Set<OfferMenu>();
     public DbSet<OfferMenuItem> OfferMenuItems => Set<OfferMenuItem>();
     public DbSet<ApiExceptionLog> ApiExceptionLogs => Set<ApiExceptionLog>();
+    public DbSet<PasswordOtp>    PasswordOtps     => Set<PasswordOtp>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -112,6 +113,13 @@ public class ApplicationDbContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Order>()
+            .HasOne(o => o.PlacedByUser)
+            .WithMany()
+            .HasForeignKey(o => o.PlacedByUserId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Order>()
             .HasOne(o => o.Branch)
             .WithMany(b => b.Orders)
             .HasForeignKey(o => o.BranchId)
@@ -183,6 +191,13 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<ApiExceptionLog>()
             .HasIndex(e => e.UserId);
+
+        // ── PasswordOtp ───────────────────────────────────────────────────────
+        modelBuilder.Entity<PasswordOtp>()
+            .HasIndex(o => o.Email);
+
+        modelBuilder.Entity<PasswordOtp>()
+            .HasIndex(o => o.CreatedAt);
 
         // ── Fixed roles — always seeded via migration (HasData) ───────────────
         // BCrypt is NOT used here: HasData values are serialised into the migration

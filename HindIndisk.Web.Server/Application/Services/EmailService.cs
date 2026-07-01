@@ -277,6 +277,20 @@ public class EmailService : IEmailService
         await SendAsync(_settings.AdminToMail, "Admin", emailSubject, WrapInHtml(body), isAdmin: true);
     }
 
+    // ── Customer: contact form acknowledgement ───────────────────────────────
+
+    public async Task SendContactConfirmationAsync(string toEmail, string toName, string subject, string message)
+    {
+        var template = await LoadTemplateAsync("Contact_Customer.htm");
+        var body = template
+            .Replace("[Customername]", WebUtility.HtmlEncode(toName))
+            .Replace("[Email]",        WebUtility.HtmlEncode(toEmail))
+            .Replace("[Subject]",      WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(subject) ? "—" : subject))
+            .Replace("[Message]",      WebUtility.HtmlEncode(message));
+
+        await SendAsync(toEmail, toName, "We received your message — Hind Indisk", WrapInHtml(body));
+    }
+
     public async Task SendNewCustomerCredentialsAsync(string toEmail, string toName, string plainPassword)
     {
         var body =

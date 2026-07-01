@@ -1,45 +1,58 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Mail, Lock, User as UserIcon, Phone, CheckCircle2 } from "lucide-react";
+import { X, Mail, Lock, User as UserIcon, Phone, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/context/AuthContext";
 import { useI18n } from "@/i18n/I18nProvider";
-import { toast } from "sonner";
 import { apiFetch } from "@/lib/api/client";
+
+type Alert = { type: "success" | "error" | "info"; message: string };
 
 export function AuthModal() {
   const { modalOpen, closeModal, modalMode, setModalMode, login, register } = useAuth();
   const { t } = useI18n();
   const [loading,    setLoading]    = useState(false);
   const [forgotStep, setForgotStep] = useState<1 | 2 | 3>(1);
+  const [alert,      setAlert]      = useState<Alert | null>(null);
+  const [resetToken, setResetToken] = useState("");
   const [form, setForm] = useState({
     firstname: "", lastname: "", email: "", phone: "", password: "", confirm: "", otp: "", newpwd: "", newpwdConfirm: "",
   });
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAlert(null);
     setForm({ ...form, [k]: e.target.value });
+  };
 
   useEffect(() => {
     if (modalOpen) {
       setForm({ firstname: "", lastname: "", email: "", phone: "", password: "", confirm: "", otp: "", newpwd: "", newpwdConfirm: "" });
+      setAlert(null);
+      setResetToken("");
     } else {
       setForgotStep(1);
     }
   }, [modalOpen]);
-  useEffect(() => { if (modalMode !== "forgot") setForgotStep(1); }, [modalMode]);
+
+  useEffect(() => {
+    if (modalMode !== "forgot") setForgotStep(1);
+    setAlert(null);
+  }, [modalMode]);
+
+  useEffect(() => { setAlert(null); }, [forgotStep]);
 
   // ── Login ──────────────────────────────────────────────────────────────────
   const onLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setAlert(null);
     try {
       await login(form.email, form.password);
-      toast.success("Logged in");
       closeModal();
     } catch {
-      toast.error("Invalid email or password.");
+      setAlert({ type: "error", message: "Invalid email or password." });
     } finally {
       setLoading(false);
     }
@@ -48,19 +61,22 @@ export function AuthModal() {
   // ── Register ───────────────────────────────────────────────────────────────
   const onRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.password.length < 8) { toast.error("Password must be at least 8 characters."); return; }
-    if (form.password !== form.confirm) { toast.error("Passwords do not match"); return; }
+    if (form.password.length < 8) {
+      setAlert({ type: "error", message: "Password must be at least 8 characters." }); return;
+    }
+    if (form.password !== form.confirm) {
+      setAlert({ type: "error", message: "Passwords do not match." }); return;
+    }
     if (form.phone && !/^\d{8,13}$/.test(form.phone.trim().replace(/[+ ]/g, ""))) {
-      toast.error("Phone must be 8–13 digits. You may use + and spaces (e.g. +45 12 34 56 78)."); return;
+      setAlert({ type: "error", message: "Phone must be 8–13 digits. You may use + and spaces (e.g. +45 12 34 56 78)." }); return;
     }
     setLoading(true);
+    setAlert(null);
     try {
       await register({ firstname: form.firstname, lastname: form.lastname, email: form.email, phone: form.phone || undefined, password: form.password });
-      toast.success("Account created");
       closeModal();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Registration failed. Please try again.";
-      toast.error(msg);
+      setAlert({ type: "error", message: err instanceof Error ? err.message : "Registration failed. Please try again." });
     } finally {
       setLoading(false);
     }
@@ -70,54 +86,88 @@ export function AuthModal() {
   const onSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setAlert(null);
     try {
       await apiFetch("/api/auth/forgot-password", {
         method: "POST",
         body: JSON.stringify({ email: form.email }),
       });
-      toast.success(t("auth.otpSent"));
       setForgotStep(2);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Could not send OTP. Please try again.");
+      const msg = err instanceof Error ? err.message : "Could not send OTP. Please try again.";
+      // Active OTP exists (too soon / daily limit + still valid) → skip to OTP input
+      const hasActiveOtp = msg.includes("OTP_ALREADY_ACTIVE") || msg.toLowerCase().includes("please wait");
+      if (hasActiveOtp) {
+        setForgotStep(2);
+        setAlert({ type: "info", message: "OTP already sent to your email. Please check your inbox." });
+      } else {
+        setAlert({ type: "error", message: msg });
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // ── Forgot: Step 2 — verify OTP (client-side, no round-trip) ──────────────
-  const onVerifyOtp = (e: React.FormEvent) => {
+  // ── Forgot: Step 2 — verify OTP via API ───────────────────────────────────
+  const onVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (form.otp.length !== 6 || !/^\d{6}$/.test(form.otp)) {
-      toast.error("Please enter the 6-digit OTP sent to your email."); return;
+      setAlert({ type: "error", message: "Please enter the 6-digit OTP sent to your email." }); return;
     }
-    setForgotStep(3);
+    setLoading(true);
+    setAlert(null);
+    try {
+      const res = await apiFetch<{ resetToken: string }>("/api/auth/verify-otp", {
+        method: "POST",
+        body: JSON.stringify({ email: form.email, otp: form.otp }),
+      });
+      setResetToken(res.resetToken);
+      setForgotStep(3);
+    } catch (err: unknown) {
+      setAlert({ type: "error", message: err instanceof Error ? err.message : "Invalid OTP. Please try again." });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ── Forgot: Step 3 — reset password ───────────────────────────────────────
   const onResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (form.newpwd.length < 8) {
-      toast.error("Password must be at least 8 characters."); return;
+      setAlert({ type: "error", message: "Password must be at least 8 characters." }); return;
     }
     if (form.newpwd !== form.newpwdConfirm) {
-      toast.error("Passwords do not match."); return;
+      setAlert({ type: "error", message: "Passwords do not match." }); return;
     }
     setLoading(true);
+    setAlert(null);
     try {
       await apiFetch("/api/auth/reset-password", {
         method: "POST",
-        body: JSON.stringify({ email: form.email, otp: form.otp, newPassword: form.newpwd }),
+        body: JSON.stringify({ email: form.email, resetToken, newPassword: form.newpwd }),
       });
-      toast.success(t("auth.resetSuccess"));
-      setForgotStep(1);
-      setModalMode("login");
+      setAlert({ type: "success", message: t("auth.resetSuccess") });
+      setTimeout(() => { setForgotStep(1); setModalMode("login"); }, 1500);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to reset password.";
-      toast.error(msg);
+      setAlert({ type: "error", message: err instanceof Error ? err.message : "Failed to reset password." });
     } finally {
       setLoading(false);
     }
   };
+
+  // ── Inline alert banner ────────────────────────────────────────────────────
+  const AlertBanner = () => alert ? (
+    <div className={`rounded-xl px-4 py-3 text-sm flex items-start gap-2 ${
+      alert.type === "error"   ? "bg-destructive/10 border border-destructive/20 text-destructive" :
+      alert.type === "success" ? "bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400" :
+                                 "bg-primary/5 border border-primary/20 text-muted-foreground"
+    }`}>
+      {alert.type === "error"   && <AlertCircle  className="h-4 w-4 shrink-0 mt-0.5" />}
+      {alert.type === "success" && <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />}
+      {alert.type === "info"    && <Info         className="h-4 w-4 shrink-0 mt-0.5" />}
+      <span>{alert.message}</span>
+    </div>
+  ) : null;
 
   return (
     <AnimatePresence>
@@ -154,14 +204,12 @@ export function AuthModal() {
                     <label className="flex items-center gap-2"><Checkbox /> {t("auth.remember")}</label>
                     <button type="button" onClick={() => setModalMode("forgot")} className="text-primary hover:underline">{t("auth.forgot")}</button>
                   </div>
+                  <AlertBanner />
                   <Button disabled={loading} className="w-full gradient-primary text-primary-foreground">{t("actions.login")}</Button>
                   <div className="relative my-2 text-center text-xs text-muted-foreground">
                     <span className="bg-card px-2 relative z-10">or</span>
                     <span className="absolute inset-x-0 top-1/2 h-px bg-border" />
                   </div>
-                  {/* <Button type="button" variant="outline" className="w-full" onClick={() => { toast.info("Google sign-in (mock)"); }}>
-                    {t("auth.continueGoogle")}
-                  </Button> */}
                   <p className="pt-2 text-center text-sm text-muted-foreground">
                     {t("auth.noAccount")}{" "}
                     <button type="button" onClick={() => setModalMode("register")} className="font-semibold text-primary hover:underline">{t("actions.register")}</button>
@@ -198,6 +246,7 @@ export function AuthModal() {
                     <Input required type="password" value={form.confirm} onChange={set("confirm")} placeholder="Repeat password" />
                   </Field>
                   <label className="flex items-start gap-2 text-sm"><Checkbox required className="mt-0.5" /> <span>{t("auth.acceptTerms")}</span></label>
+                  <AlertBanner />
                   <Button disabled={loading} className="w-full gradient-primary text-primary-foreground">{t("actions.register")}</Button>
                   <p className="pt-2 text-center text-sm text-muted-foreground">
                     {t("auth.haveAccount")}{" "}
@@ -225,6 +274,7 @@ export function AuthModal() {
                       <Field icon={<Mail className="h-4 w-4" />} label={t("auth.email")}>
                         <Input required type="email" value={form.email} onChange={set("email")} placeholder="you@email.dk" />
                       </Field>
+                      <AlertBanner />
                       <Button disabled={loading} className="w-full gradient-primary text-primary-foreground">
                         {loading ? "Sending…" : "Send OTP"}
                       </Button>
@@ -252,7 +302,10 @@ export function AuthModal() {
                           className="text-center text-xl tracking-widest font-mono"
                         />
                       </Field>
-                      <Button className="w-full gradient-primary text-primary-foreground">Verify OTP</Button>
+                      <AlertBanner />
+                      <Button disabled={loading} className="w-full gradient-primary text-primary-foreground">
+                        {loading ? "Verifying…" : "Verify OTP"}
+                      </Button>
                       <button
                         type="button"
                         className="block w-full text-center text-xs text-muted-foreground hover:text-primary transition"
@@ -273,6 +326,7 @@ export function AuthModal() {
                       <Field icon={<Lock className="h-4 w-4" />} label={t("auth.confirmPassword")}>
                         <Input required type="password" value={form.newpwdConfirm} onChange={set("newpwdConfirm")} placeholder="Repeat new password" />
                       </Field>
+                      <AlertBanner />
                       <Button disabled={loading} className="w-full gradient-primary text-primary-foreground">
                         {loading ? "Saving…" : t("actions.save")}
                       </Button>

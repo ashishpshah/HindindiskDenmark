@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ShoppingBag, Loader2, MapPin, Banknote } from "lucide-react";
+import { ShoppingBag, Loader2, MapPin, Banknote, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMyOrders } from "@/hooks/useMyOrders";
 import { useI18n } from "@/i18n/I18nProvider";
+import { formatDateTime } from "@/lib/dateFormat";
 
 export const Route = createFileRoute("/account/orders")({ component: OrdersPage });
 
@@ -63,8 +64,14 @@ function OrdersPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="font-mono text-sm text-muted-foreground">#{o.id}</div>
-              <div className="font-semibold">{new Date(o.createdAt).toLocaleString("da-DK", { timeZone: "Europe/Copenhagen" })}</div>
+              <div className="font-semibold">{formatDateTime(o.createdAt)}</div>
               <div className="text-sm text-muted-foreground">{o.branchName} · {o.orderType}</div>
+              {o.placedByName && (
+                <div className="mt-1 flex items-center gap-1.5 text-xs text-amber-600">
+                  <UserCog className="h-3.5 w-3.5 shrink-0" />
+                  <span>Placed by <strong>{o.placedByName}</strong></span>
+                </div>
+              )}
             </div>
             <div className="text-right shrink-0">
               <div className="font-display text-xl">{o.total.toFixed(0)} DKK</div>

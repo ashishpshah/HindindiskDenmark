@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { z } from "zod";
 import { useOrder } from "@/hooks/useOrder";
+import { formatDateTime } from "@/lib/dateFormat";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/context/AuthContext";
 import { OrderSummary } from "@/components/OrderSummary";
@@ -132,7 +133,7 @@ function TrackPage() {
                 <div>
                   <h3 className="font-display text-xl font-semibold">{t("pages.tracking.orderDetails")}</h3>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {t("pages.tracking.placedOn")} {new Date(apiOrder.createdAt).toLocaleString("da-DK", { timeZone: "Europe/Copenhagen" })}
+                    {t("pages.tracking.placedOn")} {formatDateTime(apiOrder.createdAt)}
                   </p>
                 </div>
 
@@ -220,7 +221,7 @@ function TrackPage() {
                 <div>
                   <h3 className="font-display text-xl font-semibold">{t("pages.tracking.orderDetails")}</h3>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Placed on {new Date(legacyOrder.date).toLocaleString("da-DK", { timeZone: "Europe/Copenhagen" })}
+                    Placed on {formatDateTime(legacyOrder.date)}
                   </p>
                 </div>
                 <div className="space-y-3 border-t pt-4 text-sm">

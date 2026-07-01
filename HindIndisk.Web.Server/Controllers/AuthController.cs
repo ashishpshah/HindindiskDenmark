@@ -93,16 +93,39 @@ public class AuthController : ControllerBase
 
     /// <summary>Send a 6-digit OTP to the supplied email for password reset.</summary>
     [HttpPost("forgot-password")]
-
     [AllowAnonymous]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
     {
-        await _auth.ForgotPasswordAsync(request.Email);
-        // Always 200 — don't reveal whether the email is registered
-        return Ok(new { message = "If that email is registered, an OTP has been sent." });
+        try
+        {
+            await _auth.ForgotPasswordAsync(request.Email);
+            // Always 200 — don't reveal whether the email is registered
+            return Ok(new { message = "If that email is registered, an OTP has been sent." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Surface rate-limit errors (cooldown / daily limit) to the client
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
-    /// <summary>Verify OTP and set a new password.</summary>
+    /// <summary>Verify OTP — returns a short-lived reset token to use in reset-password.</summary>
+    [HttpPost("verify-otp")]
+    [AllowAnonymous]
+    public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest request)
+    {
+        try
+        {
+            var result = await _auth.VerifyOtpAsync(request);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>Reset password using the token issued by verify-otp.</summary>
     [HttpPost("reset-password")]
 
     [AllowAnonymous]

@@ -54,7 +54,7 @@ namespace HindIndisk.Web.Server
 
 			builder.Services.AddAuthorization();
 
-			// ── In-memory cache (OTP storage for password reset) ─────────────────────────
+			// ── In-memory cache (used by GoogleReviewsService) ───────────────────────────
 			builder.Services.AddMemoryCache();
 
 			// ── AutoMapper ────────────────────────────────────────────────────────────────

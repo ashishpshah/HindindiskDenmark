@@ -23,4 +23,5 @@ public interface IEmailService
     Task SendAdminOrderNotificationAsync(OrderDto order);
     Task SendAdminReservationNotificationAsync(ReservationDto reservation);
     Task SendContactEnquiryAsync(string fromName, string fromEmail, string subject, string message);
+    Task SendContactConfirmationAsync(string toEmail, string toName, string subject, string message);
 }

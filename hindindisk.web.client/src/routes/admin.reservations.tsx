@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { UserCheck, UserX } from "lucide-react";
 import { getPriority } from "@/lib/priority";
+import { formatDate } from "@/lib/dateFormat";
 import { toast } from "sonner";
 import { useAdminReservations, type AdminReservationDto } from "@/hooks/useAdminReservations";
 import { useUpdateReservationStatus } from "@/hooks/useUpdateReservationStatus";
@@ -153,7 +154,7 @@ function AdminReservations() {
       header: "Booked On",
       cell: info => (
         <span className="text-xs text-muted-foreground">
-          {new Date(info.getValue<string>()).toLocaleDateString("da-DK", { timeZone: "Europe/Copenhagen", day: "2-digit", month: "short", year: "numeric" })}
+          {formatDate(info.getValue<string>())}
         </span>
       ),
     },

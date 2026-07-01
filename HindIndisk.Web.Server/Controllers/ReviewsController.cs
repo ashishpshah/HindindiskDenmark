@@ -15,8 +15,5 @@ public class ReviewsController : ControllerBase
     // GET /api/reviews
     [HttpGet]
     public async Task<ActionResult<PlaceReviewsDto>> Get()
-    {
-        try   { return Ok(await _reviews.GetReviewsAsync()); }
-        catch (HttpRequestException ex) { return StatusCode(502, new { message = $"Could not fetch reviews: {ex.Message}" }); }
-    }
+        => Ok(await _reviews.GetReviewsAsync());
 }

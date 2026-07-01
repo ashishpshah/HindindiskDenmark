@@ -6,6 +6,7 @@ import { useMyOrders } from "@/hooks/useMyOrders";
 import { useMyReservations } from "@/hooks/useMyReservations";
 import { useAddresses } from "@/hooks/useAddresses";
 import { todayInDenmark } from "@/lib/denmarkTime";
+import { formatDate } from "@/lib/dateFormat";
 
 export const Route = createFileRoute("/account/")({
   component: Dashboard,
@@ -118,7 +119,7 @@ function Dashboard() {
                 </div>
                 <div className="mt-0.5 text-xs text-muted-foreground truncate">
                   {lastOrder.branchName} · {lastOrder.total.toFixed(0)} DKK ·{" "}
-                  {new Date(lastOrder.createdAt).toLocaleDateString("da-DK", { timeZone: "Europe/Copenhagen" })}
+                  {formatDate(lastOrder.createdAt)}
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition shrink-0" />

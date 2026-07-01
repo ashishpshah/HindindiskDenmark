@@ -18,7 +18,7 @@ public class OrderService : IOrderService
         _customers = customers;
     }
 
-    public async Task<OrderDto> CreateOrderAsync(CreateOrderRequest request, long? loggedInUserId = null)
+    public async Task<OrderDto> CreateOrderAsync(CreateOrderRequest request, long? loggedInUserId = null, long? placedByUserId = null)
     {
         long   userId;
         bool   sendCredentials  = false;
@@ -26,27 +26,38 @@ public class OrderService : IOrderService
         string? credentialsEmail = null;
         string  credentialsName  = string.Empty;
 
-        if (loggedInUserId.HasValue)
+        if (loggedInUserId.HasValue && !placedByUserId.HasValue)
         {
-            // Cases 1 & 2: authenticated — own the order, no account creation
+            // Authenticated customer placing their own order
             userId = loggedInUserId.Value;
         }
         else
         {
-            // Cases 3 & 4: guest checkout — find or create by contact details
+            // Guest checkout OR admin placing on behalf of a customer
+            // → find or create a customer account from the contact details
             var (customer, isNew, pwd) = await _customers.FindOrCreateAsync(
                 request.Firstname ?? string.Empty, request.Lastname ?? string.Empty, request.Phone, request.Email);
             userId = customer.Id;
 
             if (isNew && pwd is not null)
             {
-                // Case 3: brand-new account — queue credentials email after order saves
                 sendCredentials  = true;
                 credentialsPwd   = pwd;
                 credentialsEmail = customer.Email!;
                 credentialsName  = $"{customer.Firstname} {customer.Lastname}".Trim();
             }
-            // Case 4: existing account — no email
+        }
+
+        // Resolve the name of the admin/staff member who placed this order (if any)
+        string? placedByName = null;
+        if (placedByUserId.HasValue)
+        {
+            var placer = await _db.Users.AsNoTracking()
+                .Where(u => u.Id == placedByUserId.Value)
+                .Select(u => new { u.Firstname, u.Lastname })
+                .FirstOrDefaultAsync();
+            if (placer is not null)
+                placedByName = $"{placer.Firstname} {placer.Lastname}".Trim();
         }
 
         if (request.OrderType == "Delivery" && string.IsNullOrWhiteSpace(request.DeliveryAddress))
@@ -153,6 +164,7 @@ public class OrderService : IOrderService
             ScheduledTime        = request.ScheduledTime,
             SpecialInstructions  = string.IsNullOrWhiteSpace(request.SpecialInstructions) ? null : request.SpecialInstructions.Trim(),
             CreatedAt            = DenmarkTime.Now,
+            PlacedByUserId       = placedByUserId,
         };
         _db.Orders.Add(order);
         await _db.SaveChangesAsync(); // generates order.Id
@@ -224,7 +236,7 @@ public class OrderService : IOrderService
             order.ContactName, order.ContactPhone, order.ContactEmail,
             order.DeliveryAddress, order.PaymentMethod,
             order.ScheduledDate, order.ScheduledTime, order.SpecialInstructions,
-            order.CancellationReason);
+            order.CancellationReason, placedByName);
 
         // Case 3 only: new guest account — credentials arrive before the order confirmation
         if (sendCredentials)
@@ -245,6 +257,7 @@ public class OrderService : IOrderService
             .Include(o => o.Branch)
             .Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem)
             .Include(o => o.AppliedOffers).ThenInclude(ao => ao.Offer)
+            .Include(o => o.PlacedByUser)
             .AsNoTracking()
             .FirstOrDefaultAsync(o => o.Id == orderId && o.UserId == userId)
             ?? throw new InvalidOperationException("Order not found.");
@@ -259,6 +272,7 @@ public class OrderService : IOrderService
             .Include(o => o.Branch)
             .Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem)
             .Include(o => o.AppliedOffers).ThenInclude(ao => ao.Offer)
+            .Include(o => o.PlacedByUser)
             .OrderByDescending(o => o.CreatedAt)
             .AsNoTracking()
             .ToListAsync();
@@ -278,12 +292,16 @@ public class OrderService : IOrderService
                 oi.PriceAtPurchase))
             .ToList();
 
+        var placedByName = o.PlacedByUser is null
+            ? null
+            : $"{o.PlacedByUser.Firstname} {o.PlacedByUser.Lastname}".Trim();
+
         return new OrderDto(o.Id, o.OrderType, o.Branch.Name,
             o.Subtotal, o.DeliveryFee, o.Tax, o.Discount, o.Total,
             o.Status, o.CreatedAt, items, couponCode,
             o.ContactName, o.ContactPhone, o.ContactEmail,
             o.DeliveryAddress, o.PaymentMethod,
             o.ScheduledDate, o.ScheduledTime, o.SpecialInstructions,
-            o.CancellationReason);
+            o.CancellationReason, placedByName);
     }
 }

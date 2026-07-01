@@ -46,6 +46,7 @@ export type OrderDto = {
   scheduledTime?: string;
   specialInstructions?: string;
   cancellationReason?: string;
+  placedByName?: string;
 };
 
 export function useCreateOrder() {

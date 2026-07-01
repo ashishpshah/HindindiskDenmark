@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/ui/FormField";
+import { formatDate } from "@/lib/dateFormat";
 import { OrderSummary } from "@/components/OrderSummary";
 import { AddressSelectDialog } from "@/components/AddressSelectDialog";
 import { useCart } from "@/context/CartContext";
@@ -368,7 +369,7 @@ function CheckoutPage() {
                             />
                             {scheduledDate !== today && (
                               <p className="text-xs text-primary font-medium">
-                                {t("checkout.advanceOrder")} — {new Date(scheduledDate + "T12:00:00").toLocaleDateString(da ? "da-DK" : "en-GB", { weekday: "long", day: "numeric", month: "long" })}
+                                {t("checkout.advanceOrder")} — {formatDate(scheduledDate + "T12:00:00")}
                               </p>
                             )}
                           </div>

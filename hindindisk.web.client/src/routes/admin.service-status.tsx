@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { nowInDenmark } from "@/lib/denmarkTime";
+import { formatDateTime } from "@/lib/dateFormat";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -402,10 +403,7 @@ function WeeklySchedulePanel({ branches }: { branches: AdminBranchDto[] }) {
 // ── History ───────────────────────────────────────────────────────────────────
 
 function formatDt(iso: string) {
-  return new Date(iso).toLocaleString("da-DK", {
-    day: "2-digit", month: "2-digit", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
+  return formatDateTime(iso);
 }
 
 function duration(closedAt: string, reopenedAt?: string) {

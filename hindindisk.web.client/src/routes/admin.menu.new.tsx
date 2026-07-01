@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
+import { useAdminMenuItems } from "@/hooks/useAdminMenuItems";
 import { useAdminMenus } from "@/hooks/useAdminMenus";
 import { useBranches } from "@/hooks/useBranches";
 import { useCreateMenuItem } from "@/hooks/useCreateMenuItem";
@@ -24,6 +25,7 @@ type PriceMap = Record<number, string>;
 
 function MenuItemNewPage() {
   const navigate              = useNavigate();
+  const { data: allItems = [] } = useAdminMenuItems();
   const { data: menus    = [] } = useAdminMenus();
   const { data: branches = [] } = useBranches();
   const createItem            = useCreateMenuItem();
@@ -38,6 +40,14 @@ function MenuItemNewPage() {
   const [menuIds,       setMenuIds]       = useState<number[]>([]);
   const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>([]);
   const [prices,        setPrices]        = useState<PriceMap>({});
+
+  const codeInitialized = useRef(false);
+  useEffect(() => {
+    if (allItems.length === 0 || codeInitialized.current) return;
+    codeInitialized.current = true;
+    const maxCode = Math.max(0, ...allItems.map(i => i.code ?? 0));
+    setCode(maxCode + 1);
+  }, [allItems]);
 
   const toggleMenu = (id: number) =>
     setMenuIds(prev => prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]);
@@ -54,6 +64,10 @@ function MenuItemNewPage() {
 
   const handleSave = async () => {
     if (!name.trim()) return;
+    if (code > 0 && allItems.some(i => i.code === code)) {
+      toast.error(`Code ${code} is already used by another item.`);
+      return;
+    }
     try {
       await createItem.mutateAsync({
         name:          name.trim(),
@@ -104,8 +118,8 @@ function MenuItemNewPage() {
           </div>
         </div>
 
-        {/* Code + Spicy + Image */}
-        <div className="grid gap-4 sm:grid-cols-3">
+        {/* Code + Spicy */}
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Code</Label>
             <Input type="number" min={0} value={code} onChange={e => setCode(Number(e.target.value))} />
@@ -119,10 +133,12 @@ function MenuItemNewPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5">
-            <Label>Image</Label>
-            <ImagePicker value={imageUrl} onChange={setImageUrl} />
-          </div>
+        </div>
+
+        {/* Image */}
+        <div className="space-y-1.5">
+          <Label>Image</Label>
+          <ImagePicker value={imageUrl} onChange={setImageUrl} />
         </div>
 
         {/* Menus */}

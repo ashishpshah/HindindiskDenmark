@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api/client";
 import { lsGet, lsSet, lsRemove } from "@/lib/storage";
@@ -98,13 +98,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const selectedBranch = branches.find(x => x.name === branch);
 
-  // Keep pricing in sync with the selected branch so cart drawer always shows correct values
+  // Default to first branch when none is selected — run at most once
+  const branchDefaulted = useRef(false);
+  useEffect(() => {
+    if (branchDefaulted.current || branches.length === 0 || branch) return;
+    branchDefaulted.current = true;
+    setBranch(branches[0].name);
+  }, [branches, branch]);
+
+  // Keep pricing in sync; functional update bails out if values haven't changed,
+  // preventing re-renders caused by the new-object-reference from setBranchPricing({})
   useEffect(() => {
     if (!selectedBranch) return;
-    setBranchPricing({
-      deliveryFeeEnabled: selectedBranch.deliveryFeeEnabled,
-      deliveryFee:        selectedBranch.deliveryFee,
-    });
+    setBranchPricing(prev =>
+      prev.deliveryFeeEnabled === selectedBranch.deliveryFeeEnabled &&
+      prev.deliveryFee        === selectedBranch.deliveryFee
+        ? prev
+        : { deliveryFeeEnabled: selectedBranch.deliveryFeeEnabled, deliveryFee: selectedBranch.deliveryFee }
+    );
   }, [branch, branches]);
 
   useEffect(() => {

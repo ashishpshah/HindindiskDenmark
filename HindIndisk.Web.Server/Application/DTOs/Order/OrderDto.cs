@@ -21,5 +21,6 @@ public record OrderDto(
     DateOnly? ScheduledDate,
     string?   ScheduledTime,         // null = ASAP
     string?   SpecialInstructions,
-    string?   CancellationReason
+    string?   CancellationReason,
+    string?   PlacedByName          // null = customer placed the order themselves
 );

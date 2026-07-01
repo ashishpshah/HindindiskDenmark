@@ -27,14 +27,22 @@ public class OrdersController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Create([FromBody] CreateOrderRequest request)
     {
-        // Resolve logged-in userId from JWT if present (null for guest checkout)
-        long? loggedInUserId = null;
+        long? customerUserId = null;
+        long? placedByUserId = null;
+
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (long.TryParse(raw, out var uid)) loggedInUserId = uid;
+        if (long.TryParse(raw, out var uid))
+        {
+            var role = User.FindFirstValue(ClaimTypes.Role);
+            if (role is "Admin" or "SystemAdmin")
+                placedByUserId = uid;   // admin placing on behalf of a customer
+            else
+                customerUserId = uid;   // customer placing their own order
+        }
 
         try
         {
-            var order = await _orders.CreateOrderAsync(request, loggedInUserId);
+            var order = await _orders.CreateOrderAsync(request, customerUserId, placedByUserId);
             return Ok(order);
         }
         catch (InvalidOperationException ex)

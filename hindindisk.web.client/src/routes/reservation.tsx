@@ -155,7 +155,7 @@ function ReservationPage() {
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
 
   const [form, setForm] = useState({
-    branch:    defaultBranch,
+    branch:    cartBranch || defaultBranch,
     guests:    "2",
     date:      defaultDate(),
     time:      defaultTime(),

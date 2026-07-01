@@ -72,7 +72,7 @@ function MenuPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground hidden md:inline">{t("pages.menu.changeLocation")}</span>
+            <span className="text-sm text-muted-foreground">{t("pages.menu.changeLocation")}</span>
             <Select value={branch} onValueChange={setBranch}>
               <SelectTrigger className="w-[220px] rounded-full bg-background border-input shadow-soft focus:ring-1 focus:ring-primary cursor-pointer">
                 <SelectValue />

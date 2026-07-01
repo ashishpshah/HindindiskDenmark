@@ -90,6 +90,10 @@ function MenuItemEditPage() {
 
   const handleSave = async () => {
     if (!name.trim()) return;
+    if (code > 0 && items.some(i => i.id !== item.id && i.code === code)) {
+      toast.error(`Code ${code} is already used by another item.`);
+      return;
+    }
     try {
       await updateItem.mutateAsync({
         id:            item.id,
@@ -144,8 +148,8 @@ function MenuItemEditPage() {
           </div>
         </div>
 
-        {/* Code + Spicy + Image */}
-        <div className="grid gap-4 sm:grid-cols-3">
+        {/* Code + Spicy */}
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Code</Label>
             <Input type="number" min={0} value={code} onChange={e => setCode(Number(e.target.value))} />
@@ -159,10 +163,12 @@ function MenuItemEditPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5">
-            <Label>Image</Label>
-            <ImagePicker value={imageUrl} onChange={setImageUrl} />
-          </div>
+        </div>
+
+        {/* Image */}
+        <div className="space-y-1.5">
+          <Label>Image</Label>
+          <ImagePicker value={imageUrl} onChange={setImageUrl} />
         </div>
 
         {/* Signature toggle */}

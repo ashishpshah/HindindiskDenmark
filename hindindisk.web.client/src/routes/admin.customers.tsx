@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Loader2, Search, History, ChevronDown, ChevronRight,
   ShoppingBag, CalendarCheck2,
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatDate } from "@/lib/dateFormat";
 import { nowInDenmark } from "@/lib/denmarkTime";
 
 export const Route = createFileRoute("/admin/customers")({ component: AdminCustomers });
@@ -121,7 +122,7 @@ function OrderCard({ order }: { order: AdminCustomerOrderDto }) {
           </span>
           <span className="font-semibold tabular-nums">{order.total.toFixed(0)} DKK</span>
           <span className="text-xs text-muted-foreground">
-            {new Date(order.createdAt).toLocaleDateString("da-DK", { timeZone: "Europe/Copenhagen", day: "2-digit", month: "short", year: "numeric" })}
+            {formatDate(order.createdAt)}
           </span>
           {expanded
             ? <ChevronDown  className="h-3.5 w-3.5 text-muted-foreground" />
@@ -172,7 +173,7 @@ function ReservationCard({ r }: { r: AdminCustomerReservationDto }) {
           {r.status}
         </span>
         <span className="text-xs text-muted-foreground">
-          {new Date(r.createdAt).toLocaleDateString("da-DK", { timeZone: "Europe/Copenhagen", day: "2-digit", month: "short", year: "numeric" })}
+          {formatDate(r.createdAt)}
         </span>
       </div>
     </div>
@@ -191,6 +192,14 @@ function CustomerHistoryDialog({
   const [preset,     setPreset]     = useState<DatePreset>("all");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo,   setCustomTo]   = useState("");
+
+  useEffect(() => {
+    if (customer !== null) {
+      setPreset("all");
+      setCustomFrom("");
+      setCustomTo("");
+    }
+  }, [customer?.id]);
 
   const { data: detail, isLoading } = useAdminCustomerDetail(customer?.id ?? null);
 
@@ -261,7 +270,7 @@ function CustomerHistoryDialog({
             <Loader2 className="h-5 w-5 animate-spin" /> Loading history…
           </div>
         ) : (
-          <Tabs defaultValue="orders" className="flex flex-col flex-1 min-h-0 overflow-hidden pt-3">
+          <Tabs key={customer?.id} defaultValue="orders" className="flex flex-col flex-1 min-h-0 overflow-hidden pt-3">
             <TabsList className="shrink-0 self-start mb-3">
               <TabsTrigger value="orders" className="gap-1.5">
                 <ShoppingBag className="h-3.5 w-3.5" />
@@ -334,7 +343,7 @@ function AdminCustomers() {
       header: "Joined",
       cell: info => (
         <span className="text-xs text-muted-foreground">
-          {new Date(info.getValue<string>()).toLocaleDateString("da-DK", { timeZone: "Europe/Copenhagen", day: "2-digit", month: "short", year: "numeric" })}
+          {formatDate(info.getValue<string>())}
         </span>
       ),
     },
