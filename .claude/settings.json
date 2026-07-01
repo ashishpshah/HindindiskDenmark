@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Remove-Item -Force \"D:\\\\VK\\\\Projects\\\\Personal\\\\AI\\\\PracticalApps\\\\HindIndisk.Web\\\\hindindisk.web.client\\\\src\\\\start.ts\" -Confirm:$false)",
+      "PowerShell(Remove-Item -Force \"D:\\\\VK\\\\Projects\\\\Personal\\\\AI\\\\PracticalApps\\\\HindIndisk.Web\\\\hindindisk.web.client\\\\src\\\\server.ts\" -Confirm:$false)",
+      "PowerShell(Copy-Item \"D:\\\\VK\\\\Projects\\\\Personal\\\\AI\\\\PracticalApps\\\\HindIndisk.Web\\\\hindindisk.web.client\\\\src\\\\assets\\\\main_logo-removebg-preview.png\" \"D:\\\\VK\\\\Projects\\\\Personal\\\\AI\\\\PracticalApps\\\\HindIndisk.Web\\\\hindindisk.web.client\\\\public\\\\main_logo-removebg-preview.png\")",
+      "PowerShell($loginBody = '{\"email\":\"admin@hindindisk.dk\",\"password\":\"Admin@123\"}'; $loginResp = Invoke-RestMethod -Uri \"http://localhost:5228/api/auth/login\" -Method POST -Body $loginBody -ContentType \"application/json\" -ErrorAction SilentlyContinue; $token = $loginResp.token; if \\($token\\) { Write-Host \"Login OK\"; $headers = @{ Authorization = \"Bearer $token\" }; try { $items = Invoke-RestMethod -Uri \"http://localhost:5228/api/admin/menu-items\" -Headers $headers -ErrorAction Stop; Write-Host \"admin/menu-items OK: $\\($items.Count\\) items\" } catch { Write-Host \"admin/menu-items ERROR: $\\($_.Exception.Message\\)\" }; try { $pub = Invoke-RestMethod -Uri \"http://localhost:5228/api/menu/items\" -ErrorAction Stop; Write-Host \"public /menu/items OK: $\\($pub.Count\\) items\" } catch { Write-Host \"public /menu/items ERROR: $\\($_.Exception.Message\\)\" } } else { Write-Host \"Login FAILED\" })",
+      "PowerShell(cd \"d:\\\\VK\\\\Projects\\\\Personal\\\\AI\\\\PracticalApps\\\\HindIndisk.Web\\\\HindIndisk.Web.Server\"; $proc = Start-Process dotnet -ArgumentList \"run --no-build\" -PassThru -RedirectStandardOutput \"C:\\\\Temp\\\\hind-run.log\" -RedirectStandardError \"C:\\\\Temp\\\\hind-err.log\" -NoNewWindow; Start-Sleep -Seconds 12; $loginBody = '{\"email\":\"admin@hindindisk.dk\",\"password\":\"Admin@123\"}'; try { $r = Invoke-RestMethod -Uri \"http://localhost:5228/api/auth/login\" -Method POST -Body $loginBody -ContentType \"application/json\"; $token = $r.token; $headers = @{ Authorization = \"Bearer $token\" }; Invoke-RestMethod -Uri \"http://localhost:5228/api/admin/menu-items\" -Headers $headers -ErrorAction SilentlyContinue | Out-Null } catch {}; Start-Sleep -Seconds 3; Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue; Get-Content \"C:\\\\Temp\\\\hind-run.log\" | Select-Object -Last 60)",
+      "PowerShell($loginBody = '{\"email\":\"admin@hindindisk.dk\",\"password\":\"Admin@123\"}'; try { $r = Invoke-RestMethod -Uri \"http://localhost:5228/api/auth/login\" -Method POST -Body $loginBody -ContentType \"application/json\"; $token = $r.token; Write-Host \"Login OK\"; $headers = @{ Authorization = \"Bearer $token\" }; Invoke-RestMethod -Uri \"http://localhost:5228/api/admin/menu-items\" -Headers $headers -ErrorAction SilentlyContinue | Out-Null; Write-Host \"Request sent\" } catch { Write-Host \"Error: $_\" }; Start-Sleep -Seconds 3; Get-Process dotnet -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host \"Done\")",
+      "Read(//c/Temp/**)",
+      "PowerShell($loginBody = '{\"email\":\"admin@hindindisk.dk\",\"password\":\"Admin@123\"}'; try { $r = Invoke-RestMethod -Uri \"http://localhost:5228/api/auth/login\" -Method POST -Body $loginBody -ContentType \"application/json\"; $token = $r.token; Write-Host \"Login OK\"; $headers = @{ Authorization = \"Bearer $token\" }; $items = Invoke-RestMethod -Uri \"http://localhost:5228/api/admin/menu-items\" -Headers $headers; Write-Host \"GET /api/admin/menu-items: $\\($items.Count\\) items returned — SUCCESS\" } catch { Write-Host \"FAIL: $_\" })",
+      "PowerShell($r = Invoke-RestMethod -Uri \"http://localhost:5228/api/locations\"; Write-Host \"GET /api/locations: $\\($r.Count\\) branches\"; $r2 = Invoke-RestMethod -Uri \"http://localhost:5228/api/offers\"; Write-Host \"GET /api/offers: $\\($r2.Count\\) offers\")",
+      "PowerShell(Get-Process dotnet -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:5055/api/locations/slots?branchId=1&date=2026-06-27&type=reservation\" -UseBasicParsing 2>&1)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:5055/api/locations/slots?branchId=1&date=2026-06-27&type=reservation\" -UseBasicParsing)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5055 -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 7113 -ErrorAction SilentlyContinue)",
+      "PowerShell($loginBody = '{\"email\":\"admin@hindindisk.dk\",\"password\":\"Admin@123\"}'; $token = \\(Invoke-WebRequest -Uri \"http://localhost:5228/api/auth/login\" -Method POST -Body $loginBody -ContentType \"application/json\" -UseBasicParsing | ConvertFrom-Json\\).token; $headers = @{Authorization=\"Bearer $token\"; \"Content-Type\"=\"application/json\"}; $body = '[{\"dayOfWeek\":1,\"openTime\":\"10:00\",\"closeTime\":\"21:00\",\"slotIntervalMinutes\":30,\"maxOrdersPerSlot\":8,\"maxReservationsPerSlot\":4},{\"dayOfWeek\":5,\"openTime\":\"11:00\",\"closeTime\":\"23:00\",\"slotIntervalMinutes\":30,\"maxOrdersPerSlot\":15,\"maxReservationsPerSlot\":8}]'; \\(Invoke-WebRequest -Uri \"http://localhost:5228/api/admin/branches/1/schedule\" -Method PUT -Headers $headers -Body $body -UseBasicParsing\\).Content)",
+      "Bash(cd /d)",
+      "Bash(find . -maxdepth 4 -name \"*web.client\" -type d)",
+      "PowerShell(grep -E \"\\(account|checkout|order\\)\")",
+      "Bash(find \"/mnt/d/VK/Projects/Personal/AI/PracticalApps/HindIndisk.Web\" -name \"Header.tsx\" -type f 2>/dev/null)",
+      "Read(//mnt/d/VK/Projects/Personal/AI/PracticalApps/**)",
+      "Bash(npx eslint *)",
+      "PowerShell(cd \"d:\\\\VK\\\\Projects\\\\Personal\\\\AI\\\\PracticalApps\\\\HindIndisk.Web\\\\HindIndisk.Web.Server\"; dotnet build 2>&1 | Where-Object { $_ -match \"error CS\" })",
+      "PowerShell(cd \"d:\\\\VK\\\\Projects\\\\Personal\\\\AI\\\\PracticalApps\\\\HindIndisk.Web\\\\HindIndisk.Web.Server\"; dotnet build --no-restore 2>&1 | Where-Object { $_ -match \"error CS|warning CS|Build succeeded|FAILED\" })"
+    ],
+    "additionalDirectories": [
+      "D:\\VK\\Projects\\Personal\\AI\\PracticalApps\\taste-of-denmark-main\\src",
+      "\\dev"
+    ]
+  }
+}

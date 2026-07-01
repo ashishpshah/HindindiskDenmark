@@ -7,14 +7,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules/
-build/
-dist/
-coverage/
-.env*
-!.env.example
+node_modules
+dist
+dist-ssr
 *.local
-
 
 # Editor directories and files
 .vscode/*
@@ -26,17 +22,3 @@ coverage/
 *.njsproj
 *.sln
 *.sw?
-
-
-
-# .NET
-bin/
-obj/
-publish/
-*.user
-*.userosscache
-*.sln.docuser
-.vs/
-wwwroot/assets/
-appsettings.Production.json
-
