@@ -21,10 +21,10 @@ public class ApiExceptionLog
     public int StatusCode { get; set; }
 
     [MaxLength(500)]
-    public string ExceptionType { get; set; } = string.Empty;
+    public string? ExceptionType { get; set; }
 
     [MaxLength(2000)]
-    public string ExceptionMessage { get; set; } = string.Empty;
+    public string? ExceptionMessage { get; set; }
 
     public string? StackTrace { get; set; }
 

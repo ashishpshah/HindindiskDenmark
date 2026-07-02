@@ -7,8 +7,8 @@ public record ExceptionLogDto(
     string   RequestPath,
     string?  QueryString,
     int      StatusCode,
-    string   ExceptionType,
-    string   ExceptionMessage,
+    string?  ExceptionType,
+    string?  ExceptionMessage,
     string?  StackTrace,
     long?    UserId,
     string?  ClientIp

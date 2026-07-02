@@ -145,6 +145,7 @@ namespace HindIndisk.Web.Server
 			}
 
 			app.UseMiddleware<ExceptionLoggingMiddleware>();
+			app.UseMiddleware<RequestLoggingMiddleware>();
 
 			app.UseDefaultFiles();
 			app.UseStaticFiles();

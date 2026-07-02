@@ -17,19 +17,23 @@ public class ExceptionLogService : IExceptionLogService
     }
 
     public async Task LogAsync(
-        string    httpMethod,
-        string    requestPath,
-        string?   queryString,
-        int       statusCode,
-        Exception exception,
-        long?     userId,
-        string?   clientIp)
+        string     httpMethod,
+        string     requestPath,
+        string?    queryString,
+        int        statusCode,
+        Exception? exception,
+        long?      userId,
+        string?    clientIp)
     {
         try
         {
-            var message = exception.Message.Length > 2000
-                ? exception.Message[..2000]
-                : exception.Message;
+            string? message = null;
+            if (exception != null)
+            {
+                message = exception.Message.Length > 2000
+                    ? exception.Message[..2000]
+                    : exception.Message;
+            }
 
             _db.ApiExceptionLogs.Add(new ApiExceptionLog
             {
@@ -38,9 +42,9 @@ public class ExceptionLogService : IExceptionLogService
                 RequestPath      = requestPath,
                 QueryString      = queryString,
                 StatusCode       = statusCode,
-                ExceptionType    = exception.GetType().FullName ?? exception.GetType().Name,
+                ExceptionType    = exception?.GetType().FullName ?? exception?.GetType().Name,
                 ExceptionMessage = message,
-                StackTrace       = exception.StackTrace,
+                StackTrace       = exception?.StackTrace,
                 UserId           = userId,
                 ClientIp         = clientIp,
             });
@@ -49,7 +53,7 @@ public class ExceptionLogService : IExceptionLogService
         }
         catch (Exception dbEx)
         {
-            _logger.LogError(dbEx, "Failed to persist exception log for {Path}", requestPath);
+            _logger.LogError(dbEx, "Failed to persist log for {Path}", requestPath);
         }
     }
 
@@ -61,12 +65,17 @@ public class ExceptionLogService : IExceptionLogService
         DateTime? to      = null,
         string?   module  = null)
     {
+        var cutoff = DenmarkTime.Now.AddDays(-5);
+        await _db.ApiExceptionLogs
+            .Where(e => e.OccurredAt < cutoff)
+            .ExecuteDeleteAsync();
+
         var q = _db.ApiExceptionLogs.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))
             q = q.Where(e => e.RequestPath.Contains(search)
-                           || e.ExceptionType.Contains(search)
-                           || e.ExceptionMessage.Contains(search));
+                           || (e.ExceptionType != null && e.ExceptionType.Contains(search))
+                           || (e.ExceptionMessage != null && e.ExceptionMessage.Contains(search)));
 
         if (from.HasValue)
             q = q.Where(e => e.OccurredAt >= from.Value);

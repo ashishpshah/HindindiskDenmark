@@ -9,7 +9,7 @@ public interface IExceptionLogService
         string    requestPath,
         string?   queryString,
         int       statusCode,
-        Exception exception,
+        Exception? exception,
         long?     userId,
         string?   clientIp);
 

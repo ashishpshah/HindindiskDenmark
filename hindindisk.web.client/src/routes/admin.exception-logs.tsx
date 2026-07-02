@@ -39,6 +39,7 @@ const METHOD_COLORS: Record<string, string> = {
 
 function ExpandableRow({ log }: { log: ExceptionLogDto }) {
   const [open, setOpen] = useState(false);
+  if (!log.stackTrace) return null;
   return (
     <div>
       <button
@@ -48,7 +49,7 @@ function ExpandableRow({ log }: { log: ExceptionLogDto }) {
         {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
         {open ? "Hide" : "Stack trace"}
       </button>
-      {open && log.stackTrace && (
+      {open && (
         <pre className="mt-2 max-h-48 overflow-auto rounded-lg bg-muted p-3 text-[10px] leading-relaxed text-muted-foreground whitespace-pre-wrap break-all">
           {log.stackTrace}
         </pre>
@@ -128,7 +129,8 @@ function ExceptionLogsPage() {
       accessorKey: "exceptionType",
       header: "Exception",
       cell: info => {
-        const full  = info.getValue<string>();
+        const full = info.getValue<string | null>();
+        if (!full) return <span className="text-xs text-muted-foreground">—</span>;
         const short = full.split(".").at(-1) ?? full;
         return <span className="text-xs font-medium text-destructive" title={full}>{short}</span>;
       },
@@ -136,29 +138,15 @@ function ExceptionLogsPage() {
     {
       accessorKey: "exceptionMessage",
       header: "Message",
-      cell: info => (
-        <span className="text-xs text-muted-foreground line-clamp-2 max-w-xs" title={info.getValue<string>()}>
-          {info.getValue<string>()}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "userId",
-      header: "User",
-      cell: info => (
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {info.getValue<number | null>() ?? "—"}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "clientIp",
-      header: "IP",
-      cell: info => (
-        <span className="font-mono text-xs text-muted-foreground">
-          {info.getValue<string | null>() ?? "—"}
-        </span>
-      ),
+      cell: info => {
+        const msg = info.getValue<string | null>();
+        if (!msg) return <span className="text-xs text-muted-foreground">—</span>;
+        return (
+          <span className="text-xs text-muted-foreground line-clamp-2 max-w-xs" title={msg}>
+            {msg}
+          </span>
+        );
+      },
     },
     {
       id: "stackTrace",

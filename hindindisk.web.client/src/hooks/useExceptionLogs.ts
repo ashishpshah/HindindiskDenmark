@@ -8,8 +8,8 @@ export type ExceptionLogDto = {
   requestPath: string;
   queryString: string | null;
   statusCode: number;
-  exceptionType: string;
-  exceptionMessage: string;
+  exceptionType: string | null;
+  exceptionMessage: string | null;
   stackTrace: string | null;
   userId: number | null;
   clientIp: string | null;
