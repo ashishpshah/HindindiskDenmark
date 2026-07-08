@@ -155,6 +155,97 @@ public class BranchClosureService(ApplicationDbContext db, IHubContext<ClosureHu
             : c.StartDate is not null && c.EndDate is not null
               && date >= c.StartDate.Value && date <= c.EndDate.Value;
 
+    /// <summary>
+    /// Returns reservations and orders that fall within the given closure window.
+    /// Used by admin UI to warn before creating a closure.
+    /// </summary>
+    public async Task<ClosureConflictsDto> GetConflictsAsync(
+        long branchId, string scope, DateOnly start, DateOnly end,
+        TimeOnly? startTime, TimeOnly? endTime)
+    {
+        var reservations = new List<ConflictItemDto>();
+        var orders       = new List<ConflictItemDto>();
+
+        if (scope is "Reservation" or "Restaurant")
+        {
+            var q = await db.Reservations
+                .Where(r => r.BranchId == branchId
+                         && r.Status   != "Cancelled"
+                         && DateOnly.FromDateTime(r.Date) >= start
+                         && DateOnly.FromDateTime(r.Date) <= end)
+                .ToListAsync();
+
+            if (startTime.HasValue && endTime.HasValue)
+                q = q.Where(r =>
+                    TimeOnly.TryParse(r.TimeSlot, out var t)
+                    && t >= startTime.Value && t <= endTime.Value).ToList();
+
+            reservations = q.Select(r => new ConflictItemDto(
+                r.Id, r.ContactName,
+                DateOnly.FromDateTime(r.Date).ToString("yyyy-MM-dd"),
+                r.TimeSlot)).ToList();
+        }
+
+        if (scope is "Delivery" or "Pickup" or "Restaurant")
+        {
+            var orderType = scope == "Restaurant" ? null : scope;
+            var q = await db.Orders
+                .Where(o => o.BranchId == branchId
+                         && o.Status   != "Cancelled"
+                         && o.Status   != "Completed"
+                         && (orderType == null || o.OrderType == orderType)
+                         && o.ScheduledDate.HasValue
+                         && o.ScheduledDate.Value >= start
+                         && o.ScheduledDate.Value <= end)
+                .ToListAsync();
+
+            if (startTime.HasValue && endTime.HasValue)
+                q = q.Where(o =>
+                    o.ScheduledTime != null
+                    && TimeOnly.TryParse(o.ScheduledTime, out var t)
+                    && t >= startTime.Value && t <= endTime.Value).ToList();
+
+            orders = q.Select(o => new ConflictItemDto(
+                o.Id, o.ContactName,
+                o.ScheduledDate!.Value.ToString("yyyy-MM-dd"),
+                o.ScheduledTime ?? "ASAP")).ToList();
+        }
+
+        return new ClosureConflictsDto(reservations, orders);
+    }
+
+    /// <summary>
+    /// Bulk-cancels the given reservations and orders (e.g. when an admin creates a closure
+    /// over a period that already has bookings).
+    /// </summary>
+    public async Task CancelAffectedAsync(long[] reservationIds, long[] orderIds, string? reason)
+    {
+        if (reservationIds.Length > 0)
+        {
+            var list = await db.Reservations
+                .Where(r => reservationIds.Contains(r.Id))
+                .ToListAsync();
+            foreach (var r in list)
+                r.Status = "Cancelled";
+        }
+
+        if (orderIds.Length > 0)
+        {
+            var list = await db.Orders
+                .Where(o => orderIds.Contains(o.Id))
+                .ToListAsync();
+            var cancelReason = string.IsNullOrWhiteSpace(reason)
+                ? "Branch closed during this period" : reason.Trim();
+            foreach (var o in list)
+            {
+                o.Status             = "Cancelled";
+                o.CancellationReason = cancelReason;
+            }
+        }
+
+        await db.SaveChangesAsync();
+    }
+
     private static BranchClosureDto ToDto(BranchClosure c) =>
         new(c.Id, c.BranchId, c.Scope, c.ClosureType,
             c.StartDate?.ToString("yyyy-MM-dd"),

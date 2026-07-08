@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { nowInDenmark, todayInDenmark } from "@/lib/denmarkTime";
 import { formatDateTime, formatDateStr, formatTimeStr } from "@/lib/dateFormat";
+import { apiFetch } from "@/lib/api/client";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Check, Store, CalendarOff, Repeat, Plus, Trash2 } from "lucide-react";
+import { Loader2, Check, Store, CalendarOff, Repeat, Plus, Trash2, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/admin/settings")({ component: ServiceStatusPage });
 
@@ -296,6 +297,26 @@ function WeeklySchedulePanel({ branches }: { branches: AdminBranchDto[] }) {
   );
 }
 
+// ── Closure conflict check ────────────────────────────────────────────────────
+
+type ConflictItem = { id: number; contactName: string; date: string; time: string };
+type ConflictData = { reservations: ConflictItem[]; orders: ConflictItem[] };
+
+async function gatherConflicts(
+  checks: { branchId: number; scope: string; startDate: string; endDate: string; startTime?: string; endTime?: string }[]
+): Promise<ConflictData> {
+  const merged: ConflictData = { reservations: [], orders: [] };
+  for (const p of checks) {
+    const qs = new URLSearchParams({ branchId: String(p.branchId), scope: p.scope, startDate: p.startDate, endDate: p.endDate });
+    if (p.startTime) qs.set("startTime", p.startTime);
+    if (p.endTime)   qs.set("endTime",   p.endTime);
+    const data = await apiFetch<ConflictData>(`/api/admin/closures/conflicts?${qs}`);
+    for (const r of data.reservations) if (!merged.reservations.some(x => x.id === r.id)) merged.reservations.push(r);
+    for (const o of data.orders)       if (!merged.orders.some(x => x.id === o.id))       merged.orders.push(o);
+  }
+  return merged;
+}
+
 // ── Date-Specific Closures ────────────────────────────────────────────────────
 
 type ServiceKey = "Reservation" | "Pickup" | "Delivery";
@@ -426,20 +447,21 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
     Pickup:      isActiveNow("Pickup"),
   };
 
+  const [pendingClosure, setPendingClosure] = useState<{
+    conflicts: ConflictData;
+    proceed: () => Promise<void>;
+  } | null>(null);
+  const [isCancellingBookings, setIsCancellingBookings] = useState(false);
+  const [isCheckingConflicts,  setIsCheckingConflicts]  = useState(false);
+
   const isDirty = SERVICE_KEYS.some(s => localClosed[s] !== serverClosed[s]);
-  const isSaving = toggleService.isPending || createInstant.isPending || deleteInstant.isPending;
+  const isSaving = isCheckingConflicts || toggleService.isPending || createInstant.isPending || deleteInstant.isPending;
 
-  const handleSave = async () => {
-    if (!instantBranchId) return;
-    const toClose = SERVICE_KEYS.filter(s => localClosed[s] && !serverClosed[s]);
-    const toOpen  = SERVICE_KEYS.filter(s => !localClosed[s] && serverClosed[s]);
-    if (toClose.length === 0 && toOpen.length === 0) return;
-
+  const doInstantSave = async (toClose: ServiceKey[], toOpen: ServiceKey[]) => {
     try {
       for (const s of toClose) {
         const t = instantTimes[s];
         const hasTime = !!(t.from && t.to);
-        // All three services store a BranchClosure for the time range (enables auto-reopen)
         await createInstant.mutateAsync({
           scope: s as "Reservation" | "Delivery" | "Pickup",
           closureType: "DateRange", startDate: today, endDate: today,
@@ -447,23 +469,46 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
           endTime:   hasTime ? t.to   : undefined,
           note: instantNoteFor(s),
         });
-        await toggleService.mutateAsync({ branchId: instantBranchId, serviceType: s, isClosed: true, note: instantNoteFor(s) });
+        await toggleService.mutateAsync({ branchId: instantBranchId!, serviceType: s, isClosed: true, note: instantNoteFor(s) });
       }
       for (const s of toOpen) {
-        // Delete ALL active-today BranchClosures for this scope
         const allExisting = instantClosures.filter(c =>
           c.closureType === "DateRange" && c.scope === s
           && (c.startDate ?? "") <= today && (c.endDate ?? c.startDate ?? "") >= today
         );
-        for (const ex of allExisting) {
-          await deleteInstant.mutateAsync(ex.id);
-        }
-        await toggleService.mutateAsync({ branchId: instantBranchId, serviceType: s, isClosed: false });
+        for (const ex of allExisting) await deleteInstant.mutateAsync(ex.id);
+        await toggleService.mutateAsync({ branchId: instantBranchId!, serviceType: s, isClosed: false });
       }
       const closedNames = toClose.map(s => SERVICE_LABEL[s]).join(", ");
       const openedNames = toOpen.map(s => SERVICE_LABEL[s]).join(", ");
       toast.success([closedNames && `${closedNames} closed`, openedNames && `${openedNames} reopened`].filter(Boolean).join(" · "));
     } catch (e) { toast.error((e as Error).message || "Failed to save"); }
+  };
+
+  const handleSave = async () => {
+    if (!instantBranchId) return;
+    const toClose = SERVICE_KEYS.filter(s => localClosed[s] && !serverClosed[s]);
+    const toOpen  = SERVICE_KEYS.filter(s => !localClosed[s] && serverClosed[s]);
+    if (toClose.length === 0 && toOpen.length === 0) return;
+
+    if (toClose.length > 0) {
+      setIsCheckingConflicts(true);
+      try {
+        const checks = toClose.map(s => {
+          const t = instantTimes[s];
+          return { branchId: instantBranchId, scope: s, startDate: today, endDate: today,
+                   startTime: t.from || undefined, endTime: t.to || undefined };
+        });
+        const conflicts = await gatherConflicts(checks);
+        if (conflicts.reservations.length + conflicts.orders.length > 0) {
+          setPendingClosure({ conflicts, proceed: () => doInstantSave(toClose, toOpen) });
+          return;
+        }
+      } catch { /* conflict check failure — proceed with save */ }
+      finally { setIsCheckingConflicts(false); }
+    }
+
+    await doInstantSave(toClose, toOpen);
   };
 
   // Auto-reopen when the To time passes for any time-bounded instant closure
@@ -499,17 +544,7 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
   const updateFuture = (s: ServiceKey, patch: Partial<FutureRow>) =>
     setFutureRows(prev => ({ ...prev, [s]: { ...prev[s], ...patch } }));
 
-  const handleAdd = async () => {
-    const toAdd = SERVICE_KEYS.filter(s => futureRows[s].closed);
-    if (toAdd.length === 0) { toast.error("Select at least one service."); return; }
-    for (const s of toAdd) {
-      if (futureRows[s].startDate <= today) {
-        toast.error(`${SERVICE_LABEL[s]}: Start date must be tomorrow or later.`); return;
-      }
-      if (futureRows[s].endDate < futureRows[s].startDate) {
-        toast.error(`${SERVICE_LABEL[s]}: End date cannot be before start date.`); return;
-      }
-    }
+  const doFutureAdd = async (toAdd: ServiceKey[]) => {
     try {
       for (const s of toAdd) {
         const row = futureRows[s];
@@ -525,6 +560,40 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
       toast.success(toAdd.length > 1 ? "Closures added." : "Closure added.");
       setFutureRows({ Reservation: defaultFutureRow(), Pickup: defaultFutureRow(), Delivery: defaultFutureRow() });
     } catch (e) { toast.error((e as Error).message || "Failed to add closure."); }
+  };
+
+  const handleAdd = async () => {
+    const toAdd = SERVICE_KEYS.filter(s => futureRows[s].closed);
+    if (toAdd.length === 0) { toast.error("Select at least one service."); return; }
+    for (const s of toAdd) {
+      if (futureRows[s].startDate <= today) {
+        toast.error(`${SERVICE_LABEL[s]}: Start date must be tomorrow or later.`); return;
+      }
+      if (futureRows[s].endDate < futureRows[s].startDate) {
+        toast.error(`${SERVICE_LABEL[s]}: End date cannot be before start date.`); return;
+      }
+    }
+    if (!scheduleBranchId) return;
+
+    setIsCheckingConflicts(true);
+    try {
+      const checks = toAdd.map(s => {
+        const row = futureRows[s];
+        const hasTime = !!(row.startTime && row.endTime);
+        return { branchId: scheduleBranchId, scope: s,
+                 startDate: row.startDate, endDate: row.endDate,
+                 startTime: hasTime ? row.startTime : undefined,
+                 endTime:   hasTime ? row.endTime   : undefined };
+      });
+      const conflicts = await gatherConflicts(checks);
+      if (conflicts.reservations.length + conflicts.orders.length > 0) {
+        setPendingClosure({ conflicts, proceed: () => doFutureAdd(toAdd) });
+        return;
+      }
+    } catch { /* conflict check failure — proceed */ }
+    finally { setIsCheckingConflicts(false); }
+
+    await doFutureAdd(toAdd);
   };
 
   const handleDelete = async (c: ClosureDto) => {
@@ -704,7 +773,7 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
 
         <div className="flex justify-end">
           <Button className="gradient-primary text-primary-foreground"
-            onClick={handleAdd} disabled={createClosure.isPending}>
+            onClick={handleAdd} disabled={createClosure.isPending || isCheckingConflicts}>
             {createClosure.isPending
               ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               : <Plus className="mr-1.5 h-4 w-4" />}
@@ -832,6 +901,98 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
           <PaginationBar page={listPage} pageCount={listPageCount} total={visibleClosures.length} pageSize={LIST_PAGE_SIZE} onChange={setListPage} />
         )}
       </section>
+
+      {/* ── Conflict confirmation modal ─────────────────────────────────────── */}
+      {pendingClosure && (
+        <>
+          <div className="fixed inset-0 z-50 bg-black/50"
+            onClick={() => !isCancellingBookings && setPendingClosure(null)} />
+          <div className="fixed left-1/2 top-1/2 z-50 w-[92%] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-6 shadow-2xl space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-amber-100 text-amber-600">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">Existing Bookings During Closure</h3>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  The following bookings fall within this closure period. Cancel them or save without cancelling.
+                </p>
+              </div>
+            </div>
+
+            <div className="max-h-60 overflow-y-auto space-y-3 pr-1">
+              {pendingClosure.conflicts.reservations.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide">
+                    Reservations ({pendingClosure.conflicts.reservations.length})
+                  </p>
+                  {pendingClosure.conflicts.reservations.map(r => (
+                    <div key={r.id} className="flex items-center justify-between rounded-lg border border-purple-100 bg-purple-50 px-3 py-2 text-sm">
+                      <span className="font-medium text-gray-800">#{r.id} {r.contactName}</span>
+                      <span className="text-gray-500 text-xs whitespace-nowrap ml-2">{formatDateStr(r.date)} · {formatTimeStr(r.time)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {pendingClosure.conflicts.orders.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide">
+                    Orders ({pendingClosure.conflicts.orders.length})
+                  </p>
+                  {pendingClosure.conflicts.orders.map(o => (
+                    <div key={o.id} className="flex items-center justify-between rounded-lg border border-orange-100 bg-orange-50 px-3 py-2 text-sm">
+                      <span className="font-medium text-gray-800">#{o.id} {o.contactName}</span>
+                      <span className="text-gray-500 text-xs whitespace-nowrap ml-2">
+                        {formatDateStr(o.date)} · {o.time === "ASAP" ? "ASAP" : formatTimeStr(o.time)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2 pt-1">
+              <Button
+                className="w-full bg-red-600 hover:bg-red-700 text-white"
+                disabled={isCancellingBookings}
+                onClick={async () => {
+                  setIsCancellingBookings(true);
+                  try {
+                    await apiFetch("/api/admin/closures/cancel-affected", {
+                      method: "POST",
+                      body: JSON.stringify({
+                        reservationIds: pendingClosure.conflicts.reservations.map(r => r.id),
+                        orderIds:       pendingClosure.conflicts.orders.map(o => o.id),
+                        reason:         "Branch closed during this period",
+                      }),
+                    });
+                    qc.invalidateQueries({ queryKey: ["admin-reservations"] });
+                    qc.invalidateQueries({ queryKey: ["admin-orders"] });
+                    await pendingClosure.proceed();
+                    setPendingClosure(null);
+                  } catch (e) {
+                    toast.error((e as Error).message || "Failed to cancel bookings.");
+                  } finally {
+                    setIsCancellingBookings(false);
+                  }
+                }}
+              >
+                {isCancellingBookings
+                  ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Cancelling…</>
+                  : "Cancel Bookings & Save Closure"}
+              </Button>
+              <Button variant="secondary" className="w-full" disabled={isCancellingBookings}
+                onClick={async () => { await pendingClosure.proceed(); setPendingClosure(null); }}>
+                Save Closure Without Cancelling
+              </Button>
+              <button disabled={isCancellingBookings} onClick={() => setPendingClosure(null)}
+                className="text-sm text-gray-500 hover:text-gray-800 underline py-1 disabled:opacity-50">
+                Go Back
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

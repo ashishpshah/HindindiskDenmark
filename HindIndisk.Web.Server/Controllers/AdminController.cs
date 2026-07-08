@@ -300,6 +300,43 @@ public class AdminController : ControllerBase
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
+    // GET /api/admin/closures/conflicts?branchId=1&scope=Reservation&startDate=2026-07-08&endDate=2026-07-08&startTime=10:00&endTime=14:00
+    [HttpGet("closures/conflicts")]
+    public async Task<IActionResult> GetClosureConflicts(
+        [FromQuery] long    branchId,
+        [FromQuery] string  scope,
+        [FromQuery] string  startDate,
+        [FromQuery] string  endDate,
+        [FromQuery] string? startTime = null,
+        [FromQuery] string? endTime   = null)
+    {
+        if (!DateOnly.TryParseExact(startDate, "yyyy-MM-dd", out var start) ||
+            !DateOnly.TryParseExact(endDate,   "yyyy-MM-dd", out var end))
+            return BadRequest(new { message = "Invalid date format. Use yyyy-MM-dd." });
+
+        TimeOnly? tStart = null, tEnd = null;
+        if (!string.IsNullOrEmpty(startTime) && !string.IsNullOrEmpty(endTime))
+        {
+            if (!TimeOnly.TryParseExact(startTime, "HH:mm", out var ts) ||
+                !TimeOnly.TryParseExact(endTime,   "HH:mm", out var te))
+                return BadRequest(new { message = "Invalid time format. Use HH:mm." });
+            tStart = ts; tEnd = te;
+        }
+
+        return Ok(await _closures.GetConflictsAsync(branchId, scope, start, end, tStart, tEnd));
+    }
+
+    // POST /api/admin/closures/cancel-affected
+    [HttpPost("closures/cancel-affected")]
+    public async Task<IActionResult> CancelAffected([FromBody] CancelAffectedRequest request)
+    {
+        await _closures.CancelAffectedAsync(
+            request.ReservationIds ?? [],
+            request.OrderIds       ?? [],
+            request.Reason);
+        return NoContent();
+    }
+
     // ── Branch service status ─────────────────────────────────────────────────
 
     // GET /api/admin/service-status

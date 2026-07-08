@@ -55,19 +55,34 @@ type ServiceRow = {
   schedPeriod?: string;
 };
 
-function buildServiceRows(branch: BranchDto, closures: ClosureDto[], today: string, nowStr: string): ServiceRow[] {
+function buildServiceRows(_branch: BranchDto, closures: ClosureDto[], today: string, nowStr: string): ServiceRow[] {
+  // Instant = today-only DateRange closure currently active
+  const activeInstant = (scope: "Reservation" | "Delivery" | "Pickup") =>
+    closures.find(c => {
+      if (c.scope !== scope || c.closureType !== "DateRange") return false;
+      const s = c.startDate ?? "", e = c.endDate ?? s;
+      if (s !== today || e !== today) return false;
+      if (c.startTime && c.endTime) return nowStr >= c.startTime && nowStr <= c.endTime;
+      return true;
+    });
+
+  // Scheduled = DateRange spanning today but not today-only
   const activeScheduled = (scope: "Reservation" | "Delivery" | "Pickup") =>
     closures.find(c => {
       if (c.scope !== scope || c.closureType !== "DateRange") return false;
       const s = c.startDate ?? "", e = c.endDate ?? s;
       if (today < s || today > e) return false;
+      if (s === today && e === today) return false; // instant, handled above
       if (c.startTime && c.endTime) return nowStr >= c.startTime && nowStr <= c.endTime;
       return true;
     });
 
-  const resSched  = activeScheduled("Reservation");
-  const delSched  = activeScheduled("Delivery");
-  const pickSched = activeScheduled("Pickup");
+  const resInstant  = activeInstant("Reservation");
+  const delInstant  = activeInstant("Delivery");
+  const pickInstant = activeInstant("Pickup");
+  const resSched    = activeScheduled("Reservation");
+  const delSched    = activeScheduled("Delivery");
+  const pickSched   = activeScheduled("Pickup");
 
   const schedPeriod = (c: ClosureDto) => {
     const period = c.startDate === c.endDate
@@ -82,23 +97,23 @@ function buildServiceRows(branch: BranchDto, closures: ClosureDto[], today: stri
   return [
     {
       label:       "Reservation",
-      isClosed:    branch.isCloseReservation || !!resSched,
-      note:        branch.isCloseReservation ? branch.closeReservationNote : (resSched?.note ?? null),
-      closureKind: branch.isCloseReservation ? "Instant" : resSched ? "Scheduled" : null,
+      isClosed:    !!resInstant || !!resSched,
+      note:        resInstant?.note ?? resSched?.note ?? null,
+      closureKind: resInstant ? "Instant" : resSched ? "Scheduled" : null,
       schedPeriod: resSched ? schedPeriod(resSched) : undefined,
     },
     {
       label:       "Order — Delivery",
-      isClosed:    branch.isCloseDelivery || !!delSched,
-      note:        branch.isCloseDelivery ? branch.closeDeliveryNote : (delSched?.note ?? null),
-      closureKind: branch.isCloseDelivery ? "Instant" : delSched ? "Scheduled" : null,
+      isClosed:    !!delInstant || !!delSched,
+      note:        delInstant?.note ?? delSched?.note ?? null,
+      closureKind: delInstant ? "Instant" : delSched ? "Scheduled" : null,
       schedPeriod: delSched ? schedPeriod(delSched) : undefined,
     },
     {
       label:       "Order — Pickup",
-      isClosed:    branch.isClosePickup || !!pickSched,
-      note:        branch.isClosePickup ? branch.closePickupNote : (pickSched?.note ?? null),
-      closureKind: branch.isClosePickup ? "Instant" : pickSched ? "Scheduled" : null,
+      isClosed:    !!pickInstant || !!pickSched,
+      note:        pickInstant?.note ?? pickSched?.note ?? null,
+      closureKind: pickInstant ? "Instant" : pickSched ? "Scheduled" : null,
       schedPeriod: pickSched ? schedPeriod(pickSched) : undefined,
     },
   ];

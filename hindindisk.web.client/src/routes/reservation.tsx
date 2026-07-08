@@ -367,18 +367,7 @@ function ReservationPage() {
             </FormField>
           </div>
 
-          {resClosedNow ? (
-            <div className="rounded-2xl border border-orange-200 bg-orange-50 px-6 py-8 text-center space-y-2">
-              <p className="text-lg font-semibold text-orange-700">Reservations temporarily suspended</p>
-              <p className="text-sm text-orange-600">
-                This branch is not accepting new reservations at the moment. Please try again later or contact us directly.
-              </p>
-              {resClosureMsg && (
-                <p className="text-sm text-orange-700 font-medium italic">"{resClosureMsg}"</p>
-              )}
-            </div>
-          ) : (
-            <>
+          <>
               <div className="grid gap-5 sm:grid-cols-2">
                 <FormField label={t("forms.dateLabel")}>
                   <Input type="date" required
@@ -492,7 +481,6 @@ function ReservationPage() {
                 </p>
               )}
             </>
-          )}
         </form>
       </section>
 
