@@ -16,7 +16,6 @@ export type BranchForm = {
   city: string; postalCode: string; country: string;
   phone: string; email: string; googleMapsLink: string;
   imageUrl: string; rating: string; reviewCount: string;
-  deliveryEnabled: boolean; pickupEnabled: boolean;
   deliveryFee: string; deliveryFeeEnabled: boolean;
   maxAdvanceDays: string;
 };
@@ -25,7 +24,6 @@ export const EMPTY_BRANCH: BranchForm = {
   name: "", addressLine1: "", addressLine2: "", city: "", postalCode: "",
   country: "Denmark", phone: "", email: "", googleMapsLink: "",
   imageUrl: "", rating: "5.0", reviewCount: "0",
-  deliveryEnabled: true, pickupEnabled: true,
   deliveryFee: "39", deliveryFeeEnabled: true,
   maxAdvanceDays: "7",
 };
@@ -49,8 +47,6 @@ function BranchNewPage() {
         imageUrl: form.imageUrl,
         rating: parseFloat(form.rating) || 5.0,
         reviewCount: parseInt(form.reviewCount) || 0,
-        deliveryEnabled: form.deliveryEnabled,
-        pickupEnabled: form.pickupEnabled,
         deliveryFee: parseFloat(form.deliveryFee) || 39,
         deliveryFeeEnabled: form.deliveryFeeEnabled,
         maxAdvanceDays: parseInt(form.maxAdvanceDays) || 0,

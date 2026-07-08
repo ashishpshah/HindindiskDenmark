@@ -6,7 +6,7 @@ import { useMyOrders } from "@/hooks/useMyOrders";
 import { useMyReservations } from "@/hooks/useMyReservations";
 import { useAddresses } from "@/hooks/useAddresses";
 import { todayInDenmark } from "@/lib/denmarkTime";
-import { formatDate } from "@/lib/dateFormat";
+import { formatDate, formatDateStr, formatTimeStr } from "@/lib/dateFormat";
 
 export const Route = createFileRoute("/account/")({
   component: Dashboard,
@@ -137,7 +137,7 @@ function Dashboard() {
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-sm">{t("account.upcomingReservation")}</div>
                 <div className="mt-0.5 text-xs text-muted-foreground truncate">
-                  {nextResv.branchName} · {nextResv.date} · {nextResv.timeSlot} · {nextResv.guestCount} {t("reservations.guests")}
+                  {nextResv.branchName} · {formatDateStr(nextResv.date)} · {formatTimeStr(nextResv.timeSlot)} · {nextResv.guestCount} {t("reservations.guests")}
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition shrink-0" />

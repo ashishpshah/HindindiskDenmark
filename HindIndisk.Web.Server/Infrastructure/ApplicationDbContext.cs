@@ -14,6 +14,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Branch>               Branches             => Set<Branch>();
     public DbSet<BranchDaySchedule>    BranchDaySchedules   => Set<BranchDaySchedule>();
     public DbSet<BranchServiceClosure> BranchServiceClosures => Set<BranchServiceClosure>();
+    public DbSet<BranchClosure>        BranchClosures       => Set<BranchClosure>();
     public DbSet<Menu> Menus => Set<Menu>();
     public DbSet<MenuItem> MenuItems => Set<MenuItem>();
     public DbSet<MenuLabel> MenuLabels => Set<MenuLabel>();
@@ -38,6 +39,16 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<BranchServiceClosure>()
             .HasOne(c => c.Branch)
             .WithMany(b => b.ServiceClosures)
+            .HasForeignKey(c => c.BranchId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // ── BranchClosure: scheduled / recurring closures ────────────────────
+        modelBuilder.Entity<BranchClosure>()
+            .HasIndex(c => new { c.BranchId, c.ClosureType });
+
+        modelBuilder.Entity<BranchClosure>()
+            .HasOne(c => c.Branch)
+            .WithMany(b => b.Closures)
             .HasForeignKey(c => c.BranchId)
             .OnDelete(DeleteBehavior.Cascade);
 

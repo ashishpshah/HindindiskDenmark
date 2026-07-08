@@ -1,23 +1,36 @@
 using HindIndisk.Api.Application.DTOs.Admin;
 using HindIndisk.Api.Domain.Entities;
+using HindIndisk.Api.Hubs;
 using HindIndisk.Api.Infrastructure;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace HindIndisk.Api.Application.Services;
 
-public class BranchServiceStatusService(ApplicationDbContext db)
+public class BranchServiceStatusService(ApplicationDbContext db, IHubContext<ClosureHub> hub)
 {
-    /// <summary>Toggle IsCloseOrder or IsCloseReservation for a branch and record history.</summary>
+    /// <summary>
+    /// Toggle a service for a branch and record history.
+    /// "Order" and "Reservation" also flip the branch flag.
+    /// "Delivery" and "Pickup" only write history (the BranchClosure record is managed separately).
+    /// </summary>
     public async Task<BranchServiceClosureDto> ToggleAsync(
-        long branchId, string serviceType, bool isClosed, string adminEmail)
+        long branchId, string serviceType, bool isClosed, string adminEmail, string? note = null)
     {
         var branch = await db.Branches.FindAsync(branchId)
             ?? throw new KeyNotFoundException($"Branch {branchId} not found.");
 
         if (serviceType == "Order")
-            branch.IsCloseOrder = isClosed;
-        else
-            branch.IsCloseReservation = isClosed;
+        {
+            branch.IsCloseOrder   = isClosed;
+            branch.CloseOrderNote = isClosed ? (string.IsNullOrWhiteSpace(note) ? null : note.Trim()) : null;
+        }
+        else if (serviceType == "Reservation")
+        {
+            branch.IsCloseReservation   = isClosed;
+            branch.CloseReservationNote = isClosed ? (string.IsNullOrWhiteSpace(note) ? null : note.Trim()) : null;
+        }
+        // "Delivery" and "Pickup" — history only, no branch flag
 
         BranchServiceClosure history;
 
@@ -30,38 +43,51 @@ public class BranchServiceStatusService(ApplicationDbContext db)
                 ServiceType = serviceType,
                 ClosedAt    = DenmarkTime.Now,
                 ClosedBy    = adminEmail,
+                Note        = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
             };
             db.BranchServiceClosures.Add(history);
         }
         else
         {
-            // Reopening — stamp the latest open row for this branch+type
-            history = await db.BranchServiceClosures
+            // Reopening — stamp ALL open rows for this branch+type (not just the latest)
+            var openRows = await db.BranchServiceClosures
                 .Where(c => c.BranchId == branchId
                          && c.ServiceType == serviceType
                          && c.ReopenedAt == null)
                 .OrderByDescending(c => c.ClosedAt)
-                .FirstOrDefaultAsync()
-                ?? new BranchServiceClosure
+                .ToListAsync();
+
+            var reopenTime = DenmarkTime.Now;
+
+            if (openRows.Count > 0)
+            {
+                foreach (var row in openRows)
+                    row.ReopenedAt = reopenTime;
+                history = openRows[0];
+            }
+            else
+            {
+                // No open row exists — create a zero-duration record so history is consistent
+                history = new BranchServiceClosure
                 {
                     BranchId    = branchId,
                     ServiceType = serviceType,
-                    ClosedAt    = DenmarkTime.Now,
+                    ClosedAt    = reopenTime,
                     ClosedBy    = adminEmail,
+                    ReopenedAt  = reopenTime,
                 };
-
-            history.ReopenedAt = DenmarkTime.Now;
-
-            if (history.Id == 0)
                 db.BranchServiceClosures.Add(history);
+            }
         }
 
         await db.SaveChangesAsync();
 
+        await hub.Clients.Group($"branch-{branchId}").SendAsync("ServiceStatusChanged", branchId);
+
         return new BranchServiceClosureDto(
             history.Id, branch.Id, branch.Name,
             history.ServiceType, history.ClosedAt,
-            history.ReopenedAt, history.ClosedBy);
+            history.ReopenedAt, history.ClosedBy, history.Note);
     }
 
     /// <summary>Paginated history with optional filters.</summary>
@@ -89,7 +115,7 @@ public class BranchServiceStatusService(ApplicationDbContext db)
 
         return rows.Select(c => new BranchServiceClosureDto(
             c.Id, c.BranchId, c.Branch.Name,
-            c.ServiceType, c.ClosedAt, c.ReopenedAt, c.ClosedBy)).ToList();
+            c.ServiceType, c.ClosedAt, c.ReopenedAt, c.ClosedBy, c.Note)).ToList();
     }
 
     /// <summary>Current open/close status for all branches.</summary>
@@ -99,7 +125,7 @@ public class BranchServiceStatusService(ApplicationDbContext db)
         return branches.Select(b => new AdminBranchDto(
             b.Id, b.Name, b.AddressLine1, b.AddressLine2, b.City, b.PostalCode, b.Country,
             b.Phone, b.Email, b.GoogleMapsLink, b.ImageUrl, b.Rating, b.ReviewCount,
-            b.DeliveryEnabled, b.PickupEnabled, b.DeliveryFee, b.DeliveryFeeEnabled,
+            b.DeliveryFee, b.DeliveryFeeEnabled,
             b.IsCloseOrder, b.IsCloseReservation, b.MaxAdvanceDays)).ToList();
     }
 }

@@ -25,7 +25,7 @@ import { Route as MenuIndexRouteImport } from './routes/menu.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AccountIndexRouteImport } from './routes/account.index'
 import { Route as MenuNameRouteImport } from './routes/menu.$name'
-import { Route as AdminServiceStatusRouteImport } from './routes/admin.service-status'
+import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminReservationsRouteImport } from './routes/admin.reservations'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 import { Route as AdminMenusRouteImport } from './routes/admin.menus'
@@ -127,9 +127,9 @@ const MenuNameRoute = MenuNameRouteImport.update({
   path: '/$name',
   getParentRoute: () => MenuRoute,
 } as any)
-const AdminServiceStatusRoute = AdminServiceStatusRouteImport.update({
-  id: '/service-status',
-  path: '/service-status',
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminReservationsRoute = AdminReservationsRouteImport.update({
@@ -257,7 +257,7 @@ export interface FileRoutesByFullPath {
   '/admin/menus': typeof AdminMenusRouteWithChildren
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/reservations': typeof AdminReservationsRoute
-  '/admin/service-status': typeof AdminServiceStatusRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/menu/$name': typeof MenuNameRoute
   '/account/': typeof AccountIndexRoute
   '/admin/': typeof AdminIndexRoute
@@ -290,7 +290,7 @@ export interface FileRoutesByTo {
   '/admin/exception-logs': typeof AdminExceptionLogsRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/reservations': typeof AdminReservationsRoute
-  '/admin/service-status': typeof AdminServiceStatusRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/menu/$name': typeof MenuNameRoute
   '/account': typeof AccountIndexRoute
   '/admin': typeof AdminIndexRoute
@@ -330,7 +330,7 @@ export interface FileRoutesById {
   '/admin/menus': typeof AdminMenusRouteWithChildren
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/reservations': typeof AdminReservationsRoute
-  '/admin/service-status': typeof AdminServiceStatusRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/menu/$name': typeof MenuNameRoute
   '/account/': typeof AccountIndexRoute
   '/admin/': typeof AdminIndexRoute
@@ -371,7 +371,7 @@ export interface FileRouteTypes {
     | '/admin/menus'
     | '/admin/orders'
     | '/admin/reservations'
-    | '/admin/service-status'
+    | '/admin/settings'
     | '/menu/$name'
     | '/account/'
     | '/admin/'
@@ -404,7 +404,7 @@ export interface FileRouteTypes {
     | '/admin/exception-logs'
     | '/admin/orders'
     | '/admin/reservations'
-    | '/admin/service-status'
+    | '/admin/settings'
     | '/menu/$name'
     | '/account'
     | '/admin'
@@ -443,7 +443,7 @@ export interface FileRouteTypes {
     | '/admin/menus'
     | '/admin/orders'
     | '/admin/reservations'
-    | '/admin/service-status'
+    | '/admin/settings'
     | '/menu/$name'
     | '/account/'
     | '/admin/'
@@ -588,11 +588,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MenuNameRouteImport
       parentRoute: typeof MenuRoute
     }
-    '/admin/service-status': {
-      id: '/admin/service-status'
-      path: '/service-status'
-      fullPath: '/admin/service-status'
-      preLoaderRoute: typeof AdminServiceStatusRouteImport
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/reservations': {
@@ -813,7 +813,7 @@ interface AdminRouteChildren {
   AdminMenusRoute: typeof AdminMenusRouteWithChildren
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminReservationsRoute: typeof AdminReservationsRoute
-  AdminServiceStatusRoute: typeof AdminServiceStatusRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
@@ -825,7 +825,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminMenusRoute: AdminMenusRouteWithChildren,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminReservationsRoute: AdminReservationsRoute,
-  AdminServiceStatusRoute: AdminServiceStatusRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 

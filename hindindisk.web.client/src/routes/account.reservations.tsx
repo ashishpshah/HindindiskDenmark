@@ -3,6 +3,7 @@ import { CalendarCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMyReservations } from "@/hooks/useMyReservations";
 import { useI18n } from "@/i18n/I18nProvider";
+import { formatDateStr, formatTimeStr } from "@/lib/dateFormat";
 
 export const Route = createFileRoute("/account/reservations")({ component: ReservationsPage });
 
@@ -51,7 +52,7 @@ function ReservationsPage() {
             <div>
               <div className="font-semibold text-foreground">{r.branchName}</div>
               <div className="mt-0.5 text-sm text-muted-foreground">
-                {r.date} · {r.timeSlot} · {r.guestCount} {r.guestCount === 1 ? t("reservations.guest") : t("reservations.guests")}
+                {formatDateStr(r.date)} · {formatTimeStr(r.timeSlot)} · {r.guestCount} {r.guestCount === 1 ? t("reservations.guest") : t("reservations.guests")}
               </div>
               {r.specialRequests && (
                 <div className="mt-1 text-xs text-muted-foreground italic">"{r.specialRequests}"</div>

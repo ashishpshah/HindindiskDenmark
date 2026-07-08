@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Mail, Lock, User as UserIcon, Phone, CheckCircle2, AlertCircle, Info } from "lucide-react";
+import { X, Mail, Lock, User as UserIcon, Phone, CheckCircle2, AlertCircle, Info, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -198,7 +198,7 @@ export function AuthModal() {
                     <Input required type="email" value={form.email} onChange={set("email")} placeholder="you@email.dk" />
                   </Field>
                   <Field icon={<Lock className="h-4 w-4" />} label={t("auth.password")}>
-                    <Input required type="password" value={form.password} onChange={set("password")} />
+                    <PasswordInput required value={form.password} onChange={set("password")} />
                   </Field>
                   <div className="flex items-center justify-between text-sm">
                     <label className="flex items-center gap-2"><Checkbox /> {t("auth.remember")}</label>
@@ -240,10 +240,10 @@ export function AuthModal() {
                     <Input type="tel" value={form.phone} onChange={set("phone")} placeholder="+45 12 34 56 78" />
                   </Field>
                   <Field icon={<Lock className="h-4 w-4" />} label={t("auth.password")}>
-                    <Input required type="password" value={form.password} onChange={set("password")} placeholder="Min. 8 characters" />
+                    <PasswordInput required value={form.password} onChange={set("password")} placeholder="Min. 8 characters" />
                   </Field>
                   <Field icon={<Lock className="h-4 w-4" />} label={t("auth.confirmPassword")}>
-                    <Input required type="password" value={form.confirm} onChange={set("confirm")} placeholder="Repeat password" />
+                    <PasswordInput required value={form.confirm} onChange={set("confirm")} placeholder="Repeat password" />
                   </Field>
                   <label className="flex items-start gap-2 text-sm"><Checkbox required className="mt-0.5" /> <span>{t("auth.acceptTerms")}</span></label>
                   <AlertBanner />
@@ -321,10 +321,10 @@ export function AuthModal() {
                     <form onSubmit={onResetPassword} className="space-y-4">
                       <p className="text-sm text-muted-foreground">OTP verified. Enter your new password.</p>
                       <Field icon={<Lock className="h-4 w-4" />} label={t("auth.newPassword")}>
-                        <Input required type="password" value={form.newpwd} onChange={set("newpwd")} placeholder="At least 8 characters" />
+                        <PasswordInput required value={form.newpwd} onChange={set("newpwd")} placeholder="At least 8 characters" />
                       </Field>
                       <Field icon={<Lock className="h-4 w-4" />} label={t("auth.confirmPassword")}>
-                        <Input required type="password" value={form.newpwdConfirm} onChange={set("newpwdConfirm")} placeholder="Repeat new password" />
+                        <PasswordInput required value={form.newpwdConfirm} onChange={set("newpwdConfirm")} placeholder="Repeat new password" />
                       </Field>
                       <AlertBanner />
                       <Button disabled={loading} className="w-full gradient-primary text-primary-foreground">
@@ -355,6 +355,23 @@ function Field({ label, icon, children }: { label: React.ReactNode; icon?: React
     <div className="space-y-1.5">
       <Label className="flex items-center gap-1.5 text-sm">{icon}{label}</Label>
       {children}
+    </div>
+  );
+}
+
+function PasswordInput(props: Omit<React.ComponentProps<typeof Input>, "type">) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <Input {...props} type={show ? "text" : "password"} className="pr-10" />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setShow(s => !s)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
     </div>
   );
 }

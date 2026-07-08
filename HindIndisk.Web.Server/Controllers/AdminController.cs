@@ -1,4 +1,5 @@
 using HindIndisk.Api.Application.DTOs.Admin;
+using HindIndisk.Api.Application.DTOs.Closure;
 using HindIndisk.Api.Application.DTOs.Schedule;
 using HindIndisk.Api.Application.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -18,17 +19,19 @@ public class AdminController : ControllerBase
     private readonly IWebHostEnvironment        _env;
     private readonly ScheduleService           _schedules;
     private readonly BranchServiceStatusService _serviceStatus;
+    private readonly BranchClosureService       _closures;
     private readonly IExceptionLogService       _exceptionLogs;
 
     public AdminController(
         IAdminService admin, IWebHostEnvironment env,
         ScheduleService schedules, BranchServiceStatusService serviceStatus,
-        IExceptionLogService exceptionLogs)
+        BranchClosureService closures, IExceptionLogService exceptionLogs)
     {
         _admin         = admin;
         _env           = env;
         _schedules     = schedules;
         _serviceStatus = serviceStatus;
+        _closures      = closures;
         _exceptionLogs = exceptionLogs;
     }
 
@@ -271,6 +274,32 @@ public class AdminController : ControllerBase
         catch (InvalidOperationException ex) { return BadRequest(ex.Message); }
     }
 
+    // ── Branch closures (scheduled / weekly-off) ──────────────────────────────
+
+    // GET /api/admin/branches/{id}/closures
+    [HttpGet("branches/{id:long}/closures")]
+    public async Task<ActionResult<IReadOnlyList<BranchClosureDto>>> GetClosures(long id)
+        => Ok(await _closures.GetAsync(id));
+
+    // POST /api/admin/branches/{id}/closures
+    [HttpPost("branches/{id:long}/closures")]
+    public async Task<ActionResult<BranchClosureDto>> CreateClosure(
+        long id, [FromBody] CreateBranchClosureRequest request)
+    {
+        var adminEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "admin";
+        try   { return Ok(await _closures.CreateAsync(id, request, adminEmail)); }
+        catch (KeyNotFoundException ex)      { return NotFound(new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    // DELETE /api/admin/branches/{id}/closures/{closureId}
+    [HttpDelete("branches/{id:long}/closures/{closureId:long}")]
+    public async Task<IActionResult> DeleteClosure(long id, long closureId)
+    {
+        try   { await _closures.DeleteAsync(id, closureId); return NoContent(); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
     // ── Branch service status ─────────────────────────────────────────────────
 
     // GET /api/admin/service-status
@@ -284,7 +313,7 @@ public class AdminController : ControllerBase
         long id, [FromBody] ToggleServiceRequest request)
     {
         var adminEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "admin";
-        try   { return Ok(await _serviceStatus.ToggleAsync(id, request.ServiceType, request.IsClosed, adminEmail)); }
+        try   { return Ok(await _serviceStatus.ToggleAsync(id, request.ServiceType, request.IsClosed, adminEmail, request.Note)); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 

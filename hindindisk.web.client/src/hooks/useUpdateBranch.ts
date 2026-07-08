@@ -14,8 +14,6 @@ export type UpdateBranchInput = {
   imageUrl: string;
   rating: number;
   reviewCount: number;
-  deliveryEnabled: boolean;
-  pickupEnabled: boolean;
   deliveryFee: number;
   deliveryFeeEnabled: boolean;
   maxAdvanceDays: number;
@@ -35,12 +33,8 @@ export type AdminBranchDto = {
   imageUrl: string;
   rating: number;
   reviewCount: number;
-  deliveryEnabled: boolean;
-  pickupEnabled: boolean;
   deliveryFee: number;
   deliveryFeeEnabled: boolean;
-  isCloseOrder: boolean;
-  isCloseReservation: boolean;
   maxAdvanceDays: number;
 };
 

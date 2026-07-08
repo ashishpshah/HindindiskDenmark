@@ -16,8 +16,6 @@ public class CreateBranchRequest
     [MaxLength(500)]           public string  ImageUrl    { get; set; } = string.Empty;
     [Range(0, 5)]              public decimal Rating           { get; set; } = 5.0m;
     [Range(0, int.MaxValue)]   public int     ReviewCount      { get; set; } = 0;
-    public bool    DeliveryEnabled    { get; set; } = true;
-    public bool    PickupEnabled      { get; set; } = true;
     [Range(0, 9999)] public decimal DeliveryFee       { get; set; } = 39.0m;
     public bool    DeliveryFeeEnabled { get; set; } = true;
     [Range(0, 90)] public int MaxAdvanceDays { get; set; } = 7;

@@ -14,8 +14,6 @@ public record AdminBranchDto(
     string  ImageUrl,
     decimal Rating,
     int     ReviewCount,
-    bool    DeliveryEnabled,
-    bool    PickupEnabled,
     decimal DeliveryFee,
     bool    DeliveryFeeEnabled,
     bool    IsCloseOrder,

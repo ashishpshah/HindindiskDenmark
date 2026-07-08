@@ -21,7 +21,7 @@ const NAV: Array<{ to: string; label: string; icon: typeof ShoppingBag; exact?: 
   { to: "/admin/menu",         label: "Items",         icon: UtensilsCrossed },
   { to: "/admin/branches",        label: "Branches",        icon: Store },
   { to: "/admin/customers",       label: "Customers",       icon: Users },
-  { to: "/admin/service-status",  label: "Service Status",  icon: PowerOff },
+  { to: "/admin/settings",  label: "Settings",  icon: PowerOff },
 ];
 
 function AdminLoginForm() {

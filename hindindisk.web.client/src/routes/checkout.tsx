@@ -18,6 +18,9 @@ import { toast } from "sonner";
 import { useBranches } from "@/hooks/useBranches";
 import { useCreateOrder, type OrderDto } from "@/hooks/useCreateOrder";
 import { useAvailableSlots } from "@/hooks/useAvailableSlots";
+import { useClosedDates } from "@/hooks/useClosedDates";
+import { useClosureHub } from "@/hooks/useClosureHub";
+import { usePublicClosures } from "@/hooks/usePublicClosures";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCustomerLookup, type CustomerAddress } from "@/hooks/useCustomerLookup";
 import { todayInDenmark } from "@/lib/denmarkTime";
@@ -103,8 +106,15 @@ function CheckoutPage() {
     return d.toISOString().slice(0, 10);
   }, [currentBranch, today]);
 
-  const { isOpen: branchOpen, slots: orderSlots, isLoading: slotsLoading } =
+  const { isOpen: branchOpen, slots: orderSlots, closeNote: slotsCloseNote, isLoading: slotsLoading } =
     useAvailableSlots(currentBranch?.id, scheduledDate, orderType === "delivery" ? "delivery" : "pickup");
+
+  const isDateClosed   = useClosedDates(currentBranch?.id);
+  const closedDateNote = isDateClosed(scheduledDate, orderType === "delivery" ? "Delivery" : "Pickup");
+
+  const branchIds = useMemo(() => branchesData.map(b => b.id), [branchesData]);
+  const { isClosedNow, closureNote } = usePublicClosures(branchIds);
+  useClosureHub(branchIds); // subscribe to all branches for real-time branch-card updates
 
   useEffect(() => {
     if (!currentBranch) return;
@@ -116,8 +126,7 @@ function CheckoutPage() {
 
   useEffect(() => {
     if (!currentBranch) return;
-    if (currentBranch.pickupEnabled) setOrderType("pickup");
-    else if (currentBranch.deliveryEnabled) setOrderType("delivery");
+    setOrderType("pickup");
   }, [currentBranch, setOrderType]);
 
   const [scheduledTime, setScheduledTime] = useState("");
@@ -128,10 +137,10 @@ function CheckoutPage() {
   // Reset time slot when date changes to avoid stale selection
   useEffect(() => { setScheduledTime(""); }, [scheduledDate]);
 
-  const { data: customer, isFetching: lookingUp, matchedBy } = useCustomerLookup(details.phone, details.email);
+  const { data: customer, isFetching: lookingUp, isError: lookupError, matchedBy } = useCustomerLookup(details.phone, details.email);
 
   useEffect(() => {
-    if (!customer) { setSavedAddresses([]); return; }
+    if (!customer || lookupError) { setSavedAddresses([]); return; }
     setSavedAddresses(customer.addresses);
     setDetails(prev => ({
       ...prev,
@@ -139,7 +148,7 @@ function CheckoutPage() {
       lastname:  prev.lastname  || customer.lastname,
       email:     prev.email     || customer.email || "",
     }));
-  }, [customer]);
+  }, [customer, lookupError]);
 
   // 5 steps: Branch · Order Type + Address · Contact · Payment · Review
   const STEPS = [
@@ -154,12 +163,6 @@ function CheckoutPage() {
   const next = () => {
     if (step === 1) {
       if (!branch) { toast.error("Please select a branch."); return; }
-      if (currentBranch && !currentBranch.deliveryEnabled && !currentBranch.pickupEnabled) {
-        toast.error("This branch is not accepting online orders."); return;
-      }
-      if (currentBranch?.isCloseOrder) {
-        toast.error("Online orders are temporarily suspended for this branch."); return;
-      }
     }
     if (step === 2) {
       const hours = branchHours(currentBranch);
@@ -284,24 +287,29 @@ function CheckoutPage() {
                     <h2 className="font-display text-2xl font-semibold">{t("checkout.step1")}</h2>
                     <div className="grid gap-3 sm:grid-cols-2">
                       {branchesData.map((b) => {
-                        const bothDisabled = !b.deliveryEnabled && !b.pickupEnabled;
+                        const deliveryNote = closureNote(b.id, "Delivery");
+                        const pickupNote   = closureNote(b.id, "Pickup");
                         return (
                           <button
                             key={b.name}
-                            onClick={() => !bothDisabled && setBranch(b.name)}
-                            disabled={bothDisabled}
+                            onClick={() => setBranch(b.name)}
                             className={`rounded-2xl border p-5 text-left transition
-                              ${branch === b.name ? "border-primary bg-primary/5 shadow-soft" : "hover:border-primary/40"}
-                              ${bothDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                              ${branch === b.name ? "border-primary bg-primary/5 shadow-soft" : "hover:border-primary/40"}`}
                           >
                             <div className="flex items-center gap-2 font-semibold"><MapPin className="h-4 w-4 text-primary" />{b.name}</div>
                             <div className="mt-1 text-sm text-muted-foreground">{b.address}, {b.city}</div>
                             <div className="mt-1 text-xs text-muted-foreground">{b.weekdayHours}</div>
-                            {bothDisabled && (
-                              <div className="mt-2 text-xs text-destructive font-medium">{t("checkout.notAcceptingOrders")}</div>
+                            {isClosedNow(b.id, "Delivery") && (
+                              <div className="mt-2 text-xs text-orange-600 font-medium">
+                                Delivery temporarily closed
+                                {deliveryNote && <span className="ml-1 italic font-normal">— {deliveryNote}</span>}
+                              </div>
                             )}
-                            {!bothDisabled && b.isCloseOrder && (
-                              <div className="mt-2 text-xs text-orange-600 font-medium">{t("checkout.ordersSuspended")}</div>
+                            {isClosedNow(b.id, "Pickup") && (
+                              <div className="mt-2 text-xs text-orange-600 font-medium">
+                                Pickup temporarily closed
+                                {pickupNote && <span className="ml-1 italic font-normal">— {pickupNote}</span>}
+                              </div>
                             )}
                           </button>
                         );
@@ -318,36 +326,34 @@ function CheckoutPage() {
                     <h2 className="font-display text-2xl font-semibold">{t("checkout.step2")}</h2>
 
                     <div className="grid gap-3 sm:grid-cols-2">
-                      {/* Delivery tile — disabled if branch doesn't support it */}
+                      {/* Delivery tile */}
                       <button
-                        onClick={() => currentBranch?.deliveryEnabled && setOrderType("delivery")}
-                        disabled={!currentBranch?.deliveryEnabled}
+                        onClick={() => setOrderType("delivery")}
                         className={`rounded-2xl border p-6 text-left transition
-                          ${orderType === "delivery" ? "border-primary bg-primary/5" : "hover:border-primary/40"}
-                          ${!currentBranch?.deliveryEnabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                          ${orderType === "delivery" ? "border-primary bg-primary/5" : "hover:border-primary/40"}`}
                       >
-                        <Truck className={`h-6 w-6 ${currentBranch?.deliveryEnabled ? "text-primary" : "text-muted-foreground"}`} />
+                        <Truck className="h-6 w-6 text-primary" />
                         <div className="mt-2 font-semibold">{t("checkout.delivery")}</div>
                         <div className="text-sm text-muted-foreground">
-                          {currentBranch?.deliveryEnabled
-                            ? (currentBranch.deliveryFeeEnabled ? `+${currentBranch.deliveryFee} DKK` : t("checkout.free"))
-                            : t("checkout.notAvailable")}
+                          {currentBranch?.deliveryFeeEnabled ? `+${currentBranch.deliveryFee} DKK` : t("checkout.free")}
                         </div>
+                        {currentBranch && isClosedNow(currentBranch.id, "Delivery") && (
+                          <div className="mt-1.5 text-xs text-orange-600 font-medium">Temporarily closed</div>
+                        )}
                       </button>
 
-                      {/* Pickup tile — disabled if branch doesn't support it */}
+                      {/* Pickup tile */}
                       <button
-                        onClick={() => currentBranch?.pickupEnabled && setOrderType("pickup")}
-                        disabled={!currentBranch?.pickupEnabled}
+                        onClick={() => setOrderType("pickup")}
                         className={`rounded-2xl border p-6 text-left transition
-                          ${orderType === "pickup" ? "border-primary bg-primary/5" : "hover:border-primary/40"}
-                          ${!currentBranch?.pickupEnabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                          ${orderType === "pickup" ? "border-primary bg-primary/5" : "hover:border-primary/40"}`}
                       >
-                        <Store className={`h-6 w-6 ${currentBranch?.pickupEnabled ? "text-primary" : "text-muted-foreground"}`} />
+                        <Store className="h-6 w-6 text-primary" />
                         <div className="mt-2 font-semibold">{t("checkout.pickup")}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {currentBranch?.pickupEnabled ? t("checkout.free") : t("checkout.notAvailable")}
-                        </div>
+                        <div className="text-sm text-muted-foreground">{t("checkout.free")}</div>
+                        {currentBranch && isClosedNow(currentBranch.id, "Pickup") && (
+                          <div className="mt-1.5 text-xs text-orange-600 font-medium">Temporarily closed</div>
+                        )}
                       </button>
                     </div>
 
@@ -367,11 +373,15 @@ function CheckoutPage() {
                               onChange={e => setScheduledDate(e.target.value)}
                               className="h-9 w-44"
                             />
-                            {scheduledDate !== today && (
+                            {closedDateNote !== null ? (
+                              <p className="text-xs text-destructive font-medium">
+                                Closed — {closedDateNote !== "Closed" ? closedDateNote : "please choose another date"}
+                              </p>
+                            ) : scheduledDate !== today ? (
                               <p className="text-xs text-primary font-medium">
                                 {t("checkout.advanceOrder")} — {formatDate(scheduledDate + "T12:00:00")}
                               </p>
-                            )}
+                            ) : null}
                           </div>
                         )}
 
@@ -383,6 +393,7 @@ function CheckoutPage() {
                           ) : !branchOpen ? (
                             <div className="space-y-0.5">
                               <p className="text-sm text-destructive">{t("forms.branchClosedDay")}</p>
+                              {slotsCloseNote && <p className="text-xs text-muted-foreground italic">"{slotsCloseNote}"</p>}
                               {branchHours(currentBranch) && <p className="text-xs text-muted-foreground">{branchHours(currentBranch)}</p>}
                             </div>
                           ) : orderSlots.length > 0 ? (

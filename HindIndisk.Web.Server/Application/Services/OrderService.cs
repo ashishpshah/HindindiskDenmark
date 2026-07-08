@@ -10,12 +10,15 @@ public class OrderService : IOrderService
     private readonly ApplicationDbContext _db;
     private readonly IEmailService _email;
     private readonly ICustomerService _customers;
+    private readonly BranchClosureService _closures;
 
-    public OrderService(ApplicationDbContext db, IEmailService email, ICustomerService customers)
+    public OrderService(ApplicationDbContext db, IEmailService email, ICustomerService customers,
+        BranchClosureService closures)
     {
         _db        = db;
         _email     = email;
         _customers = customers;
+        _closures  = closures;
     }
 
     public async Task<OrderDto> CreateOrderAsync(CreateOrderRequest request, long? loggedInUserId = null, long? placedByUserId = null)
@@ -69,6 +72,11 @@ public class OrderService : IOrderService
 
         if (branch.IsCloseOrder)
             throw new InvalidOperationException("Online orders are temporarily suspended for this branch.");
+
+        var scheduledDateOnly   = DateOnly.Parse(request.ScheduledDate);
+        var closureServiceScope = request.OrderType == "Delivery" ? "Delivery" : "Pickup";
+        if (await _closures.IsClosedAsync(request.BranchId, scheduledDateOnly, closureServiceScope) is not null)
+            throw new InvalidOperationException("The restaurant is closed on the selected date.");
 
 
         var itemIds = request.Items.Select(i => i.MenuItemId).Distinct().ToList();
@@ -142,6 +150,14 @@ public class OrderService : IOrderService
         if (scheduledDate > maxDate)
             throw new InvalidOperationException(
                 $"This branch only accepts advance orders up to {branch.MaxAdvanceDays} day(s) ahead.");
+
+        // Scheduled/recurring closure for this fulfillment type (also blocks whole-branch closures)
+        var closure = await _closures.IsClosedAsync(request.BranchId, scheduledDate, request.OrderType);
+        if (closure is not null)
+            throw new InvalidOperationException(
+                request.OrderType == "Delivery"
+                    ? "Delivery is not available on the selected date."
+                    : "Pickup is not available on the selected date.");
 
         // Persist order
         var order = new Order

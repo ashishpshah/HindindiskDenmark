@@ -20,15 +20,16 @@ public class Branch
     [Column(TypeName = "decimal(3,1)")]
     public decimal Rating { get; set; } = 5.0m;
     public int ReviewCount { get; set; } = 0;
-    public bool    DeliveryEnabled    { get; set; } = true;
-    public bool    PickupEnabled      { get; set; } = true;
     [Column(TypeName = "decimal(8,2)")]  public decimal DeliveryFee        { get; set; } = 39.0m;
     public bool    DeliveryFeeEnabled { get; set; } = true;
     public bool    IsCloseOrder       { get; set; } = false;
+    public string? CloseOrderNote     { get; set; }
     public bool    IsCloseReservation { get; set; } = false;
+    public string? CloseReservationNote { get; set; }
     public int     MaxAdvanceDays     { get; set; } = 7;
 
     public virtual ICollection<BranchServiceClosure> ServiceClosures { get; set; } = [];
+    public virtual ICollection<BranchClosure>        Closures        { get; set; } = [];
     public virtual ICollection<BranchDaySchedule>    DaySchedules    { get; set; } = [];
     public virtual ICollection<UserBranch>            UserBranches    { get; set; } = [];
     public virtual ICollection<BranchMenu>            BranchMenus     { get; set; } = [];

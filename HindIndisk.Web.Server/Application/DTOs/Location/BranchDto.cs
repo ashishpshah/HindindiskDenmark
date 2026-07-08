@@ -19,11 +19,15 @@ public record BranchDto(
     string  ImageUrl,
     decimal Rating,
     int     ReviewCount,
-    bool    DeliveryEnabled,
-    bool    PickupEnabled,
     decimal DeliveryFee,
     bool    DeliveryFeeEnabled,
     bool    IsCloseOrder,
+    string? CloseOrderNote,
     bool    IsCloseReservation,
+    string? CloseReservationNote,
+    bool    IsCloseDelivery,
+    string? CloseDeliveryNote,
+    bool    IsClosePickup,
+    string? ClosePickupNote,
     int     MaxAdvanceDays
 );

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/Layout";
 import { PageHero } from "@/components/PageHero";
@@ -18,6 +18,9 @@ import { useCart } from "@/context/CartContext";
 import { apiFetch } from "@/lib/api/client";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAvailableSlots } from "@/hooks/useAvailableSlots";
+import { useClosedDates } from "@/hooks/useClosedDates";
+import { useClosureHub } from "@/hooks/useClosureHub";
+import { usePublicClosures } from "@/hooks/usePublicClosures";
 import { nowInDenmark, todayInDenmark } from "@/lib/denmarkTime";
 import type { BranchDto } from "@/hooks/useBranches";
 
@@ -144,7 +147,7 @@ export const Route = createFileRoute("/reservation")({
 function ReservationPage() {
   const { t } = useI18n();
   const { user }                    = useAuth();
-  const { branch: cartBranch, isCloseReservation: ctxCloseReservation } = useCart();
+  const { branch: cartBranch } = useCart();
   const { data: branchesData = [] } = useBranches();
   const createReservation           = useCreateReservation();
 
@@ -181,11 +184,22 @@ function ReservationPage() {
 
   const selectedBranchObj = branchesData.find(b => b.name === branchValue);
 
-  // Use CartContext values instantly (no async wait); switch to selectedBranchObj once loaded
-  const bannerBranch           = selectedBranchObj?.name ?? cartBranch ?? "";
-  const bannerCloseReservation = selectedBranchObj ? selectedBranchObj.isCloseReservation : (bannerBranch === cartBranch && ctxCloseReservation);
-  const { isOpen: branchOpen, slots, isLoading: slotsLoading } =
+  const bannerBranch = selectedBranchObj?.name ?? cartBranch ?? "";
+
+  const { isOpen: branchOpen, slots, closeNote: slotsCloseNote, isLoading: slotsLoading } =
     useAvailableSlots(selectedBranchObj?.id, form.date, "reservation");
+
+  const isDateClosed   = useClosedDates(selectedBranchObj?.id);
+  const closedDateNote = isDateClosed(form.date, "Reservation");
+
+  // All branch IDs — subscribe to all upfront so branch switching is instant,
+  // no reconnect gap, and real-time updates work before a branch is selected.
+  const allBranchIds = useMemo(() => branchesData.map(b => b.id), [branchesData]);
+  const { isClosedNow, closureNote: branchClosureNote } = usePublicClosures(allBranchIds);
+  const resClosedNow  = selectedBranchObj ? isClosedNow(selectedBranchObj.id, "Reservation") : false;
+  const resClosureMsg = selectedBranchObj ? branchClosureNote(selectedBranchObj.id, "Reservation") : null;
+
+  useClosureHub(allBranchIds);
 
   useEffect(() => {
     if (slots.length === 0) return;
@@ -321,11 +335,14 @@ function ReservationPage() {
         image="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1920&q=80"
       />
 
-      {bannerCloseReservation && (
+      {resClosedNow && (
         <div className="border-b border-orange-200 bg-orange-50 py-3">
           <div className="mx-auto max-w-7xl px-6 flex items-center gap-2 text-sm text-orange-700">
             <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
-            <span><strong>{bannerBranch}</strong> is not accepting reservations at the moment.</span>
+            <span>
+              <strong>{bannerBranch}</strong> is not accepting reservations at the moment.
+              {resClosureMsg && <span className="ml-1 italic">— {resClosureMsg}</span>}
+            </span>
           </div>
         </div>
       )}
@@ -350,12 +367,15 @@ function ReservationPage() {
             </FormField>
           </div>
 
-          {selectedBranchObj?.isCloseReservation ? (
+          {resClosedNow ? (
             <div className="rounded-2xl border border-orange-200 bg-orange-50 px-6 py-8 text-center space-y-2">
               <p className="text-lg font-semibold text-orange-700">Reservations temporarily suspended</p>
               <p className="text-sm text-orange-600">
                 This branch is not accepting new reservations at the moment. Please try again later or contact us directly.
               </p>
+              {resClosureMsg && (
+                <p className="text-sm text-orange-700 font-medium italic">"{resClosureMsg}"</p>
+              )}
             </div>
           ) : (
             <>
@@ -365,6 +385,11 @@ function ReservationPage() {
                     min={todayInDenmark()}
                     value={form.date}
                     onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                  {closedDateNote !== null && (
+                    <p className="mt-1 text-xs text-destructive font-medium">
+                      Closed — {closedDateNote !== "Closed" ? closedDateNote : "please choose another date"}
+                    </p>
+                  )}
                 </FormField>
 
                 <FormField label={t("forms.timeLabel")}>
@@ -373,6 +398,7 @@ function ReservationPage() {
                   ) : !branchOpen ? (
                     <div className="py-2 space-y-0.5">
                       <p className="text-sm text-destructive">{t("forms.branchClosedDay")}</p>
+                      {slotsCloseNote && <p className="text-xs text-muted-foreground italic">"{slotsCloseNote}"</p>}
                       {branchHours(selectedBranchObj) && <p className="text-xs text-muted-foreground">{branchHours(selectedBranchObj)}</p>}
                     </div>
                   ) : slots.length > 0 ? (

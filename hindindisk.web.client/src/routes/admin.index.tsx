@@ -1,9 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ShoppingBag, CalendarCheck, TrendingUp, Clock, Loader2, DollarSign,
-  UtensilsCrossed, Users, GitBranch, ArrowRight,
+  UtensilsCrossed, Users, GitBranch, ArrowRight, Store, Settings,
 } from "lucide-react";
 import { useAdminDashboard } from "@/hooks/useAdminDashboard";
+import { useBranches, type BranchDto } from "@/hooks/useBranches";
+import { useAllClosures, type ClosureDto } from "@/hooks/useClosures";
+import { todayInDenmark, nowInDenmark } from "@/lib/denmarkTime";
+import { formatDateStr, formatTimeStr } from "@/lib/dateFormat";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminDashboard,
@@ -33,7 +37,6 @@ function StatCard({ label, value, icon: Icon, sub, color = "primary" }:
   );
 }
 
-// F5 fixed: actual navigation cards replace static text
 const QUICK_LINKS = [
   { label: "Orders",       to: "/admin/orders",       icon: ShoppingBag,     desc: "View & update order status"    },
   { label: "Reservations", to: "/admin/reservations", icon: CalendarCheck,   desc: "Manage table bookings"          },
@@ -41,6 +44,158 @@ const QUICK_LINKS = [
   { label: "Menus",        to: "/admin/menus",        icon: GitBranch,       desc: "Organise menu categories"       },
   { label: "Customers",    to: "/admin/customers",    icon: Users,           desc: "Browse registered customers"    },
 ];
+
+// ── Branch closure status ────────────────────────────────────────────────────
+
+type ServiceRow = {
+  label:        string;
+  isClosed:     boolean;
+  note:         string | null;
+  closureKind:  "Instant" | "Scheduled" | null;
+  schedPeriod?: string;
+};
+
+function buildServiceRows(branch: BranchDto, closures: ClosureDto[], today: string, nowStr: string): ServiceRow[] {
+  const activeScheduled = (scope: "Reservation" | "Delivery" | "Pickup") =>
+    closures.find(c => {
+      if (c.scope !== scope || c.closureType !== "DateRange") return false;
+      const s = c.startDate ?? "", e = c.endDate ?? s;
+      if (today < s || today > e) return false;
+      if (c.startTime && c.endTime) return nowStr >= c.startTime && nowStr <= c.endTime;
+      return true;
+    });
+
+  const resSched  = activeScheduled("Reservation");
+  const delSched  = activeScheduled("Delivery");
+  const pickSched = activeScheduled("Pickup");
+
+  const schedPeriod = (c: ClosureDto) => {
+    const period = c.startDate === c.endDate
+      ? formatDateStr(c.startDate ?? "")
+      : `${formatDateStr(c.startDate ?? "")} → ${formatDateStr(c.endDate ?? "")}`;
+    const time = c.startTime && c.endTime
+      ? ` (${formatTimeStr(c.startTime)}–${formatTimeStr(c.endTime)})`
+      : "";
+    return period + time;
+  };
+
+  return [
+    {
+      label:       "Reservation",
+      isClosed:    branch.isCloseReservation || !!resSched,
+      note:        branch.isCloseReservation ? branch.closeReservationNote : (resSched?.note ?? null),
+      closureKind: branch.isCloseReservation ? "Instant" : resSched ? "Scheduled" : null,
+      schedPeriod: resSched ? schedPeriod(resSched) : undefined,
+    },
+    {
+      label:       "Order — Delivery",
+      isClosed:    branch.isCloseDelivery || !!delSched,
+      note:        branch.isCloseDelivery ? branch.closeDeliveryNote : (delSched?.note ?? null),
+      closureKind: branch.isCloseDelivery ? "Instant" : delSched ? "Scheduled" : null,
+      schedPeriod: delSched ? schedPeriod(delSched) : undefined,
+    },
+    {
+      label:       "Order — Pickup",
+      isClosed:    branch.isClosePickup || !!pickSched,
+      note:        branch.isClosePickup ? branch.closePickupNote : (pickSched?.note ?? null),
+      closureKind: branch.isClosePickup ? "Instant" : pickSched ? "Scheduled" : null,
+      schedPeriod: pickSched ? schedPeriod(pickSched) : undefined,
+    },
+  ];
+}
+
+function BranchClosureCard({ branch, closures }: { branch: BranchDto; closures: ClosureDto[] }) {
+  const today  = todayInDenmark();
+  const nowStr = nowInDenmark().toTimeString().slice(0, 5);
+  const rows   = buildServiceRows(branch, closures, today, nowStr);
+  const anyClosed = rows.some(r => r.isClosed);
+
+  return (
+    <div className="rounded-2xl border bg-card shadow-soft overflow-hidden">
+      {/* Header */}
+      <div className={`flex items-center gap-2 px-4 py-3 border-b ${anyClosed ? "bg-red-50 border-red-100" : "bg-green-50 border-green-100"}`}>
+        <Store className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <span className="font-semibold text-sm flex-1 truncate">{branch.name}</span>
+        <span className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${
+          anyClosed ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
+        }`}>
+          {anyClosed ? "Partially closed" : "All open"}
+        </span>
+      </div>
+
+      {/* Service rows */}
+      <div className="divide-y">
+        {rows.map(svc => (
+          <div key={svc.label} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5">
+            <span className="text-xs text-gray-500 w-36 shrink-0">{svc.label}</span>
+
+            {svc.isClosed ? (
+              <>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                  Closed
+                </span>
+                <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                  svc.closureKind === "Instant" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"
+                }`}>
+                  {svc.closureKind}
+                </span>
+                {svc.schedPeriod && (
+                  <span className="text-xs text-gray-400">{svc.schedPeriod}</span>
+                )}
+                {svc.note && (
+                  <span className="text-xs text-gray-500 italic truncate max-w-[160px]">{svc.note}</span>
+                )}
+              </>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                Open
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BranchClosureStatus() {
+  const { data: branches = [], isLoading: isBranchLoading } = useBranches();
+  const branchIds = branches.map(b => b.id);
+  const { data: closures, isLoading: isClosureLoading } = useAllClosures(branchIds);
+  const isLoading = isBranchLoading || isClosureLoading;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-display text-lg font-semibold">Current Service Status</h2>
+        <Link to="/admin/settings"
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition">
+          <Settings className="h-3.5 w-3.5" /> Manage
+        </Link>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading status…
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {branches.map(b => (
+            <BranchClosureCard
+              key={b.id}
+              branch={b}
+              closures={closures.filter(c => c.branchId === b.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
 
 function AdminDashboard() {
   const { data, isLoading } = useAdminDashboard();
@@ -60,14 +215,16 @@ function AdminDashboard() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <StatCard label="Orders Today"        value={data?.todayOrders ?? 0}                    icon={ShoppingBag}   color="primary" />
-          <StatCard label="Revenue Today"       value={`${(data?.todayRevenue ?? 0).toFixed(0)} DKK`} icon={TrendingUp} color="green" />
-          <StatCard label="Pending Orders"      value={data?.pendingOrders ?? 0}                  icon={Clock}         color="orange" sub="Placed / Accepted / Preparing" />
-          <StatCard label="Reservations Today"  value={data?.todayReservations ?? 0}              icon={CalendarCheck} color="blue" />
-          <StatCard label="All-Time Orders"     value={data?.totalOrders ?? 0}                    icon={ShoppingBag} />
-          <StatCard label="All-Time Revenue"    value={`${(data?.totalRevenue ?? 0).toFixed(0)} DKK`} icon={DollarSign} color="green" />
+          <StatCard label="Orders Today"        value={data?.todayOrders ?? 0}                        icon={ShoppingBag}   color="primary" />
+          <StatCard label="Revenue Today"       value={`${(data?.todayRevenue ?? 0).toFixed(0)} DKK`} icon={TrendingUp}    color="green"   />
+          <StatCard label="Pending Orders"      value={data?.pendingOrders ?? 0}                      icon={Clock}         color="orange"  sub="Placed / Accepted / Preparing" />
+          <StatCard label="Reservations Today"  value={data?.todayReservations ?? 0}                  icon={CalendarCheck} color="blue"    />
+          <StatCard label="All-Time Orders"     value={data?.totalOrders ?? 0}                        icon={ShoppingBag}                  />
+          <StatCard label="All-Time Revenue"    value={`${(data?.totalRevenue ?? 0).toFixed(0)} DKK`} icon={DollarSign}    color="green"   />
         </div>
       )}
+
+      <BranchClosureStatus />
 
       <div>
         <h2 className="font-display text-lg font-semibold mb-3">Quick Links</h2>

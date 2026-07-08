@@ -8,7 +8,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { MenuItemPhoto } from "@/components/MenuItemPhoto";
 
 export function CartDrawer() {
-  const { open, setOpen, lines, add, sub, remove, subtotal, delivery, discount, total, isCloseOrder, branch } = useCart();
+  const { open, setOpen, lines, add, sub, remove, subtotal, delivery, discount, total } = useCart();
   const { t } = useI18n();
 
   return (
@@ -58,16 +58,9 @@ export function CartDrawer() {
             {lines.length > 0 && (
               <div className="space-y-3 border-t bg-muted/30 p-5">
                 <OrderSummary subtotal={subtotal} discount={discount} delivery={delivery} total={total} />
-                {isCloseOrder && branch ? (
-                  <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-4 text-center space-y-1">
-                    <p className="text-sm font-semibold text-orange-700">Orders temporarily suspended</p>
-                    <p className="text-xs text-orange-600">{branch} is not accepting online orders at the moment.</p>
-                  </div>
-                ) : (
-                  <Button asChild size="lg" className="w-full gradient-primary text-primary-foreground" onClick={() => setOpen(false)}>
-                    <Link to="/checkout">{t("actions.checkout")}</Link>
-                  </Button>
-                )}
+                <Button asChild size="lg" className="w-full gradient-primary text-primary-foreground" onClick={() => setOpen(false)}>
+                  <Link to="/checkout">{t("actions.checkout")}</Link>
+                </Button>
               </div>
             )}
           </motion.aside>

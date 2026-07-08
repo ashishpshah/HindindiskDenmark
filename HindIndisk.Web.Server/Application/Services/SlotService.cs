@@ -4,15 +4,29 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HindIndisk.Api.Application.Services;
 
-public class SlotService(ApplicationDbContext db)
+public class SlotService(ApplicationDbContext db, BranchClosureService closures)
 {
     public async Task<SlotResultDto> GetAvailableSlotsAsync(
         long   branchId,
         string dateStr,      // "YYYY-MM-DD"
-        string type)         // "reservation" | "order"
+        string type)         // "reservation" | "order" | "pickup" | "delivery"
     {
         var date = DateOnly.Parse(dateStr);
         var dayOfWeek = date.DayOfWeek;
+
+        var isReservation = type == "reservation";
+
+        // Layer 0 — scheduled / recurring closures (future dates, weekly-off)
+        var closureService = type switch
+        {
+            "reservation" => "Reservation",
+            "pickup"      => "Pickup",
+            "delivery"    => "Delivery",
+            _             => "Restaurant",  // generic "order" → whole-branch closures only
+        };
+        var activeClosure = await closures.IsClosedAsync(branchId, date, closureService);
+        if (activeClosure is not null)
+            return new SlotResultDto(false, [], activeClosure.Note);
 
         // Layer 1 — weekly schedule
         var schedule = await db.BranchDaySchedules
@@ -23,14 +37,14 @@ public class SlotService(ApplicationDbContext db)
             return new SlotResultDto(false, []);
 
         // Layer 2 — generate raw slots
-        var bufferMins = type == "reservation" ? 90 : 30;
+        var bufferMins = isReservation ? 90 : 30;
         var allSlots   = GenerateSlots(schedule.OpenTime, schedule.CloseTime,
                                        schedule.SlotIntervalMinutes, bufferMins);
 
         // Layer 3 — remove slots at or above capacity
         var slotTimeStrings = allSlots.Select(t => t.ToString("HH:mm")).ToList();
 
-        var orderCounts = type == "order"
+        var orderCounts = !isReservation
             ? await db.Orders
                 .Where(o => o.BranchId == branchId
                          && o.ScheduledDate == date
@@ -43,7 +57,7 @@ public class SlotService(ApplicationDbContext db)
         var dayStart  = date.ToDateTime(TimeOnly.MinValue);
         var dayEnd    = dayStart.AddDays(1);
 
-        var resvnCounts = type == "reservation"
+        var resvnCounts = isReservation
             ? await db.Reservations
                 .Where(r => r.BranchId == branchId
                          && r.Date >= dayStart && r.Date < dayEnd
@@ -53,12 +67,12 @@ public class SlotService(ApplicationDbContext db)
                 .ToListAsync()
             : [];
 
-        var maxCapacity = type == "reservation"
+        var maxCapacity = isReservation
             ? schedule.MaxReservationsPerSlot
             : schedule.MaxOrdersPerSlot;
 
         var fullSlots = new HashSet<string>(
-            (type == "reservation"
+            (isReservation
                 ? resvnCounts.Where(r => r.Count >= maxCapacity).Select(r => r.Time)
                 : orderCounts.Where(r => r.Count >= maxCapacity).Select(r => r.Time))
             .OfType<string>()
@@ -75,6 +89,18 @@ public class SlotService(ApplicationDbContext db)
         }
 
         var available = slotTimeStrings.Where(s => !fullSlots.Contains(s)).ToList();
+
+        // Layer 4 — remove slots that fall within a time-range closure for today
+        var timeRangeClosures = await closures.GetTimeRangeClosuresAsync(branchId, date, closureService);
+        if (timeRangeClosures.Count > 0)
+        {
+            available = available.Where(slot =>
+            {
+                var t = TimeOnly.ParseExact(slot, "HH:mm");
+                return !timeRangeClosures.Any(c => t >= c.StartTime!.Value && t < c.EndTime!.Value);
+            }).ToList();
+        }
+
         return new SlotResultDto(true, available);
     }
 

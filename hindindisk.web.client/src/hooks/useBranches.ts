@@ -20,12 +20,12 @@ export type BranchDto = {
   imageUrl: string;
   rating: number;
   reviewCount: number;
-  deliveryEnabled: boolean;
-  pickupEnabled: boolean;
   deliveryFee: number;
   deliveryFeeEnabled: boolean;
-  isCloseOrder: boolean;
-  isCloseReservation: boolean;
+  isCloseDelivery: boolean;
+  closeDeliveryNote: string | null;
+  isClosePickup: boolean;
+  closePickupNote: string | null;
   maxAdvanceDays: number;
 };
 
@@ -33,6 +33,6 @@ export function useBranches() {
   return useQuery({
     queryKey: ["branches"],
     queryFn:  () => apiFetch<BranchDto[]>("/api/locations"),
-    staleTime: 1000 * 60 * 60, // branches rarely change
+    staleTime: 1000 * 60 * 2, // 2 min — short enough for instant closure notes to propagate
   });
 }

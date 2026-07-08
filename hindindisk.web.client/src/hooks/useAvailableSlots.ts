@@ -4,6 +4,7 @@ import { apiFetch } from "@/lib/api/client";
 export type SlotResult = {
   isOpen: boolean;
   slots: string[];
+  closeNote: string | null;
 };
 
 async function fetchSlots(branchId: number, date: string, type: string): Promise<SlotResult> {
@@ -25,8 +26,9 @@ export function useAvailableSlots(
   });
 
   return {
-    isOpen:    data?.isOpen    ?? false,
-    slots:     data?.slots     ?? [],
+    isOpen:    data?.isOpen     ?? false,
+    slots:     data?.slots      ?? [],
+    closeNote: data?.closeNote  ?? null,
     isLoading,
   };
 }

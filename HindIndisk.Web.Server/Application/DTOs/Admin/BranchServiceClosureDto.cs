@@ -7,5 +7,6 @@ public record BranchServiceClosureDto(
     string    ServiceType,   // "Order" | "Reservation"
     DateTime  ClosedAt,
     DateTime? ReopenedAt,    // null = still closed
-    string?   ClosedBy
+    string?   ClosedBy,
+    string?   Note
 );

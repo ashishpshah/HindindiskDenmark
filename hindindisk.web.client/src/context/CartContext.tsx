@@ -7,8 +7,6 @@ type BranchApiDto = {
   name: string;
   deliveryFeeEnabled: boolean;
   deliveryFee: number;
-  isCloseOrder: boolean;
-  isCloseReservation: boolean;
 };
 
 // Full metadata stored per entry — no mock.ts lookup needed at render time
@@ -61,8 +59,6 @@ type Ctx = {
   setOrderType: (t: "pickup" | "delivery") => void;
   branchPricing: BranchPricingConfig;
   setBranchPricing: (c: BranchPricingConfig) => void;
-  isCloseOrder: boolean;
-  isCloseReservation: boolean;
 };
 
 const CartContext = createContext<Ctx | null>(null);
@@ -203,8 +199,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       add, sub, remove, clear, open, setOpen,
       branch, setBranch, orderType, setOrderType,
       branchPricing, setBranchPricing,
-      isCloseOrder:       selectedBranch?.isCloseOrder ?? false,
-      isCloseReservation: selectedBranch?.isCloseReservation ?? false,
     }}>{children}</CartContext.Provider>
   );
 }

@@ -90,18 +90,11 @@ export function Header() {
         <div className="hidden items-center gap-2 lg:flex">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              {(() => {
-                const current = branchesData.find(b => b.name === branch);
-                const closed = current && (current.isCloseOrder || current.isCloseReservation);
-                return (
-                  <button className="relative flex max-w-[160px] items-center gap-1 rounded-full px-2 py-2 text-xs text-foreground/70 hover:text-primary">
-                    <MapPin className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{branch ? branch.replace("Hind Indisk ", "") : "Select branch"}</span>
-                    {closed && <span className="h-2 w-2 rounded-full bg-orange-500 shrink-0" title="Some services suspended" />}
-                    <ChevronDown className="h-3 w-3 shrink-0" />
-                  </button>
-                );
-              })()}
+              <button className="relative flex max-w-[160px] items-center gap-1 rounded-full px-2 py-2 text-xs text-foreground/70 hover:text-primary">
+                <MapPin className="h-4 w-4 shrink-0" />
+                <span className="truncate">{branch ? branch.replace("Hind Indisk ", "") : "Select branch"}</span>
+                <ChevronDown className="h-3 w-3 shrink-0" />
+              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {branchesData.map((b) => (
@@ -208,20 +201,15 @@ export function Header() {
                   <MapPin className="h-3.5 w-3.5" /> {t("pages.menu.changeLocation")}
                 </div>
                 <div className="flex flex-col gap-1">
-                  {branchesData.map((b) => {
-                    const isSelected = branch === b.name;
-                    const isClosed = b.isCloseOrder || b.isCloseReservation;
-                    return (
-                      <button
-                        key={b.name}
-                        onClick={() => { setBranch(b.name); setOpen(false); }}
-                        className={`flex items-center justify-between rounded-xl px-4 py-3 text-left text-base transition ${isSelected ? "bg-primary text-primary-foreground" : "hover:bg-white/10 text-white/80"}`}
-                      >
-                        <span>{b.name}</span>
-                        {isClosed && <span className="h-2 w-2 rounded-full bg-orange-400 shrink-0" title="Some services suspended" />}
-                      </button>
-                    );
-                  })}
+                  {branchesData.map((b) => (
+                    <button
+                      key={b.name}
+                      onClick={() => { setBranch(b.name); setOpen(false); }}
+                      className={`flex items-center justify-between rounded-xl px-4 py-3 text-left text-base transition ${branch === b.name ? "bg-primary text-primary-foreground" : "hover:bg-white/10 text-white/80"}`}
+                    >
+                      <span>{b.name}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 

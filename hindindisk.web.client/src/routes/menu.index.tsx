@@ -30,7 +30,7 @@ export const Route = createFileRoute("/menu/")({
 function MenuPage() {
   const [cat, setCat] = useState<string>("All");
   const [q, setQ]     = useState("");
-  const { add, totalQty, total, setOpen: setCartOpen, branch, setBranch, isCloseOrder } = useCart();
+  const { add, totalQty, total, setOpen: setCartOpen, branch, setBranch } = useCart();
   const { lang, t } = useI18n();
   const da = lang === "da";
   const loc = (en: string, daVal?: string | null) => (da && daVal) ? daVal : en;
@@ -47,10 +47,6 @@ function MenuPage() {
   });
 
   const onAdd = (item: MenuItemDto) => {
-    if (isCloseOrder) {
-      toast.error("Orders are temporarily suspended for this branch.");
-      return;
-    }
     add(item);
     toast.success(`${loc(item.name, item.nameDa)} ${t("pages.menu.added")}`);
   };
@@ -87,14 +83,6 @@ function MenuPage() {
         </div>
       </div>
 
-      {isCloseOrder && branch && (
-        <div className="border-b border-orange-200 bg-orange-50 py-3">
-          <div className="mx-auto max-w-7xl px-6 flex items-center gap-2 text-sm text-orange-700">
-            <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
-            <span><strong>{branch}</strong> is not accepting online orders at the moment. You can still browse the menu.</span>
-          </div>
-        </div>
-      )}
 
       <section className="mx-auto max-w-7xl px-6 py-16">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

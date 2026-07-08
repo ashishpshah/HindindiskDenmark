@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Plus, Clock } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useAdminBranches } from "@/hooks/useAdminBranches";
 import type { AdminBranchDto } from "@/hooks/useUpdateBranch";
 import { Button } from "@/components/ui/button";
@@ -48,12 +48,6 @@ function AdminBranchesIndex() {
           <ActionButtons
             onEdit={() => navigate({ to: "/admin/branches/$branchId", params: { branchId: String(row.original.id) } })}
           />
-          <button
-            onClick={() => navigate({ to: "/admin/branches/$branchId", params: { branchId: String(row.original.id) }, hash: "schedule" })}
-            className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium hover:bg-accent transition"
-          >
-            <Clock className="h-3 w-3" /> Schedule
-          </button>
         </div>
       ),
     },

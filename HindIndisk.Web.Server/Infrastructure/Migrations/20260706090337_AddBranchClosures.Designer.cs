@@ -4,16 +4,19 @@ using HindIndisk.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace HindIndisk.Api.Infrastructure.Migrations
+namespace HindIndisk.Web.Server.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260706090337_AddBranchClosures")]
+    partial class AddBranchClosures
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -94,12 +97,6 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.Property<string>("City")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CloseOrderNote")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CloseReservationNote")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Country")
@@ -199,9 +196,6 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                     b.Property<DateOnly?>("EndDate")
                         .HasColumnType("date");
 
-                    b.Property<TimeOnly?>("EndTime")
-                        .HasColumnType("time");
-
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
 
@@ -211,9 +205,6 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.Property<DateOnly?>("StartDate")
                         .HasColumnType("date");
-
-                    b.Property<TimeOnly?>("StartTime")
-                        .HasColumnType("time");
 
                     b.HasKey("Id");
 
@@ -308,9 +299,6 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("ClosedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("ReopenedAt")

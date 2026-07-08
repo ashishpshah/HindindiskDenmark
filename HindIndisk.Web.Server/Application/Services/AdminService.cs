@@ -667,8 +667,6 @@ public class AdminService : IAdminService
             ImageUrl         = request.ImageUrl,
             Rating           = request.Rating,
             ReviewCount      = request.ReviewCount,
-            DeliveryEnabled    = request.DeliveryEnabled,
-            PickupEnabled      = request.PickupEnabled,
             DeliveryFee        = request.DeliveryFee,
             DeliveryFeeEnabled = request.DeliveryFeeEnabled,
             MaxAdvanceDays     = request.MaxAdvanceDays,
@@ -696,8 +694,6 @@ public class AdminService : IAdminService
         branch.ImageUrl         = request.ImageUrl;
         branch.Rating           = request.Rating;
         branch.ReviewCount      = request.ReviewCount;
-        branch.DeliveryEnabled    = request.DeliveryEnabled;
-        branch.PickupEnabled      = request.PickupEnabled;
         branch.DeliveryFee        = request.DeliveryFee;
         branch.DeliveryFeeEnabled = request.DeliveryFeeEnabled;
         branch.MaxAdvanceDays     = request.MaxAdvanceDays;
@@ -710,7 +706,6 @@ public class AdminService : IAdminService
         new(b.Id, b.Name, b.AddressLine1, b.AddressLine2, b.City, b.PostalCode, b.Country,
             b.Phone, b.Email, b.GoogleMapsLink,
             b.ImageUrl, b.Rating, b.ReviewCount,
-            b.DeliveryEnabled, b.PickupEnabled,
             b.DeliveryFee, b.DeliveryFeeEnabled,
             b.IsCloseOrder, b.IsCloseReservation, b.MaxAdvanceDays);
 

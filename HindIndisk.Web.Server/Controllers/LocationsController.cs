@@ -1,3 +1,4 @@
+using HindIndisk.Api.Application.DTOs.Closure;
 using HindIndisk.Api.Application.DTOs.Location;
 using HindIndisk.Api.Application.DTOs.Schedule;
 using HindIndisk.Api.Application.Services;
@@ -9,13 +10,15 @@ namespace HindIndisk.Api.Controllers;
 [Route("api/locations")]
 public class LocationsController : ControllerBase
 {
-    private readonly ILocationService _locations;
-    private readonly SlotService      _slots;
+    private readonly ILocationService    _locations;
+    private readonly SlotService         _slots;
+    private readonly BranchClosureService _closures;
 
-    public LocationsController(ILocationService locations, SlotService slots)
+    public LocationsController(ILocationService locations, SlotService slots, BranchClosureService closures)
     {
         _locations = locations;
         _slots     = slots;
+        _closures  = closures;
     }
 
     /// <summary>All restaurant branches with address, hours, and contact details.</summary>
@@ -23,6 +26,15 @@ public class LocationsController : ControllerBase
     [ProducesResponseType(typeof(IReadOnlyList<BranchDto>), 200)]
     public async Task<IActionResult> GetBranches()
         => Ok(await _locations.GetBranchesAsync());
+
+    /// <summary>Scheduled closures for a branch (public — used by the date picker).</summary>
+    [HttpGet("closures")]
+    [ProducesResponseType(typeof(IReadOnlyList<BranchClosureDto>), 200)]
+    public async Task<IActionResult> GetClosures([FromQuery] long branchId)
+    {
+        if (branchId <= 0) return BadRequest("branchId is required.");
+        return Ok(await _closures.GetAsync(branchId));
+    }
 
     /// <summary>Available time slots for a branch on a given date.</summary>
     /// <param name="branchId">Branch ID</param>

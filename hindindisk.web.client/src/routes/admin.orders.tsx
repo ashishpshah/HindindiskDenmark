@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { formatDate, formatTime } from "@/lib/dateFormat";
+import { formatDate, formatTime, formatDateStr, formatTimeStr } from "@/lib/dateFormat";
 
 function fmtDate(iso: string) {
   return { date: formatDate(iso), time: formatTime(iso) };
@@ -186,7 +186,7 @@ function OrderModal({
               {order.scheduledDate && order.scheduledTime ? (
                 <p className="flex items-center gap-1.5 text-muted-foreground">
                   <Clock className="h-3.5 w-3.5 shrink-0" />
-                  {order.scheduledDate} at <strong className="text-foreground ml-1">{order.scheduledTime}</strong>
+                  {formatDateStr(order.scheduledDate)} at <strong className="text-foreground ml-1">{formatTimeStr(order.scheduledTime)}</strong>
                 </p>
               ) : (
                 <p className="text-sm font-bold text-red-600">ASAP</p>

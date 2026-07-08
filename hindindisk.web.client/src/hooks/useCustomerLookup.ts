@@ -37,6 +37,7 @@ function isValidEmail(email: string) {
 type LookupResult = {
   data: CustomerLookupResult | null | undefined;
   isFetching: boolean;
+  isError: boolean;
   /** Which field triggered the match — useful for showing the indicator near the right input. */
   matchedBy: "phone" | "email" | null;
 };
@@ -88,6 +89,7 @@ export function useCustomerLookup(phone: string, email?: string): LookupResult {
     return {
       data:       phoneQuery.data,
       isFetching: phoneQuery.isFetching,
+      isError:    phoneQuery.isError,
       matchedBy:  phoneQuery.data ? "phone" : null,
     };
   }
@@ -95,6 +97,7 @@ export function useCustomerLookup(phone: string, email?: string): LookupResult {
   return {
     data:       emailQuery.data,
     isFetching: emailQuery.isFetching,
+    isError:    emailQuery.isError,
     matchedBy:  emailQuery.data ? "email" : null,
   };
 }

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { UserCheck, UserX } from "lucide-react";
 import { getPriority } from "@/lib/priority";
-import { formatDate } from "@/lib/dateFormat";
+import { formatDate, formatDateStr, formatTimeStr } from "@/lib/dateFormat";
 import { toast } from "sonner";
 import { useAdminReservations, type AdminReservationDto } from "@/hooks/useAdminReservations";
 import { useUpdateReservationStatus } from "@/hooks/useUpdateReservationStatus";
@@ -109,7 +109,7 @@ function AdminReservations() {
               <span className={`h-1.5 w-1.5 rounded-full ${p.dot}`} />
               {p.label}
             </span>
-            <span className="text-[10px] text-muted-foreground pl-1">{row.original.timeSlot}</span>
+            <span className="text-[10px] text-muted-foreground pl-1">{formatTimeStr(row.original.timeSlot)}</span>
           </div>
         );
       },
@@ -134,10 +134,12 @@ function AdminReservations() {
     {
       accessorKey: "date",
       header: "Date",
+      cell: info => formatDateStr(info.getValue<string>()),
     },
     {
       accessorKey: "timeSlot",
       header: "Time",
+      cell: info => formatTimeStr(info.getValue<string>()),
     },
     {
       accessorKey: "guestCount",

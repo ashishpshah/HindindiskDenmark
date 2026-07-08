@@ -2,19 +2,22 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api/client";
 import type { AdminBranchDto } from "./useUpdateBranch";
 
+export type ServiceType = "Order" | "Reservation" | "Delivery" | "Pickup";
+
 export type BranchServiceClosureDto = {
   id: number;
   branchId: number;
   branchName: string;
-  serviceType: "Order" | "Reservation";
+  serviceType: ServiceType;
   closedAt: string;      // ISO datetime
   reopenedAt?: string;   // null = still closed
   closedBy?: string;
+  note?: string | null;
 };
 
 export type ServiceClosureFilters = {
   branchId?: number;
-  serviceType?: "Order" | "Reservation";
+  serviceType?: ServiceType;
   from?: string;  // YYYY-MM-DD
   to?: string;
 };
@@ -43,14 +46,15 @@ export function useServiceClosureHistory(filters: ServiceClosureFilters = {}) {
 export function useToggleServiceStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ branchId, serviceType, isClosed }: {
+    mutationFn: ({ branchId, serviceType, isClosed, note }: {
       branchId: number;
-      serviceType: "Order" | "Reservation";
+      serviceType: ServiceType;
       isClosed: boolean;
+      note?: string;
     }) =>
       apiFetch<BranchServiceClosureDto>(`/api/admin/branches/${branchId}/service-status`, {
         method: "PATCH",
-        body: JSON.stringify({ serviceType, isClosed }),
+        body: JSON.stringify({ serviceType, isClosed, note }),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["service-status"] });

@@ -12,15 +12,26 @@ public class LocationService : ILocationService
 
     public async Task<IReadOnlyList<BranchDto>> GetBranchesAsync()
     {
+        var today = DenmarkTime.Today;
+
         var branches = await _db.Branches
             .AsNoTracking()
             .Include(b => b.DaySchedules)
+            .Include(b => b.Closures)
             .OrderBy(b => b.Id)
             .ToListAsync();
 
         return branches.Select(b =>
         {
             var schedules = b.DaySchedules;
+
+            // Active all-day instant closures for Delivery / Pickup (today only)
+            var deliveryClosure = b.Closures.FirstOrDefault(c =>
+                c.ClosureType == "DateRange" && c.Scope == "Delivery" && c.StartTime == null
+                && (c.StartDate ?? today) <= today && (c.EndDate ?? c.StartDate ?? today) >= today);
+            var pickupClosure = b.Closures.FirstOrDefault(c =>
+                c.ClosureType == "DateRange" && c.Scope == "Pickup" && c.StartTime == null
+                && (c.StartDate ?? today) <= today && (c.EndDate ?? c.StartDate ?? today) >= today);
 
             // First weekday (Mon–Fri) and weekend (Sat–Sun) schedule found
             var weekday = schedules.FirstOrDefault(s =>
@@ -41,9 +52,11 @@ public class LocationService : ILocationService
                 weekdayHours, weekendHours,
                 weekdayOpen, weekdayClose, weekendOpen, weekendClose,
                 b.ImageUrl, b.Rating, b.ReviewCount,
-                b.DeliveryEnabled, b.PickupEnabled,
                 b.DeliveryFee, b.DeliveryFeeEnabled,
-                b.IsCloseOrder, b.IsCloseReservation,
+                b.IsCloseOrder, b.CloseOrderNote,
+                b.IsCloseReservation, b.CloseReservationNote,
+                deliveryClosure != null, deliveryClosure?.Note,
+                pickupClosure   != null, pickupClosure?.Note,
                 b.MaxAdvanceDays
             );
         }).ToList();

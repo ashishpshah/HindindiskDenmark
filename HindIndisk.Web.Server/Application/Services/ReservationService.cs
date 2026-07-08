@@ -10,12 +10,15 @@ public class ReservationService : IReservationService
     private readonly ApplicationDbContext _db;
     private readonly IEmailService _email;
     private readonly ICustomerService _customers;
+    private readonly BranchClosureService _closures;
 
-    public ReservationService(ApplicationDbContext db, IEmailService email, ICustomerService customers)
+    public ReservationService(ApplicationDbContext db, IEmailService email, ICustomerService customers,
+        BranchClosureService closures)
     {
         _db        = db;
         _email     = email;
         _customers = customers;
+        _closures  = closures;
     }
 
     public async Task<ReservationDto> CreateAsync(CreateReservationRequest request, long? loggedInUserId = null)
@@ -61,6 +64,10 @@ public class ReservationService : IReservationService
 
         if (DateOnly.FromDateTime(date) < DenmarkTime.Today)
             throw new InvalidOperationException("Reservation date cannot be in the past.");
+
+        // Scheduled/recurring closure — only whole-restaurant closures block reservations
+        if (await _closures.IsClosedAsync(request.BranchId, DateOnly.FromDateTime(date), "Reservation") is not null)
+            throw new InvalidOperationException("The restaurant is closed on the selected date.");
 
         var reservation = new Reservation
         {

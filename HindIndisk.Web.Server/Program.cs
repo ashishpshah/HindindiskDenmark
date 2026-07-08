@@ -1,5 +1,6 @@
 using System.Text;
 using HindIndisk.Api.Application.Services;
+using HindIndisk.Api.Hubs;
 using HindIndisk.Api.Infrastructure;
 using HindIndisk.Api.Middleware;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +25,8 @@ namespace HindIndisk.Web.Server
 				options.AddPolicy("DevCors", policy =>
 					policy.WithOrigins(allowedOrigins)
 						  .AllowAnyHeader()
-						  .AllowAnyMethod());
+						  .AllowAnyMethod()
+						  .AllowCredentials()); // required for SignalR WebSocket handshake
 			});
 
 			// ── Database ──────────────────────────────────────────────────────────────────
@@ -82,6 +84,7 @@ namespace HindIndisk.Web.Server
 			builder.Services.AddScoped<HindIndisk.Api.Application.Services.SlotService>();
 			builder.Services.AddScoped<HindIndisk.Api.Application.Services.ScheduleService>();
 			builder.Services.AddScoped<HindIndisk.Api.Application.Services.BranchServiceStatusService>();
+			builder.Services.AddScoped<HindIndisk.Api.Application.Services.BranchClosureService>();
 			builder.Services.AddTransient<IExceptionLogService, ExceptionLogService>();
 
 			// ── Email service ─────────────────────────────────────────────────────────────
@@ -96,6 +99,9 @@ namespace HindIndisk.Web.Server
 			// ── Health checks ─────────────────────────────────────────────────────────────
 			builder.Services.AddHealthChecks()
 				.AddSqlServer(builder.Configuration.GetConnectionString("Default")!);
+
+			// ── SignalR ───────────────────────────────────────────────────────────────────
+			builder.Services.AddSignalR();
 
 			// ── Controllers ───────────────────────────────────────────────────────────────
 			builder.Services.AddControllers();
@@ -164,6 +170,7 @@ namespace HindIndisk.Web.Server
 
 
 			app.MapControllers();
+			app.MapHub<ClosureHub>("/hubs/closures");
 			app.MapHealthChecks("/health");
 
 			app.MapFallbackToFile("/index.html");
