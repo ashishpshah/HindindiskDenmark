@@ -385,12 +385,12 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
 
   const instantNoteFor = (s: ServiceKey) => instantNotes[s].trim() || undefined;
 
-  const instantOrderClosure = (scope: "Delivery" | "Pickup") =>
+  const instantOrderClosure = (scope: "Delivery" | "Pickup" | "Reservation") =>
     instantClosures.find(c => c.closureType === "DateRange" && c.scope === scope
       && (c.startDate ?? "") <= today && (c.endDate ?? c.startDate ?? "") >= today);
 
   // Stable booleans derived from server state — used as effect deps to avoid array-reference churn
-  const serverResClosed  = instantBranch?.isCloseReservation ?? false;
+  const serverResClosed  = !!instantOrderClosure("Reservation");
   const serverDelClosed  = !!instantOrderClosure("Delivery");
   const serverPickClosed = !!instantOrderClosure("Pickup");
 
