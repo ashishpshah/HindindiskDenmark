@@ -1,9 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Phone, MapPin, Package, Clock, Loader2, ChevronRight, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import { useAdminOrders, type AdminOrderDto, type OrderStatusHistoryDto } from "@/hooks/useAdminOrders";
 import { useUpdateOrderStatus } from "@/hooks/useUpdateOrderStatus";
+import { useAdminOrderStatuses, type OrderStatusDto } from "@/hooks/useAdminOrderStatuses";
+import { useAdminOrderStatusTransitions } from "@/hooks/useAdminOrderStatusTransitions";
 import { useBranches } from "@/hooks/useBranches";
 import { getPriority } from "@/lib/priority";
 import {
@@ -23,70 +25,45 @@ function fmtDate(iso: string) {
 
 export const Route = createFileRoute("/admin/orders")({
   validateSearch: (search: Record<string, unknown>) => ({
-    tab: (search.tab as string) ?? "Placed",
+    tab: (search.tab as string) ?? "All",
   }),
   component: AdminOrders,
 });
 
-const ORDER_STATUSES = ["Placed", "Accepted", "Preparing", "Ready", "OutForDelivery", "Completed", "Cancelled"];
-const TABS = ["All", ...ORDER_STATUSES];
+function hexToRgba(hex: string, alpha: number): string {
+  const c = hex.replace("#", "");
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
 
-const STATUS_LABELS: Record<string, string> = { OutForDelivery: "Out For Delivery" };
+function isLightColor(hex: string): boolean {
+  const c = hex.replace("#", "");
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 180;
+}
 
-const STATUS_COLORS: Record<string, string> = {
-  Placed:         "bg-blue-100 text-blue-700",
-  Accepted:       "bg-indigo-100 text-indigo-700",
-  Preparing:      "bg-amber-100 text-amber-700",
-  Ready:          "bg-cyan-100 text-cyan-700",
-  OutForDelivery: "bg-purple-100 text-purple-700",
-  Completed:      "bg-green-100 text-green-700",
-  Cancelled:      "bg-red-100 text-red-700",
-};
+function statusStyle(statusName: string, statuses: OrderStatusDto[]) {
+  const s = statuses.find(st => st.name === statusName);
+  const color = s?.color ?? "#6b7280";
+  const light = isLightColor(color);
+  return { color, light, s };
+}
 
-const STATUS_BORDER: Record<string, string> = {
-  Placed:         "border-l-blue-400",
-  Accepted:       "border-l-indigo-500",
-  Preparing:      "border-l-amber-400",
-  Ready:          "border-l-cyan-400",
-  OutForDelivery: "border-l-purple-400",
-  Completed:      "border-l-green-400",
-  Cancelled:      "border-l-red-400",
-};
-
-const STATUS_BTN_ACTIVE: Record<string, string> = {
-  Placed:         "bg-blue-500 text-white border-blue-500",
-  Accepted:       "bg-indigo-500 text-white border-indigo-500",
-  Preparing:      "bg-amber-500 text-white border-amber-500",
-  Ready:          "bg-cyan-500 text-white border-cyan-500",
-  OutForDelivery: "bg-purple-500 text-white border-purple-500",
-  Completed:      "bg-green-500 text-white border-green-500",
-  Cancelled:      "bg-red-500 text-white border-red-500",
-};
-
-const ALLOWED_TRANSITIONS: Record<string, string[]> = {
-  Placed:         ["Accepted", "Cancelled"],
-  Accepted:       ["Preparing", "Cancelled"],
-  Preparing:      ["Ready", "Cancelled"],
-  Ready:          ["OutForDelivery", "Completed", "Cancelled"],
-  OutForDelivery: ["Completed", "Cancelled"],
-  Completed:      [],
-  Cancelled:      [],
-};
-
-const STATUS_BTN_INACTIVE: Record<string, string> = {
-  Placed:         "border-blue-200 text-blue-700 hover:bg-blue-50",
-  Accepted:       "border-indigo-200 text-indigo-700 hover:bg-indigo-50",
-  Preparing:      "border-amber-200 text-amber-700 hover:bg-amber-50",
-  Ready:          "border-cyan-200 text-cyan-700 hover:bg-cyan-50",
-  OutForDelivery: "border-purple-200 text-purple-700 hover:bg-purple-50",
-  Completed:      "border-green-200 text-green-700 hover:bg-green-50",
-  Cancelled:      "border-red-200 text-red-700 hover:bg-red-50",
-};
-
-function StatusPill({ status }: { status: string }) {
+function StatusPill({ status, allStatuses }: { status: string; allStatuses: OrderStatusDto[] }) {
+  const { color, light, s } = statusStyle(status, allStatuses);
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_COLORS[status] ?? "bg-gray-100 text-gray-700"}`}>
-      {STATUS_LABELS[status] ?? status}
+    <span
+      className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
+      style={{
+        backgroundColor: hexToRgba(color, 0.12),
+        color,
+      }}
+    >
+      {s?.nameDa ?? status}
     </span>
   );
 }
@@ -102,6 +79,8 @@ function OrderModal({
   hasNext,
   position,
   total,
+  allStatuses,
+  allTransitions,
 }: {
   order: AdminOrderDto;
   onClose: () => void;
@@ -113,6 +92,8 @@ function OrderModal({
   hasNext: boolean;
   position: number;
   total: number;
+  allStatuses: OrderStatusDto[];
+  allTransitions: { fromStatusName: string; toStatusName: string; serviceType: string }[];
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -123,12 +104,18 @@ function OrderModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [hasPrev, hasNext, onPrev, onNext]);
 
+  const activeStatuses = allStatuses.filter(s => s.isActive);
+  const transitionsFromCurrent = allTransitions.filter(t => t.fromStatusName === order.status);
+  const availableTargets = transitionsFromCurrent
+    .filter(t => t.serviceType === "All" || t.serviceType === order.orderType)
+    .map(t => t.toStatusName);
+  const allowedStatuses = activeStatuses.filter(s => availableTargets.includes(s.name));
+
   return (
     <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 flex-wrap">
-            {/* Prev / Next navigation */}
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={onPrev} disabled={!hasPrev}
@@ -149,7 +136,7 @@ function OrderModal({
             <span className="text-xs text-muted-foreground font-normal tabular-nums">
               {position} / {total}
             </span>
-            <StatusPill status={order.status} />
+            <StatusPill status={order.status} allStatuses={allStatuses} />
             <span className="text-sm font-normal text-muted-foreground">
               {(() => { const f = fmtDate(order.createdAt); return `${f.date} ${f.time}`; })()}
             </span>
@@ -157,7 +144,7 @@ function OrderModal({
         </DialogHeader>
 
         <div className="space-y-5">
-          {/* Info grid */}
+          {/* Info grid — unchanged */}
           <div className="grid gap-4 sm:grid-cols-2 text-sm">
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Customer</p>
@@ -252,38 +239,31 @@ function OrderModal({
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              {ORDER_STATUSES
-                .filter(s => !(s === "OutForDelivery" && order.orderType !== "Delivery"))
-                .map(s => {
-                  const isCurrent = order.status === s;
-                  const allowed = ALLOWED_TRANSITIONS[order.status] ?? [];
-                  const isAllowed = allowed.includes(s);
-                  const isDisabled = isCurrent || isUpdating || !isAllowed;
-                  const title = !isCurrent && !isAllowed
-                    ? `Cannot change from ${order.status} to ${STATUS_LABELS[s] ?? s}`
-                    : undefined;
-                  return (
-                    <button
-                      key={s}
-                      disabled={isDisabled}
-                      onClick={() => onStatusChange(order.id, s)}
-                      title={title}
-                      className={[
-                        "px-4 py-2 rounded-lg border text-sm font-semibold transition-all",
-                        "disabled:cursor-not-allowed",
-                        isCurrent
-                          ? STATUS_BTN_ACTIVE[s]
-                          : isAllowed
-                            ? `bg-white ${STATUS_BTN_INACTIVE[s]}`
-                            : "bg-muted/40 border-muted text-muted-foreground opacity-40",
-                        !isCurrent && isUpdating ? "opacity-40" : "",
-                      ].join(" ")}
-                    >
-                      {STATUS_LABELS[s] ?? s}
-                      {isCurrent && <span className="ml-1.5 opacity-60">✓</span>}
-                    </button>
-                  );
-                })}
+              {activeStatuses.map(s => {
+                const isCurrent = order.status === s.name;
+                const isAllowed = allowedStatuses.some(a => a.name === s.name);
+                const isDisabled = isCurrent || isUpdating || !isAllowed;
+                const { color } = statusStyle(s.name, allStatuses);
+                return (
+                  <button
+                    key={s.name}
+                    disabled={isDisabled}
+                    onClick={() => onStatusChange(order.id, s.name)}
+                    className={[
+                      "px-4 py-2 rounded-lg border text-sm font-semibold transition-all",
+                      "disabled:cursor-not-allowed",
+                    ].join(" ")}
+                    style={{
+                      backgroundColor: isCurrent ? color : isAllowed ? "#ffffff" : hexToRgba(color, 0.05),
+                      borderColor: isCurrent ? color : isAllowed ? hexToRgba(color, 0.3) : hexToRgba(color, 0.1),
+                      color: isCurrent ? "#ffffff" : isAllowed ? color : hexToRgba(color, 0.4),
+                    }}
+                  >
+                    {s.nameDa ?? s.name}
+                    {isCurrent && <span className="ml-1.5 opacity-60">✓</span>}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -298,11 +278,10 @@ function OrderModal({
           {/* Status history — horizontal timeline */}
           {(() => {
             const raw = order.statusHistory ?? [];
-            // Always start with Placed from createdAt if not already first
             const history: OrderStatusHistoryDto[] =
-              raw.length > 0 && raw[0].status === "Placed"
+              raw.length > 0
                 ? [...raw]
-                : [{ status: "Placed", changedAt: order.createdAt }, ...raw];
+                : [];
             return (
               <div className="border-t pt-5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
@@ -315,9 +294,7 @@ function OrderModal({
                       return (
                         <div key={i} className="flex items-start">
                           <div className="flex flex-col items-center gap-1.5 min-w-[108px] px-1">
-                            <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${STATUS_COLORS[h.status] ?? "bg-gray-100 text-gray-700"}`}>
-                              {STATUS_LABELS[h.status] ?? h.status}
-                            </span>
+                            <StatusPill status={h.status} allStatuses={allStatuses} />
                             <div className="text-center">
                               <div className="text-[10px] text-muted-foreground tabular-nums leading-tight">{f.date}</div>
                               <div className="text-[10px] text-muted-foreground tabular-nums leading-tight">{f.time}</div>
@@ -355,7 +332,17 @@ function AdminOrders() {
 
   const { data: rawOrders = [], isLoading, refetch } = useAdminOrders({ branchId: filterBranchId });
   const { data: branches = [] } = useBranches();
+  const { data: statuses = [] } = useAdminOrderStatuses();
+  const { data: transitions = [] } = useAdminOrderStatusTransitions();
   const updateStatus = useUpdateOrderStatus();
+
+  const activeStatuses = useMemo(() =>
+    statuses.filter(s => s.isActive).sort((a, b) => a.displayOrder - b.displayOrder),
+    [statuses]
+  );
+
+  const statusNames = useMemo(() => activeStatuses.map(s => s.name), [activeStatuses]);
+  const TABS = useMemo(() => ["All", ...statusNames], [statusNames]);
 
   const orders = [...rawOrders].sort((a, b) =>
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -431,7 +418,7 @@ function AdminOrders() {
                     : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
                 ].join(" ")}
               >
-                {STATUS_LABELS[t] ?? t}
+                {activeStatuses.find(s => s.name === t)?.nameDa ?? t}
                 <span className={[
                   "inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold min-w-[18px]",
                   isActive ? "bg-primary/10 text-primary" : "bg-muted-foreground/15 text-muted-foreground",
@@ -452,7 +439,7 @@ function AdminOrders() {
           </div>
         ) : filteredOrders.length === 0 ? (
           <div className="py-16 text-center text-sm text-muted-foreground">
-            No orders{tab !== "All" ? ` with status "${STATUS_LABELS[tab] ?? tab}"` : ""}.
+            No orders{tab !== "All" ? ` with status "${activeStatuses.find(s => s.name === tab)?.nameDa ?? tab}"` : ""}.
           </div>
         ) : (
           <div className="divide-y">
@@ -471,9 +458,11 @@ function AdminOrders() {
               const priority = getPriority(order.scheduledDate, order.scheduledTime);
               const isHighlighted = !!recentlyUpdated[order.id];
               const isBeingUpdated = updatingId === order.id;
+              const { color } = statusStyle(order.status, activeStatuses);
+              const terminalStatus = activeStatuses.find(s => s.name === order.status)?.isTerminal;
               const showPriority =
                 (priority.level === "asap" || priority.level === "urgent") &&
-                order.status !== "Completed" && order.status !== "Cancelled";
+                !terminalStatus;
 
               return (
                 <div
@@ -481,11 +470,11 @@ function AdminOrders() {
                   onClick={() => setSelectedOrderId(order.id)}
                   className={[
                     "flex items-center gap-3 px-4 py-3.5 cursor-pointer select-none transition-colors border-l-4",
-                    STATUS_BORDER[order.status] ?? "border-l-gray-200",
                     isHighlighted
                       ? "bg-amber-50 hover:bg-amber-100/80"
                       : "hover:bg-muted/30",
                   ].join(" ")}
+                  style={{ borderLeftColor: color }}
                 >
                   {/* Order */}
                   <div className="w-[80px] shrink-0">
@@ -534,7 +523,7 @@ function AdminOrders() {
 
                   {/* Status */}
                   <div className="w-[126px] shrink-0">
-                    <StatusPill status={order.status} />
+                    <StatusPill status={order.status} allStatuses={activeStatuses} />
                   </div>
 
                   {/* Total */}
@@ -617,6 +606,8 @@ function AdminOrders() {
             onNext={() => setSelectedOrderId(filteredOrders[idx + 1].id)}
             position={idx + 1}
             total={filteredOrders.length}
+            allStatuses={activeStatuses}
+            allTransitions={transitions}
           />
         );
       })()}

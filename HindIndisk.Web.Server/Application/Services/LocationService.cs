@@ -1,4 +1,5 @@
 using HindIndisk.Api.Application.DTOs.Location;
+using HindIndisk.Api.Domain.Entities;
 using HindIndisk.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,6 +19,7 @@ public class LocationService : ILocationService
             .AsNoTracking()
             .Include(b => b.DaySchedules)
             .Include(b => b.Closures)
+            .Include(b => b.ServiceClosures)
             .OrderBy(b => b.Id)
             .ToListAsync();
 
@@ -32,6 +34,10 @@ public class LocationService : ILocationService
             var pickupClosure = b.Closures.FirstOrDefault(c =>
                 c.ClosureType == "DateRange" && c.Scope == "Pickup" && c.StartTime == null
                 && (c.StartDate ?? today) <= today && (c.EndDate ?? c.StartDate ?? today) >= today);
+
+            // Active reservation closure (from BranchServiceClosure)
+            var reservationClosure = b.ServiceClosures.FirstOrDefault(c =>
+                c.ServiceType == "Reservation" && c.ReopenedAt == null);
 
             // First weekday (Mon–Fri) and weekend (Sat–Sun) schedule found
             var weekday = schedules.FirstOrDefault(s =>
@@ -53,10 +59,10 @@ public class LocationService : ILocationService
                 weekdayOpen, weekdayClose, weekendOpen, weekendClose,
                 b.ImageUrl, b.Rating, b.ReviewCount,
                 b.DeliveryFee, b.DeliveryFeeEnabled,
-                b.IsCloseOrder, b.CloseOrderNote,
-                b.IsCloseReservation, b.CloseReservationNote,
-                deliveryClosure != null, deliveryClosure?.Note,
-                pickupClosure   != null, pickupClosure?.Note,
+                b.IsCloseOrder, b.CloseOrderNote, b.CloseOrderNoteDa,
+                reservationClosure != null, reservationClosure?.Note, reservationClosure?.NoteDa,
+                deliveryClosure != null, deliveryClosure?.Note, deliveryClosure?.NoteDa,
+                pickupClosure   != null, pickupClosure?.Note, pickupClosure?.NoteDa,
                 b.MaxAdvanceDays
             );
         }).ToList();

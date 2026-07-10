@@ -165,7 +165,7 @@ public class EmailService : IEmailService
 
     // ── Customer: OTP for password reset ────────────────────────────────────
 
-    public Task SendOtpEmailAsync(string toEmail, string toName, string otp)
+    public async Task SendOtpEmailAsync(string toEmail, string toName, string otp)
     {
         var subject = "Password Reset OTP — Hind Indisk";
         var body =
@@ -184,7 +184,33 @@ public class EmailService : IEmailService
             "<p>Thank you,<br/>Hind Indisk Restaurant</p>" +
             "</div>" +
             "</body></html>";
-        return SendAsync(toEmail, toName, subject, body);
+
+        if (!_settings.Enabled)
+        {
+            _logger.LogInformation("Email disabled — OTP for {Email} is {Otp}", toEmail, otp);
+            return;
+        }
+
+        // OTP delivery is critical — propagate failures so the caller can surface them to the user.
+        try
+        {
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(_settings.FromName, _settings.FromAddress));
+            message.To.Add(new MailboxAddress(toName, toEmail));
+            message.Subject = subject;
+            message.Body    = new TextPart("html") { Text = body };
+
+            using var client = new SmtpClient();
+            await client.ConnectAsync(_settings.SmtpHost, _settings.SmtpPort, SecureSocketOptions.StartTls);
+            await client.AuthenticateAsync(_settings.SmtpUser, _settings.SmtpPass);
+            await client.SendAsync(message);
+            await client.DisconnectAsync(true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send OTP email to {Email}", toEmail);
+            throw new InvalidOperationException("Failed to send OTP email. Please try again later.");
+        }
     }
 
     // ── Customer: welcome on registration ────────────────────────────────────

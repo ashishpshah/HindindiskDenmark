@@ -1,8 +1,9 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 import {
   LayoutDashboard, ShoppingBag, CalendarCheck, ExternalLink, LogOut,
-  UtensilsCrossed, Users, Eye, EyeOff, Loader2, BookOpen, Store, Menu, X, PowerOff, AlertTriangle,
+  UtensilsCrossed, Users, Eye, EyeOff, Loader2, BookOpen, Store, Menu, X,
+  PowerOff, AlertTriangle, Globe, Home, ImageIcon, ChevronDown, Info,
 } from "lucide-react";
 import { useAdminAuth, isAdminUser } from "@/context/AdminAuthContext";
 import { Button } from "@/components/ui/button";
@@ -13,15 +14,28 @@ export const Route = createFileRoute("/admin")({
   component: AdminLayout,
 });
 
-const NAV: Array<{ to: string; label: string; icon: typeof ShoppingBag; exact?: boolean }> = [
-  { to: "/admin",              label: "Dashboard",     icon: LayoutDashboard,   exact: true },
-  { to: "/admin/orders",       label: "Orders",        icon: ShoppingBag },
-  { to: "/admin/reservations", label: "Reservations",  icon: CalendarCheck },
-  { to: "/admin/menus",        label: "Menus",         icon: BookOpen },
-  { to: "/admin/menu",         label: "Items",         icon: UtensilsCrossed },
-  { to: "/admin/branches",        label: "Branches",        icon: Store },
-  { to: "/admin/customers",       label: "Customers",       icon: Users },
-  { to: "/admin/settings",  label: "Settings",  icon: PowerOff },
+type NavItem   = { kind?: "link"; to: string; label: string; icon: typeof ShoppingBag; exact?: boolean };
+type NavGroup  = { kind: "group"; label: string; icon: typeof ShoppingBag; prefix: string; children: { to: string; label: string; icon: typeof ShoppingBag }[] };
+type NavEntry  = NavItem | NavGroup;
+
+const NAV: NavEntry[] = [
+  { to: "/admin",              label: "Dashboard",    icon: LayoutDashboard,  exact: true },
+  { to: "/admin/orders",       label: "Orders",       icon: ShoppingBag },
+  { to: "/admin/order-statuses", label: "Order Statuses", icon: ShoppingBag },
+  { to: "/admin/reservations", label: "Reservations", icon: CalendarCheck },
+  { to: "/admin/menus",        label: "Menus",        icon: BookOpen },
+  { to: "/admin/menu",         label: "Items",        icon: UtensilsCrossed },
+  { to: "/admin/branches",     label: "Branches",     icon: Store },
+  { to: "/admin/customers",    label: "Customers",    icon: Users },
+  { to: "/admin/settings",     label: "Settings",     icon: PowerOff },
+  {
+    kind: "group", label: "Website Pages", icon: Globe, prefix: "/admin/website",
+    children: [
+      { to: "/admin/website/Homepage", label: "Homepage", icon: Home },
+      { to: "/admin/website/Gallery",  label: "Gallery",  icon: ImageIcon },
+      { to: "/admin/website/About",    label: "About",    icon: Info },
+    ],
+  },
 ];
 
 function AdminLoginForm() {
@@ -94,9 +108,50 @@ function AdminLoginForm() {
   );
 }
 
+function NavGroupItem({ entry, isGroupActive, onNavClick }: {
+  entry: NavGroup;
+  isGroupActive: boolean;
+  onNavClick?: () => void;
+}) {
+  const [open, setOpen] = useState(isGroupActive);
+  const Icon = entry.icon;
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition hover:bg-accent hover:text-primary
+          ${isGroupActive ? "text-primary" : "text-foreground/70"}`}
+      >
+        <Icon className="h-4 w-4" />
+        <span className="flex-1 text-left">{entry.label}</span>
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="mt-0.5 ml-3 space-y-0.5 border-l border-border pl-3">
+          {entry.children.map(({ to, label, icon: ChildIcon }) => (
+            <Link
+              key={to}
+              to={to}
+              onClick={onNavClick}
+              className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-foreground/70 transition hover:bg-accent hover:text-primary"
+              activeProps={{ className: "bg-primary/10 text-primary" }}
+            >
+              <ChildIcon className="h-3.5 w-3.5" />
+              {label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Shared sidebar nav content — used in both desktop aside and mobile drawer
 function SidebarNav({ onNavClick }: { onNavClick?: () => void }) {
   const { adminUser: user, adminLogout: logout } = useAdminAuth();
+  const pathname = useRouterState({ select: s => s.location.pathname });
+
   return (
     <>
       <div className="flex items-center gap-2.5 border-b px-4 py-4">
@@ -108,19 +163,33 @@ function SidebarNav({ onNavClick }: { onNavClick?: () => void }) {
       </div>
 
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {NAV.map(({ to, label, icon: Icon, exact }) => (
-          <Link
-            key={to}
-            to={to}
-            onClick={onNavClick}
-            className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/70 transition hover:bg-accent hover:text-primary"
-            activeProps={{ className: "bg-primary/10 text-primary" }}
-            activeOptions={{ exact: exact ?? false }}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </Link>
-        ))}
+        {NAV.map((entry) => {
+          if (entry.kind === "group") {
+            const isGroupActive = pathname.startsWith(entry.prefix);
+            return (
+              <NavGroupItem
+                key={entry.prefix}
+                entry={entry}
+                isGroupActive={isGroupActive}
+                onNavClick={onNavClick}
+              />
+            );
+          }
+          const { to, label, icon: Icon, exact } = entry as NavItem;
+          return (
+            <Link
+              key={to}
+              to={to}
+              onClick={onNavClick}
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/70 transition hover:bg-accent hover:text-primary"
+              activeProps={{ className: "bg-primary/10 text-primary" }}
+              activeOptions={{ exact: exact ?? false }}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </Link>
+          );
+        })}
 
         {/* SystemAdmin-only section */}
         {user?.role === "SystemAdmin" && (

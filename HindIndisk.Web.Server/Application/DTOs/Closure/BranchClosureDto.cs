@@ -11,6 +11,8 @@ public record BranchClosureDto(
     string?   StartTime,    // "HH:mm" — null = all-day
     string?   EndTime,      // "HH:mm" — null = all-day
     string?   Note,
+    string?   NoteDa,
+    int       DisplayBeforeDays,
     DateTime  CreatedAt,
     string?   CreatedBy
 );

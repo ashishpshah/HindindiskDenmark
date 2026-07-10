@@ -22,6 +22,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<MenuItemsMapping> MenuItemsMappings => Set<MenuItemsMapping>();
     public DbSet<BranchMenu> BranchMenus => Set<BranchMenu>();
     public DbSet<BranchMenuItemPrice> BranchMenuItemPrices => Set<BranchMenuItemPrice>();
+    public DbSet<OrderStatus>         OrderStatuses         => Set<OrderStatus>();
+    public DbSet<OrderStatusTransition> OrderStatusTransitions => Set<OrderStatusTransition>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<OrderAppliedOffer> OrderAppliedOffers => Set<OrderAppliedOffer>();
@@ -32,6 +34,15 @@ public class ApplicationDbContext : DbContext
     public DbSet<OfferMenuItem> OfferMenuItems => Set<OfferMenuItem>();
     public DbSet<ApiExceptionLog> ApiExceptionLogs => Set<ApiExceptionLog>();
     public DbSet<PasswordOtp>    PasswordOtps     => Set<PasswordOtp>();
+    public DbSet<HeroSlide>          HeroSlides          => Set<HeroSlide>();
+    public DbSet<GalleryImage>       GalleryImages       => Set<GalleryImage>();
+    public DbSet<WhyChooseUsItem>    WhyChooseUsItems    => Set<WhyChooseUsItem>();
+    public DbSet<HomeStorySectionSettings> HomeStorySectionSettings => Set<HomeStorySectionSettings>();
+    public DbSet<AboutPageSettings>  AboutPageSettings   => Set<AboutPageSettings>();
+    public DbSet<AboutStat>          AboutStats          => Set<AboutStat>();
+    public DbSet<AboutMvvItem>       AboutMvvItems       => Set<AboutMvvItem>();
+    public DbSet<AboutTimelineItem>  AboutTimelineItems  => Set<AboutTimelineItem>();
+    public DbSet<TeamMember>         TeamMembers         => Set<TeamMember>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -86,6 +97,22 @@ public class ApplicationDbContext : DbContext
 
         // ── Decimal precision ─────────────────────────────────────────────────
         modelBuilder.Entity<BranchMenuItemPrice>().Property(x => x.Price).HasPrecision(10, 2);
+
+        // ── HeroSlide ─────────────────────────────────────────────────
+        modelBuilder.Entity<HeroSlide>()
+            .Property(h => h.CtaData)
+            .HasColumnType("nvarchar(max)");
+
+        modelBuilder.Entity<HeroSlide>()
+            .HasIndex(h => h.SortOrder);
+
+        // ── Single-row settings tables — no IDENTITY ─────────────────────────
+        modelBuilder.Entity<AboutPageSettings>()
+            .Property(s => s.Id)
+            .ValueGeneratedNever();
+        modelBuilder.Entity<HomeStorySectionSettings>()
+            .Property(s => s.Id)
+            .ValueGeneratedNever();
         modelBuilder.Entity<Order>().Property(x => x.Subtotal).HasPrecision(10, 2);
         modelBuilder.Entity<Order>().Property(x => x.DeliveryFee).HasPrecision(10, 2);
         modelBuilder.Entity<Order>().Property(x => x.Tax).HasPrecision(10, 2);
@@ -209,6 +236,43 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<PasswordOtp>()
             .HasIndex(o => o.CreatedAt);
+
+        // ── OrderStatus ───────────────────────────────────────────────────────
+        modelBuilder.Entity<OrderStatus>()
+            .HasIndex(s => s.Name)
+            .IsUnique();
+
+        modelBuilder.Entity<OrderStatus>()
+            .Property(s => s.ServiceType)
+            .HasMaxLength(20);
+
+        modelBuilder.Entity<OrderStatus>()
+            .Property(s => s.Color)
+            .HasMaxLength(20);
+
+        // ── OrderStatusTransition ─────────────────────────────────────────────
+        modelBuilder.Entity<OrderStatusTransition>()
+            .HasOne(t => t.FromStatus)
+            .WithMany(s => s.FromTransitions)
+            .HasForeignKey(t => t.FromStatusId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<OrderStatusTransition>()
+            .HasOne(t => t.ToStatus)
+            .WithMany(s => s.ToTransitions)
+            .HasForeignKey(t => t.ToStatusId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<OrderStatusTransition>()
+            .Property(t => t.ServiceType)
+            .HasMaxLength(20);
+
+        // ── Order → OrderStatus FK ────────────────────────────────────────────
+        modelBuilder.Entity<Order>()
+            .HasOne(o => o.OrderStatus)
+            .WithMany()
+            .HasForeignKey(o => o.OrderStatusId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         // ── Fixed roles — always seeded via migration (HasData) ───────────────
         // BCrypt is NOT used here: HasData values are serialised into the migration

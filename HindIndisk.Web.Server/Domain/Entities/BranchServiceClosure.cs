@@ -9,6 +9,7 @@ public class BranchServiceClosure
     public DateTime? ReopenedAt { get; set; }   // null = still closed
     public string?  ClosedBy   { get; set; }    // admin email
     public string?  Note       { get; set; }    // optional reason captured at close time
+    public string?  NoteDa     { get; set; }
 
     public virtual Branch Branch { get; set; } = null!;
 }

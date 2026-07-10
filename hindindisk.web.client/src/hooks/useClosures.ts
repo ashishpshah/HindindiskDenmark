@@ -15,6 +15,8 @@ export type ClosureDto = {
   startTime: string | null; // "HH:mm" — null = all-day
   endTime: string | null;   // "HH:mm"
   note: string | null;
+  noteDa: string | null;
+  displayBeforeDays: number;
   createdAt: string;
   createdBy: string | null;
 };
@@ -28,6 +30,8 @@ export type CreateClosureInput = {
   startTime?: string; // "HH:mm" — omit for all-day
   endTime?: string;
   note?: string;
+  noteDa?: string;
+  displayBeforeDays?: number;
 };
 
 export function useAllClosures(branchIds: number[]) {

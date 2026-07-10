@@ -17,6 +17,8 @@ public class BranchClosure
     public TimeOnly?  StartTime  { get; set; }   // null = all-day; set = partial-day closure start
     public TimeOnly?  EndTime    { get; set; }   // null = all-day; set = partial-day closure end
     public string?   Note        { get; set; }   // e.g. "Christmas", "Staff training"
+    public string?   NoteDa      { get; set; }
+    public int       DisplayBeforeDays { get; set; } = 0;
     public DateTime  CreatedAt   { get; set; }
     public string?   CreatedBy   { get; set; }   // admin email
 

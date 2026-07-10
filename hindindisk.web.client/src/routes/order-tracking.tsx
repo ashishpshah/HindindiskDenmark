@@ -1,17 +1,26 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Check, ChefHat, Package, Bike, ClipboardCheck, ClipboardList, LogIn } from "lucide-react";
+import { Check, ChefHat, Package, Bike, ClipboardList, ClipboardCheck, LogIn, Circle, XCircle } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { PageHero } from "@/components/PageHero";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { z } from "zod";
 import { useOrder } from "@/hooks/useOrder";
+import { useOrderStatuses } from "@/hooks/useOrderStatuses";
 import { formatDateTime } from "@/lib/dateFormat";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAuth } from "@/context/AuthContext";
 import { OrderSummary } from "@/components/OrderSummary";
+import { BASE } from "@/lib/api/client";
+import type { OrderStatusDto } from "@/hooks/useAdminOrderStatuses";
+
+function resolveUrl(url: string) {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `${BASE}${url}`;
+}
 
 const search = z.object({ id: z.string().optional() });
 
@@ -21,22 +30,32 @@ export const Route = createFileRoute("/order-tracking")({
   component: TrackPage,
 });
 
-const STAGE_KEYS = [
-  { key: "status.placed",         icon: ClipboardList  },
-  { key: "status.accepted",       icon: ClipboardCheck },
-  { key: "status.preparing",      icon: ChefHat        },
-  { key: "status.ready",          icon: Package        },
-  { key: "status.outForDelivery", icon: Bike           },
-  { key: "status.completed",      icon: Check          },
-];
+// Option A: map icon by name pattern
+function iconForStatus(name: string) {
+  const lower = name.toLowerCase();
+  if (lower.includes("new"))        return ClipboardList;
+  if (lower.includes("preparing"))  return ChefHat;
+  if (lower === "ready")            return Package;
+  if (lower.includes("pick up"))    return Bike;
+  if (lower.includes("delivered"))  return Check;
+  if (lower.includes("cancelled"))  return XCircle;
+  return Circle;
+}
 
-const STATUS_TO_STAGE: Record<string, number> = {
-  Placed: 0, Accepted: 1, Preparing: 2, Ready: 3,
-  OutForDelivery: 4, "Out For Delivery": 4,
-  Completed: 5,
-};
+// Build tracking stages from statuses filtered by order type
+function buildStages(statuses: OrderStatusDto[], orderType: string | undefined) {
+  return statuses
+    .filter(s => s.isActive && !s.isTerminal && (s.serviceType === "All" || s.serviceType === orderType))
+    .concat(statuses.filter(s => s.isActive && s.isTerminal))
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .map(s => ({
+      label: s.nameDa ?? s.name,
+      icon: iconForStatus(s.name),
+      name: s.name,
+    }));
+}
 
-// Legacy localStorage order shape (HIN-XXXXXX format from pre-API era)
+// Legacy localStorage order shape
 type LegacyOrder = { id: string; date: string; branch: string; type: string; total: number; lines: { name: string; qty: number; price: number }[]; status: string };
 
 function loadLegacyOrder(id: string): LegacyOrder | null {
@@ -56,26 +75,36 @@ function TrackPage() {
   const [stage, setStage]         = useState(0);
   const [code, setCode]           = useState(id || "");
 
-  const STAGES = STAGE_KEYS.map((s) => ({ label: t(s.key), icon: s.icon }));
+  const { data: allStatuses = [] } = useOrderStatuses();
+
+  const activeStatuses = useMemo(() =>
+    allStatuses.filter(s => s.isActive).sort((a, b) => a.displayOrder - b.displayOrder),
+    [allStatuses]
+  );
 
   const isNumericId = id !== undefined && /^\d+$/.test(id);
 
   const { data: apiOrder, isLoading } = useOrder(id);
   const legacyOrder = !isNumericId && id ? loadLegacyOrder(id) : null;
 
-  const resolvedStatus = apiOrder?.status ?? legacyOrder?.status ?? "Placed";
+  const resolvedStatus = apiOrder?.status ?? legacyOrder?.status ?? "New";
+
+  // Build stages from order type
+  const orderType = apiOrder?.orderType ?? legacyOrder?.type;
+  const STAGES = useMemo(() => buildStages(activeStatuses, orderType), [activeStatuses, orderType]);
 
   useEffect(() => {
     if (!id) return;
-    const initialStage = STATUS_TO_STAGE[resolvedStatus] ?? 0;
+    const idx = STAGES.findIndex(s => s.name === resolvedStatus);
+    const initialStage = idx >= 0 ? idx : 0;
     setStage(initialStage);
 
     // Only run the demo animation for legacy (non-numeric) orders
     if (isNumericId) return;
-    const remaining = [1, 2, 3, 4, 5].filter((i) => i > initialStage);
-    const timers    = remaining.map((i, idx) => setTimeout(() => setStage(i), (idx + 1) * 1500));
+    const remaining = STAGES.filter((_, i) => i > initialStage);
+    const timers = remaining.map((_, idx) => setTimeout(() => setStage(idx + initialStage + 1 > STAGES.length - 1 ? STAGES.length - 1 : idx + initialStage + 1), (idx + 1) * 1500));
     return () => timers.forEach(clearTimeout);
-  }, [id, resolvedStatus, isNumericId]);
+  }, [id, resolvedStatus, isNumericId, STAGES]);
 
   if (!user) {
     return (
@@ -165,7 +194,7 @@ function TrackPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{t("pages.tracking.status")}</span>
-                    <span className="font-semibold text-primary">{STAGES[stage].label}</span>
+                    <span className="font-semibold text-primary">{STAGES[stage]?.label ?? apiOrder.status}</span>
                   </div>
                   {apiOrder.specialInstructions && (
                     <div className="flex justify-between gap-4">
@@ -183,7 +212,7 @@ function TrackPage() {
                       <div key={item.menuItemId} className="flex items-center gap-3">
                         {item.imageUrl && (
                           <img
-                            src={item.imageUrl}
+                            src={resolveUrl(item.imageUrl)}
                             alt={item.name}
                             className="h-11 w-11 rounded-xl object-cover shrink-0"
                           />
@@ -235,7 +264,7 @@ function TrackPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{t("pages.tracking.status")}</span>
-                    <span className="font-semibold text-primary">{STAGES[stage].label}</span>
+                    <span className="font-semibold text-primary">{STAGES[stage]?.label ?? legacyOrder.status}</span>
                   </div>
                 </div>
                 <div className="border-t pt-4 space-y-3">
@@ -256,7 +285,7 @@ function TrackPage() {
               </aside>
             )}
 
-            {/* ── Col 2: Order Tracking stages (second on all screen sizes) ── */}
+            {/* ── Col 2: Order Tracking stages ── */}
             <div className="rounded-3xl border bg-card p-6 sm:p-8 shadow-soft h-fit">
               <div className="mb-6 flex items-center justify-between">
                 <div>
@@ -264,7 +293,7 @@ function TrackPage() {
                   <div className="font-mono text-lg font-semibold">{isNumericId ? `#${id}` : id}</div>
                 </div>
                 <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
-                  {STAGES[stage].label}
+                  {STAGES[stage]?.label ?? resolvedStatus}
                 </div>
               </div>
 
@@ -278,7 +307,7 @@ function TrackPage() {
                   const done   = i <= stage;
                   const active = i === stage;
                   return (
-                    <div key={s.label} className="flex items-start gap-4">
+                    <div key={s.name} className="flex items-start gap-4">
                       <motion.div
                         animate={active ? { scale: [1, 1.1, 1] } : { scale: 1 }}
                         transition={{ repeat: active ? Infinity : 0, duration: 1.5 }}

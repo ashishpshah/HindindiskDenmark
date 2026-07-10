@@ -22,6 +22,124 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("HindIndisk.Api.Domain.Entities.AboutMvvItem", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DescriptionDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Icon")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TitleDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AboutMvvItems");
+                });
+
+            modelBuilder.Entity("HindIndisk.Api.Domain.Entities.AboutPageSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<string>("HeroImage")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("StoryImage")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AboutPageSettings");
+                });
+
+            modelBuilder.Entity("HindIndisk.Api.Domain.Entities.AboutStat", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LabelDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AboutStats");
+                });
+
+            modelBuilder.Entity("HindIndisk.Api.Domain.Entities.AboutTimelineItem", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DescriptionDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TitleDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Year")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AboutTimelineItems");
+                });
+
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.ApiExceptionLog", b =>
                 {
                     b.Property<long>("Id")
@@ -99,15 +217,12 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                     b.Property<string>("CloseOrderNote")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("CloseReservationNote")
+                    b.Property<string>("CloseOrderNoteDa")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Country")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("DeliveryEnabled")
-                        .HasColumnType("bit");
 
                     b.Property<decimal>("DeliveryFee")
                         .HasColumnType("decimal(8,2)");
@@ -138,9 +253,6 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                     b.Property<bool>("IsCloseOrder")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("IsCloseReservation")
-                        .HasColumnType("bit");
-
                     b.Property<int>("MaxAdvanceDays")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
@@ -153,9 +265,6 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("PickupEnabled")
-                        .HasColumnType("bit");
 
                     b.Property<string>("PostalCode")
                         .IsRequired()
@@ -196,6 +305,9 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                     b.Property<int?>("DayOfWeek")
                         .HasColumnType("int");
 
+                    b.Property<int>("DisplayBeforeDays")
+                        .HasColumnType("int");
+
                     b.Property<DateOnly?>("EndDate")
                         .HasColumnType("date");
 
@@ -203,6 +315,9 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                         .HasColumnType("time");
 
                     b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NoteDa")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Scope")
@@ -239,11 +354,20 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                     b.Property<int>("DayOfWeek")
                         .HasColumnType("int");
 
+                    b.Property<bool>("IsOpen")
+                        .HasColumnType("bit");
+
                     b.Property<int>("MaxOrdersPerSlot")
                         .HasColumnType("int");
 
                     b.Property<int>("MaxReservationsPerSlot")
                         .HasColumnType("int");
+
+                    b.Property<string>("OffMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OffMessageDa")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<TimeOnly>("OpenTime")
                         .HasColumnType("time");
@@ -313,6 +437,9 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                     b.Property<string>("Note")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("NoteDa")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime?>("ReopenedAt")
                         .HasColumnType("datetime2");
 
@@ -325,6 +452,169 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                     b.HasIndex("BranchId");
 
                     b.ToTable("BranchServiceClosures");
+                });
+
+            modelBuilder.Entity("HindIndisk.Api.Domain.Entities.GalleryImage", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Caption")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CaptionDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("GalleryImages");
+                });
+
+            modelBuilder.Entity("HindIndisk.Api.Domain.Entities.HeroSlide", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CtaData")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Subtitle")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SubtitleDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Tagline")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TaglineDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TitleDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SortOrder");
+
+                    b.ToTable("HeroSlides");
+                });
+
+            modelBuilder.Entity("HindIndisk.Api.Domain.Entities.HomeStorySectionSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ButtonLink")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ButtonText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ButtonTextDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Eyebrow")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("EyebrowDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("HeritageBadgeLabel")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("HeritageBadgeLabelDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("HeritageBadgeSince")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("HeritageBadgeSinceDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MainImage")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OverlayImage")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Subtitle")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SubtitleDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TitleDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("HomeStorySectionSettings");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.Menu", b =>
@@ -614,6 +904,9 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
 
+                    b.Property<long>("OrderStatusId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("OrderType")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -656,6 +949,8 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("BranchId");
+
+                    b.HasIndex("OrderStatusId");
 
                     b.HasIndex("PlacedByUserId");
 
@@ -718,6 +1013,50 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                     b.ToTable("OrderItems");
                 });
 
+            modelBuilder.Entity("HindIndisk.Api.Domain.Entities.OrderStatus", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsTerminal")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("NameDa")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ServiceType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("OrderStatuses");
+                });
+
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.OrderStatusHistory", b =>
                 {
                     b.Property<long>("Id")
@@ -741,6 +1080,34 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                     b.HasIndex("OrderId");
 
                     b.ToTable("OrderStatusHistories");
+                });
+
+            modelBuilder.Entity("HindIndisk.Api.Domain.Entities.OrderStatusTransition", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("FromStatusId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ServiceType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<long>("ToStatusId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FromStatusId");
+
+                    b.HasIndex("ToStatusId");
+
+                    b.ToTable("OrderStatusTransitions");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.PasswordOtp", b =>
@@ -875,6 +1242,41 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("HindIndisk.Api.Domain.Entities.TeamMember", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Image")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RoleDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TeamMembers");
+                });
+
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.User", b =>
                 {
                     b.Property<long>("Id")
@@ -974,6 +1376,45 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                     b.HasIndex("BranchId");
 
                     b.ToTable("UserBranches");
+                });
+
+            modelBuilder.Entity("HindIndisk.Api.Domain.Entities.WhyChooseUsItem", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DescriptionDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Icon")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TitleDa")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("WhyChooseUsItems");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.BranchClosure", b =>
@@ -1131,6 +1572,12 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("HindIndisk.Api.Domain.Entities.OrderStatus", "OrderStatus")
+                        .WithMany()
+                        .HasForeignKey("OrderStatusId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("HindIndisk.Api.Domain.Entities.User", "PlacedByUser")
                         .WithMany()
                         .HasForeignKey("PlacedByUserId")
@@ -1143,6 +1590,8 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Branch");
+
+                    b.Navigation("OrderStatus");
 
                     b.Navigation("PlacedByUser");
 
@@ -1204,6 +1653,25 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("HindIndisk.Api.Domain.Entities.OrderStatusTransition", b =>
+                {
+                    b.HasOne("HindIndisk.Api.Domain.Entities.OrderStatus", "FromStatus")
+                        .WithMany("FromTransitions")
+                        .HasForeignKey("FromStatusId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HindIndisk.Api.Domain.Entities.OrderStatus", "ToStatus")
+                        .WithMany("ToTransitions")
+                        .HasForeignKey("ToStatusId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("FromStatus");
+
+                    b.Navigation("ToStatus");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.Reservation", b =>
@@ -1327,6 +1795,13 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                     b.Navigation("OrderItems");
 
                     b.Navigation("StatusHistories");
+                });
+
+            modelBuilder.Entity("HindIndisk.Api.Domain.Entities.OrderStatus", b =>
+                {
+                    b.Navigation("FromTransitions");
+
+                    b.Navigation("ToTransitions");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.Role", b =>

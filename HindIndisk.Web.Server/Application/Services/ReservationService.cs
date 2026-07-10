@@ -56,7 +56,12 @@ public class ReservationService : IReservationService
             .FirstOrDefaultAsync(b => b.Id == request.BranchId)
             ?? throw new InvalidOperationException("Branch not found.");
 
-        if (branch.IsCloseReservation)
+        // Check if reservations are closed for this branch (from BranchServiceClosure)
+        var reservationClosure = await _db.BranchServiceClosures
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.BranchId == request.BranchId
+                && c.ServiceType == "Reservation" && c.ReopenedAt == null);
+        if (reservationClosure != null)
             throw new InvalidOperationException("Reservations are temporarily suspended for this branch.");
 
         if (!DateTime.TryParse(request.Date, out var date))

@@ -13,6 +13,7 @@ export type BranchServiceClosureDto = {
   reopenedAt?: string;   // null = still closed
   closedBy?: string;
   note?: string | null;
+  noteDa?: string | null;
 };
 
 export type ServiceClosureFilters = {
@@ -46,15 +47,16 @@ export function useServiceClosureHistory(filters: ServiceClosureFilters = {}) {
 export function useToggleServiceStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ branchId, serviceType, isClosed, note }: {
+    mutationFn: ({ branchId, serviceType, isClosed, note, noteDa }: {
       branchId: number;
       serviceType: ServiceType;
       isClosed: boolean;
       note?: string;
+      noteDa?: string;
     }) =>
       apiFetch<BranchServiceClosureDto>(`/api/admin/branches/${branchId}/service-status`, {
         method: "PATCH",
-        body: JSON.stringify({ serviceType, isClosed, note }),
+        body: JSON.stringify({ serviceType, isClosed, note, noteDa }),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["service-status"] });

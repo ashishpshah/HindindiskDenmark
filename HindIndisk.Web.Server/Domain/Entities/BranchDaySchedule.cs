@@ -10,6 +10,9 @@ public class BranchDaySchedule
     public int       SlotIntervalMinutes    { get; set; } = 30;
     public int       MaxOrdersPerSlot       { get; set; } = 10;
     public int       MaxReservationsPerSlot { get; set; } = 5;
+    public bool      IsOpen                 { get; set; } = true;
+    public string?   OffMessage             { get; set; }
+    public string?   OffMessageDa           { get; set; }
 
     public virtual Branch Branch { get; set; } = null!;
 }

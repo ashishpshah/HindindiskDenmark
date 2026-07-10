@@ -35,6 +35,12 @@ export type AdminBranchDto = {
   reviewCount: number;
   deliveryFee: number;
   deliveryFeeEnabled: boolean;
+  isCloseOrder: boolean;
+  closeOrderNote?: string | null;
+  closeOrderNoteDa?: string | null;
+  isCloseReservation: boolean;
+  closeReservationNote?: string | null;
+  closeReservationNoteDa?: string | null;
   maxAdvanceDays: number;
 };
 

@@ -1,35 +1,23 @@
 using HindIndisk.Api.Application.DTOs.Admin;
+using HindIndisk.Api.Domain.Entities;
+using HindIndisk.Api.Hubs;
 using HindIndisk.Api.Infrastructure;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace HindIndisk.Api.Application.Services;
 
 public class AdminService : IAdminService
 {
-    private static readonly HashSet<string> ValidOrderStatuses =
-        ["Placed", "Accepted", "Preparing", "Ready", "OutForDelivery", "Completed", "Cancelled"];
-
-    private static readonly Dictionary<string, HashSet<string>> AllowedOrderTransitions = new()
-    {
-        ["Placed"]         = ["Accepted", "Cancelled"],
-        ["Accepted"]       = ["Preparing", "Cancelled"],
-        ["Preparing"]      = ["Ready", "Cancelled"],
-        ["Ready"]          = ["OutForDelivery", "Completed", "Cancelled"],
-        ["OutForDelivery"] = ["Completed", "Cancelled"],
-        ["Completed"]      = [],
-        ["Cancelled"]      = [],
-    };
-
-    private static readonly HashSet<string> ValidReservationStatuses =
-        ["Pending", "Confirmed", "Cancelled"];
-
     private readonly ApplicationDbContext _db;
     private readonly IEmailService _email;
+    private readonly IHubContext<CustomerHub> _customerHub;
 
-    public AdminService(ApplicationDbContext db, IEmailService email)
+    public AdminService(ApplicationDbContext db, IEmailService email, IHubContext<CustomerHub> customerHub)
     {
-        _db    = db;
-        _email = email;
+        _db          = db;
+        _email       = email;
+        _customerHub = customerHub;
     }
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
@@ -44,7 +32,7 @@ public class AdminService : IAdminService
                                 .Where(o => o.CreatedAt >= today && o.CreatedAt < tomorrow && o.Status != "Cancelled")
                                 .SumAsync(o => (decimal?)o.Total) ?? 0m;
         var pendingOrders  = await _db.Orders.CountAsync(o =>
-                                o.Status == "Placed" || o.Status == "Accepted" || o.Status == "Preparing");
+                                !o.OrderStatus.IsTerminal && o.Status != "Cancelled");
         var todayReservations = await _db.Reservations
                                     .CountAsync(r => r.Date >= today && r.Date < tomorrow);
         var totalOrders    = await _db.Orders.CountAsync();
@@ -79,8 +67,9 @@ public class AdminService : IAdminService
 
     public async Task<AdminOrderDto> UpdateOrderStatusAsync(long orderId, string status, string? cancellationReason = null)
     {
-        if (!ValidOrderStatuses.Contains(status))
-            throw new InvalidOperationException($"Invalid status '{status}'.");
+        var targetStatus = await _db.OrderStatuses
+            .FirstOrDefaultAsync(s => s.Name == status && s.IsActive)
+            ?? throw new InvalidOperationException($"Invalid or inactive status '{status}'.");
 
         var order = await _db.Orders
             .Include(o => o.Branch)
@@ -91,11 +80,16 @@ public class AdminService : IAdminService
             .FirstOrDefaultAsync(o => o.Id == orderId)
             ?? throw new KeyNotFoundException($"Order {orderId} not found.");
 
-        if (!AllowedOrderTransitions.TryGetValue(order.Status, out var allowed) || !allowed.Contains(status))
-            throw new InvalidOperationException(
+        var transition = await _db.OrderStatusTransitions
+            .FirstOrDefaultAsync(t =>
+                t.FromStatusId == order.OrderStatusId &&
+                t.ToStatusId == targetStatus.Id &&
+                (t.ServiceType == "All" || t.ServiceType == order.OrderType))
+            ?? throw new InvalidOperationException(
                 $"Cannot change order status from '{order.Status}' to '{status}'.");
 
         order.Status = status;
+        order.OrderStatusId = targetStatus.Id;
         if (status == "Cancelled" && !string.IsNullOrWhiteSpace(cancellationReason))
             order.CancellationReason = cancellationReason.Trim();
 
@@ -106,6 +100,11 @@ public class AdminService : IAdminService
             ChangedAt = DenmarkTime.Now,
         });
         await _db.SaveChangesAsync();
+
+        // Push real-time update to the customer's browser
+        if (order.UserId != 0)
+            _ = _customerHub.Clients.Group($"user-{order.UserId}")
+                    .SendAsync("OrderStatusChanged", order.Id, status);
 
         // Notify customer of status change
         var email = order.User?.Email ?? order.ContactEmail;
@@ -152,7 +151,8 @@ public class AdminService : IAdminService
 
     public async Task<AdminReservationDto> UpdateReservationStatusAsync(long reservationId, string status)
     {
-        if (!ValidReservationStatuses.Contains(status))
+        var valid = new[] { "Pending", "Confirmed", "Cancelled" };
+        if (!valid.Contains(status))
             throw new InvalidOperationException($"Invalid status '{status}'.");
 
         var r = await _db.Reservations
@@ -162,6 +162,11 @@ public class AdminService : IAdminService
 
         r.Status = status;
         await _db.SaveChangesAsync();
+
+        // Push real-time update to the customer's browser
+        if (r.UserId.HasValue)
+            _ = _customerHub.Clients.Group($"user-{r.UserId.Value}")
+                    .SendAsync("ReservationStatusChanged", r.Id, status);
 
         // Notify customer of status change
         if (!string.IsNullOrWhiteSpace(r.ContactEmail))
@@ -540,6 +545,134 @@ public class AdminService : IAdminService
         await _db.SaveChangesAsync();
     }
 
+    // ── Order Status CRUD ────────────────────────────────────────────────────
+
+    public async Task<IReadOnlyList<OrderStatusDto>> GetOrderStatusesAsync()
+    {
+        var statuses = await _db.OrderStatuses
+            .AsNoTracking()
+            .OrderBy(s => s.DisplayOrder)
+            .ToListAsync();
+
+        return statuses.Select(s => new OrderStatusDto(
+            s.Id, s.Name, s.NameDa, s.ServiceType,
+            s.DisplayOrder, s.Color, s.IsTerminal, s.IsActive, s.CreatedAt
+        )).ToList();
+    }
+
+    public async Task<OrderStatusDto> CreateOrderStatusAsync(CreateOrderStatusRequest request)
+    {
+        var existing = await _db.OrderStatuses.AnyAsync(s => s.Name == request.Name.Trim());
+        if (existing)
+            throw new InvalidOperationException($"Order status '{request.Name}' already exists.");
+
+        var status = new Domain.Entities.OrderStatus
+        {
+            Name         = request.Name.Trim(),
+            NameDa       = request.NameDa?.Trim(),
+            ServiceType  = request.ServiceType,
+            DisplayOrder = request.DisplayOrder,
+            Color        = request.Color,
+            IsTerminal   = false,
+            IsActive     = true,
+        };
+        _db.OrderStatuses.Add(status);
+        await _db.SaveChangesAsync();
+
+        return new OrderStatusDto(
+            status.Id, status.Name, status.NameDa, status.ServiceType,
+            status.DisplayOrder, status.Color, status.IsTerminal, status.IsActive, status.CreatedAt);
+    }
+
+    public async Task<OrderStatusDto> UpdateOrderStatusMetaAsync(long id, UpdateOrderStatusMetaRequest request)
+    {
+        var status = await _db.OrderStatuses.FindAsync(id)
+            ?? throw new KeyNotFoundException($"Order status {id} not found.");
+
+        var duplicate = await _db.OrderStatuses.AnyAsync(s => s.Name == request.Name.Trim() && s.Id != id);
+        if (duplicate)
+            throw new InvalidOperationException($"Order status '{request.Name}' already exists.");
+
+        status.Name         = request.Name.Trim();
+        status.NameDa       = request.NameDa?.Trim();
+        status.ServiceType  = request.ServiceType;
+        status.DisplayOrder = request.DisplayOrder;
+        status.Color        = request.Color?.Trim();
+        status.IsActive     = request.IsActive;
+        await _db.SaveChangesAsync();
+
+        return new OrderStatusDto(
+            status.Id, status.Name, status.NameDa, status.ServiceType,
+            status.DisplayOrder, status.Color, status.IsTerminal, status.IsActive, status.CreatedAt);
+    }
+
+    public async Task DeleteOrderStatusAsync(long id)
+    {
+        var status = await _db.OrderStatuses.FindAsync(id)
+            ?? throw new KeyNotFoundException($"Order status {id} not found.");
+
+        var hasOrders = await _db.Orders.AnyAsync(o => o.OrderStatusId == id);
+        if (hasOrders)
+            throw new InvalidOperationException(
+                $"Cannot delete order status '{status.Name}' because it is in use by existing orders.");
+
+        _db.OrderStatuses.Remove(status);
+        await _db.SaveChangesAsync();
+    }
+
+    // ── Order Status Transition CRUD ─────────────────────────────────────────
+
+    public async Task<IReadOnlyList<OrderStatusTransitionDto>> GetOrderStatusTransitionsAsync()
+    {
+        var transitions = await _db.OrderStatusTransitions
+            .Include(t => t.FromStatus)
+            .Include(t => t.ToStatus)
+            .AsNoTracking()
+            .OrderBy(t => t.FromStatus.DisplayOrder)
+            .ThenBy(t => t.ToStatus.DisplayOrder)
+            .ToListAsync();
+
+        return transitions.Select(t => new OrderStatusTransitionDto(
+            t.Id, t.FromStatusId, t.ToStatusId, t.ServiceType,
+            t.FromStatus.Name, t.ToStatus.Name
+        )).ToList();
+    }
+
+    public async Task<OrderStatusTransitionDto> CreateOrderStatusTransitionAsync(CreateOrderStatusTransitionRequest request)
+    {
+        var duplicate = await _db.OrderStatusTransitions.AnyAsync(t =>
+            t.FromStatusId == request.FromStatusId &&
+            t.ToStatusId == request.ToStatusId &&
+            t.ServiceType == request.ServiceType);
+        if (duplicate)
+            throw new InvalidOperationException("This transition already exists.");
+
+        var transition = new Domain.Entities.OrderStatusTransition
+        {
+            FromStatusId = request.FromStatusId,
+            ToStatusId   = request.ToStatusId,
+            ServiceType  = request.ServiceType,
+        };
+        _db.OrderStatusTransitions.Add(transition);
+        await _db.SaveChangesAsync();
+
+        await _db.Entry(transition).Reference(t => t.FromStatus).LoadAsync();
+        await _db.Entry(transition).Reference(t => t.ToStatus).LoadAsync();
+
+        return new OrderStatusTransitionDto(
+            transition.Id, transition.FromStatusId, transition.ToStatusId, transition.ServiceType,
+            transition.FromStatus.Name, transition.ToStatus.Name);
+    }
+
+    public async Task DeleteOrderStatusTransitionAsync(long id)
+    {
+        var transition = await _db.OrderStatusTransitions.FindAsync(id)
+            ?? throw new KeyNotFoundException($"Order status transition {id} not found.");
+
+        _db.OrderStatusTransitions.Remove(transition);
+        await _db.SaveChangesAsync();
+    }
+
     // ── Mappers ───────────────────────────────────────────────────────────────
 
     private static AdminMenuDto ToAdminMenuDto(Domain.Entities.Menu m)
@@ -647,8 +780,41 @@ public class AdminService : IAdminService
 
     public async Task<IReadOnlyList<AdminBranchDto>> GetBranchesAsync()
     {
-        var branches = await _db.Branches.OrderBy(b => b.Name).ToListAsync();
-        return branches.Select(ToAdminBranchDto).ToList();
+        var today = DenmarkTime.Today;
+
+        var branches = await _db.Branches
+            .Include(b => b.Closures)
+            .Include(b => b.ServiceClosures)
+            .OrderBy(b => b.Name)
+            .ToListAsync();
+
+        return branches.Select(b => ToAdminBranchDto(b, today)).ToList();
+    }
+
+    private static AdminBranchDto ToAdminBranchDto(Branch b, DateOnly today)
+    {
+        // Active all-day instant closures for Delivery / Pickup (today only)
+        var deliveryClosure = b.Closures.FirstOrDefault(c =>
+            c.ClosureType == "DateRange" && c.Scope == "Delivery" && c.StartTime == null
+            && (c.StartDate ?? today) <= today && (c.EndDate ?? c.StartDate ?? today) >= today);
+        var pickupClosure = b.Closures.FirstOrDefault(c =>
+            c.ClosureType == "DateRange" && c.Scope == "Pickup" && c.StartTime == null
+            && (c.StartDate ?? today) <= today && (c.EndDate ?? c.StartDate ?? today) >= today);
+
+        // Active reservation closure (from BranchServiceClosure)
+        var reservationClosure = b.ServiceClosures.FirstOrDefault(c =>
+            c.ServiceType == "Reservation" && c.ReopenedAt == null);
+
+        return new AdminBranchDto(
+            b.Id, b.Name, b.AddressLine1, b.AddressLine2, b.City, b.PostalCode, b.Country,
+            b.Phone, b.Email, b.GoogleMapsLink,
+            b.ImageUrl, b.Rating, b.ReviewCount,
+            b.DeliveryFee, b.DeliveryFeeEnabled,
+            b.IsCloseOrder, b.CloseOrderNote, b.CloseOrderNoteDa,
+            reservationClosure != null, reservationClosure?.Note, reservationClosure?.NoteDa,
+            deliveryClosure != null, deliveryClosure?.Note, deliveryClosure?.NoteDa,
+            pickupClosure != null, pickupClosure?.Note, pickupClosure?.NoteDa,
+            b.MaxAdvanceDays);
     }
 
     public async Task<AdminBranchDto> CreateBranchAsync(CreateBranchRequest request)
@@ -707,7 +873,11 @@ public class AdminService : IAdminService
             b.Phone, b.Email, b.GoogleMapsLink,
             b.ImageUrl, b.Rating, b.ReviewCount,
             b.DeliveryFee, b.DeliveryFeeEnabled,
-            b.IsCloseOrder, b.IsCloseReservation, b.MaxAdvanceDays);
+            b.IsCloseOrder, b.CloseOrderNote, b.CloseOrderNoteDa,
+            false, null, null,
+            false, null, null,
+            false, null, null,
+            b.MaxAdvanceDays);
 
     // ── Customers ─────────────────────────────────────────────────────────────
 

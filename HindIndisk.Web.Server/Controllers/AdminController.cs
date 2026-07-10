@@ -1,5 +1,9 @@
+using HindIndisk.Api.Application.DTOs.About;
 using HindIndisk.Api.Application.DTOs.Admin;
+using HindIndisk.Api.Application.DTOs.Homepage;
 using HindIndisk.Api.Application.DTOs.Closure;
+using HindIndisk.Api.Application.DTOs.Gallery;
+using HindIndisk.Api.Application.DTOs.HeroSlide;
 using HindIndisk.Api.Application.DTOs.Schedule;
 using HindIndisk.Api.Application.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -20,25 +24,71 @@ public class AdminController : ControllerBase
     private readonly ScheduleService           _schedules;
     private readonly BranchServiceStatusService _serviceStatus;
     private readonly BranchClosureService       _closures;
+    private readonly IHeroSlideService          _heroSlides;
+    private readonly IGalleryImageService       _gallery;
+    private readonly IAboutService              _about;
+    private readonly IWhyChooseUsService        _whyChooseUs;
+    private readonly IHomeStorySectionService   _homeStory;
     private readonly IExceptionLogService       _exceptionLogs;
 
     public AdminController(
         IAdminService admin, IWebHostEnvironment env,
         ScheduleService schedules, BranchServiceStatusService serviceStatus,
-        BranchClosureService closures, IExceptionLogService exceptionLogs)
+        BranchClosureService closures, IHeroSlideService heroSlides,
+        IGalleryImageService gallery, IAboutService about,
+        IWhyChooseUsService whyChooseUs, IHomeStorySectionService homeStory,
+        IExceptionLogService exceptionLogs)
     {
         _admin         = admin;
         _env           = env;
         _schedules     = schedules;
         _serviceStatus = serviceStatus;
         _closures      = closures;
+        _heroSlides    = heroSlides;
+        _gallery       = gallery;
+        _about         = about;
+        _whyChooseUs   = whyChooseUs;
+        _homeStory     = homeStory;
         _exceptionLogs = exceptionLogs;
     }
 
     // POST /api/admin/upload/image
     [HttpPost("upload/image")]
     [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB
-    public async Task<IActionResult> UploadImage(IFormFile file)
+    public Task<IActionResult> UploadImage(IFormFile file)
+        => SaveUpload(file, "menu-items");
+
+    // POST /api/admin/upload/gallery
+    [HttpPost("upload/gallery")]
+    [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB
+    public Task<IActionResult> UploadGalleryImage(IFormFile file)
+        => SaveUpload(file, "gallery");
+
+    // POST /api/admin/upload/team
+    [HttpPost("upload/team")]
+    [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB
+    public Task<IActionResult> UploadTeamImage(IFormFile file)
+        => SaveUpload(file, "team");
+
+    // POST /api/admin/upload/branches
+    [HttpPost("upload/branches")]
+    [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB
+    public Task<IActionResult> UploadBranchImage(IFormFile file)
+        => SaveUpload(file, "branches");
+
+    // POST /api/admin/upload/hero-slides
+    [HttpPost("upload/hero-slides")]
+    [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB
+    public Task<IActionResult> UploadHeroSlideImage(IFormFile file)
+        => SaveUpload(file, "hero-slides");
+
+    // POST /api/admin/upload/about
+    [HttpPost("upload/about")]
+    [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB
+    public Task<IActionResult> UploadAboutImage(IFormFile file)
+        => SaveUpload(file, "about");
+
+    private async Task<IActionResult> SaveUpload(IFormFile file, string subfolder)
     {
         if (file is null || file.Length == 0)
             return BadRequest(new { message = "No file received." });
@@ -47,7 +97,7 @@ public class AdminController : ControllerBase
         if (!AllowedExtensions.Contains(ext))
             return BadRequest(new { message = $"File type '{ext}' is not allowed. Use jpg, png, webp or gif." });
 
-        var folder = Path.Combine(_env.WebRootPath, "images", "menu-items");
+        var folder = Path.Combine(_env.WebRootPath, "images", subfolder);
         Directory.CreateDirectory(folder);
 
         var fileName = $"{Guid.NewGuid()}{ext}";
@@ -56,8 +106,7 @@ public class AdminController : ControllerBase
         await using var stream = System.IO.File.Create(filePath);
         await file.CopyToAsync(stream);
 
-        var url = $"/images/menu-items/{fileName}";
-        return Ok(new { url });
+        return Ok(new { url = $"/images/{subfolder}/{fileName}" });
     }
 
     // GET /api/admin/dashboard
@@ -72,10 +121,69 @@ public class AdminController : ControllerBase
         [FromQuery] long?   branchId)
         => Ok(await _admin.GetOrdersAsync(status, branchId));
 
+    // ── Order Status CRUD ──────────────────────────────────────────────────
+
+    // GET /api/admin/order-statuses (public — reference data for customer UI)
+    [AllowAnonymous]
+    [HttpGet("order-statuses")]
+    public async Task<ActionResult<IReadOnlyList<OrderStatusDto>>> GetOrderStatuses()
+        => Ok(await _admin.GetOrderStatusesAsync());
+
+    // POST /api/admin/order-statuses
+    [HttpPost("order-statuses")]
+    public async Task<ActionResult<OrderStatusDto>> CreateOrderStatus([FromBody] CreateOrderStatusRequest request)
+    {
+        try   { return Ok(await _admin.CreateOrderStatusAsync(request)); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    // PUT /api/admin/order-statuses/{id}
+    [HttpPut("order-statuses/{id:long}")]
+    public async Task<ActionResult<OrderStatusDto>> UpdateOrderStatusMeta(
+        long id, [FromBody] UpdateOrderStatusMetaRequest request)
+    {
+        try   { return Ok(await _admin.UpdateOrderStatusMetaAsync(id, request)); }
+        catch (KeyNotFoundException ex)      { return NotFound(new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    // DELETE /api/admin/order-statuses/{id}
+    [HttpDelete("order-statuses/{id:long}")]
+    public async Task<IActionResult> DeleteOrderStatus(long id)
+    {
+        try   { await _admin.DeleteOrderStatusAsync(id); return NoContent(); }
+        catch (KeyNotFoundException ex)      { return NotFound(new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    // ── Order Status Transition CRUD ───────────────────────────────────────
+
+    // GET /api/admin/order-status-transitions
+    [HttpGet("order-status-transitions")]
+    public async Task<ActionResult<IReadOnlyList<OrderStatusTransitionDto>>> GetOrderStatusTransitions()
+        => Ok(await _admin.GetOrderStatusTransitionsAsync());
+
+    // POST /api/admin/order-status-transitions
+    [HttpPost("order-status-transitions")]
+    public async Task<ActionResult<OrderStatusTransitionDto>> CreateOrderStatusTransition(
+        [FromBody] CreateOrderStatusTransitionRequest request)
+    {
+        try   { return Ok(await _admin.CreateOrderStatusTransitionAsync(request)); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    // DELETE /api/admin/order-status-transitions/{id}
+    [HttpDelete("order-status-transitions/{id:long}")]
+    public async Task<IActionResult> DeleteOrderStatusTransition(long id)
+    {
+        try   { await _admin.DeleteOrderStatusTransitionAsync(id); return NoContent(); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
     // PATCH /api/admin/orders/{id}/status
     [HttpPatch("orders/{id:long}/status")]
     public async Task<ActionResult<AdminOrderDto>> UpdateOrderStatus(
-        long id, [FromBody] UpdateOrderStatusRequest request)
+        long id, [FromBody] OrderChangeStatusRequest request)
     {
         try   { return Ok(await _admin.UpdateOrderStatusAsync(id, request.Status, request.CancellationReason)); }
         catch (KeyNotFoundException ex)      { return NotFound(new { message = ex.Message }); }
@@ -350,7 +458,7 @@ public class AdminController : ControllerBase
         long id, [FromBody] ToggleServiceRequest request)
     {
         var adminEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "admin";
-        try   { return Ok(await _serviceStatus.ToggleAsync(id, request.ServiceType, request.IsClosed, adminEmail, request.Note)); }
+        try   { return Ok(await _serviceStatus.ToggleAsync(id, request.ServiceType, request.IsClosed, adminEmail, request.Note, request.NoteDa)); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
 
@@ -377,6 +485,231 @@ public class AdminController : ControllerBase
         try   { return Ok(await _admin.GetCustomerDetailAsync(id)); }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
     }
+
+    // ── Hero Slides ─────────────────────────────────────────────────────────
+
+    // GET /api/admin/hero-slides
+    [HttpGet("hero-slides")]
+    public async Task<ActionResult<IReadOnlyList<HeroSlideDto>>> GetHeroSlides()
+        => Ok(await _heroSlides.GetAllAsync());
+
+    // GET /api/admin/hero-slides/{id}
+    [HttpGet("hero-slides/{id:long}")]
+    public async Task<ActionResult<HeroSlideDto>> GetHeroSlide(long id)
+    {
+        var slide = await _heroSlides.GetByIdAsync(id);
+        return slide is null ? NotFound(new { message = $"Hero slide {id} not found." }) : Ok(slide);
+    }
+
+    // POST /api/admin/hero-slides
+    [HttpPost("hero-slides")]
+    public async Task<ActionResult<HeroSlideDto>> CreateHeroSlide([FromBody] CreateHeroSlideRequest request)
+        => Ok(await _heroSlides.CreateAsync(request));
+
+    // PUT /api/admin/hero-slides/{id}
+    [HttpPut("hero-slides/{id:long}")]
+    public async Task<ActionResult<HeroSlideDto>> UpdateHeroSlide(
+        long id, [FromBody] UpdateHeroSlideRequest request)
+    {
+        try { return Ok(await _heroSlides.UpdateAsync(id, request)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    // DELETE /api/admin/hero-slides/{id}
+    [HttpDelete("hero-slides/{id:long}")]
+    public async Task<IActionResult> DeleteHeroSlide(long id)
+    {
+        try { await _heroSlides.DeleteAsync(id); return NoContent(); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    // PUT /api/admin/hero-slides/{id}/reorder
+    [HttpPut("hero-slides/{id:long}/reorder")]
+    public async Task<ActionResult<HeroSlideDto>> ReorderHeroSlide(
+        long id, [FromBody] ReorderHeroSlideRequest request)
+    {
+        try { return Ok(await _heroSlides.ReorderAsync(id, request.SortOrder)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    // ── Gallery ───────────────────────────────────────────────────────────────
+
+    // GET /api/admin/gallery
+    [HttpGet("gallery")]
+    public async Task<ActionResult<IReadOnlyList<GalleryImageDto>>> GetGallery()
+        => Ok(await _gallery.GetAllAsync());
+
+    // POST /api/admin/gallery
+    [HttpPost("gallery")]
+    public async Task<ActionResult<GalleryImageDto>> CreateGalleryImage([FromBody] CreateGalleryImageRequest request)
+        => Ok(await _gallery.CreateAsync(request));
+
+    // PATCH /api/admin/gallery/{id}
+    [HttpPatch("gallery/{id:long}")]
+    public async Task<ActionResult<GalleryImageDto>> UpdateGalleryImage(
+        long id, [FromBody] UpdateGalleryImageRequest request)
+    {
+        try   { return Ok(await _gallery.UpdateAsync(id, request)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    // DELETE /api/admin/gallery/{id}
+    [HttpDelete("gallery/{id:long}")]
+    public async Task<IActionResult> DeleteGalleryImage(long id)
+    {
+        var deleted = await _gallery.DeleteAsync(id);
+        return deleted ? NoContent() : NotFound(new { message = $"Gallery image {id} not found." });
+    }
+
+    // PUT /api/admin/gallery/{id}/reorder
+    [HttpPut("gallery/{id:long}/reorder")]
+    public async Task<ActionResult<GalleryImageDto>> ReorderGalleryImage(
+        long id, [FromBody] int sortOrder)
+    {
+        try   { return Ok(await _gallery.ReorderAsync(id, sortOrder)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    // ── Why Choose Us ─────────────────────────────────────────────────────────
+
+    // GET /api/admin/why-choose-us
+    [HttpGet("why-choose-us")]
+    public async Task<IActionResult> GetWhyChooseUs()
+        => Ok(await _whyChooseUs.GetAllAsync());
+
+    // POST /api/admin/why-choose-us
+    [HttpPost("why-choose-us")]
+    public async Task<IActionResult> CreateWhyChooseUs([FromBody] SaveWhyChooseUsItemRequest req)
+        => Ok(await _whyChooseUs.CreateAsync(req));
+
+    // PUT /api/admin/why-choose-us/{id}
+    [HttpPut("why-choose-us/{id:long}")]
+    public async Task<IActionResult> UpdateWhyChooseUs(long id, [FromBody] SaveWhyChooseUsItemRequest req)
+    {
+        try   { return Ok(await _whyChooseUs.UpdateAsync(id, req)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    // DELETE /api/admin/why-choose-us/{id}
+    [HttpDelete("why-choose-us/{id:long}")]
+    public async Task<IActionResult> DeleteWhyChooseUs(long id)
+        => await _whyChooseUs.DeleteAsync(id) ? NoContent() : NotFound();
+
+    // ── Our Story section ─────────────────────────────────────────────────────
+
+    // GET /api/admin/home-story
+    [HttpGet("home-story")]
+    public async Task<IActionResult> GetHomeStory()
+        => Ok(await _homeStory.GetAsync());
+
+    // PATCH /api/admin/home-story
+    [HttpPatch("home-story")]
+    public async Task<IActionResult> UpdateHomeStory([FromBody] UpdateHomeStorySectionRequest req)
+        => Ok(await _homeStory.UpdateAsync(req));
+
+    // ── About page ────────────────────────────────────────────────────────────
+
+    // GET /api/admin/about/settings
+    [HttpGet("about/settings")]
+    public async Task<IActionResult> GetAboutSettings()
+        => Ok(await _about.GetSettingsAsync());
+
+    // PATCH /api/admin/about/settings
+    [HttpPatch("about/settings")]
+    public async Task<IActionResult> UpdateAboutSettings([FromBody] UpdateAboutSettingsRequest req)
+        => Ok(await _about.UpdateSettingsAsync(req));
+
+    // GET /api/admin/about/stats
+    [HttpGet("about/stats")]
+    public async Task<IActionResult> GetAboutStats()
+        => Ok(await _about.GetStatsAsync());
+
+    // POST /api/admin/about/stats
+    [HttpPost("about/stats")]
+    public async Task<IActionResult> CreateAboutStat([FromBody] SaveAboutStatRequest req)
+        => Ok(await _about.CreateStatAsync(req));
+
+    // PUT /api/admin/about/stats/{id}
+    [HttpPut("about/stats/{id:long}")]
+    public async Task<IActionResult> UpdateAboutStat(long id, [FromBody] SaveAboutStatRequest req)
+    {
+        try   { return Ok(await _about.UpdateStatAsync(id, req)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    // DELETE /api/admin/about/stats/{id}
+    [HttpDelete("about/stats/{id:long}")]
+    public async Task<IActionResult> DeleteAboutStat(long id)
+        => await _about.DeleteStatAsync(id) ? NoContent() : NotFound();
+
+    // GET /api/admin/about/mvv
+    [HttpGet("about/mvv")]
+    public async Task<IActionResult> GetAboutMvv()
+        => Ok(await _about.GetMvvAsync());
+
+    // POST /api/admin/about/mvv
+    [HttpPost("about/mvv")]
+    public async Task<IActionResult> CreateAboutMvv([FromBody] SaveAboutMvvRequest req)
+        => Ok(await _about.CreateMvvAsync(req));
+
+    // PUT /api/admin/about/mvv/{id}
+    [HttpPut("about/mvv/{id:long}")]
+    public async Task<IActionResult> UpdateAboutMvv(long id, [FromBody] SaveAboutMvvRequest req)
+    {
+        try   { return Ok(await _about.UpdateMvvAsync(id, req)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    // DELETE /api/admin/about/mvv/{id}
+    [HttpDelete("about/mvv/{id:long}")]
+    public async Task<IActionResult> DeleteAboutMvv(long id)
+        => await _about.DeleteMvvAsync(id) ? NoContent() : NotFound();
+
+    // GET /api/admin/about/timeline
+    [HttpGet("about/timeline")]
+    public async Task<IActionResult> GetAboutTimeline()
+        => Ok(await _about.GetTimelineAsync());
+
+    // POST /api/admin/about/timeline
+    [HttpPost("about/timeline")]
+    public async Task<IActionResult> CreateAboutTimelineItem([FromBody] SaveAboutTimelineRequest req)
+        => Ok(await _about.CreateTimelineItemAsync(req));
+
+    // PUT /api/admin/about/timeline/{id}
+    [HttpPut("about/timeline/{id:long}")]
+    public async Task<IActionResult> UpdateAboutTimelineItem(long id, [FromBody] SaveAboutTimelineRequest req)
+    {
+        try   { return Ok(await _about.UpdateTimelineItemAsync(id, req)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    // DELETE /api/admin/about/timeline/{id}
+    [HttpDelete("about/timeline/{id:long}")]
+    public async Task<IActionResult> DeleteAboutTimelineItem(long id)
+        => await _about.DeleteTimelineItemAsync(id) ? NoContent() : NotFound();
+
+    // GET /api/admin/about/team
+    [HttpGet("about/team")]
+    public async Task<IActionResult> GetAboutTeam()
+        => Ok(await _about.GetTeamAsync());
+
+    // POST /api/admin/about/team
+    [HttpPost("about/team")]
+    public async Task<IActionResult> CreateAboutTeamMember([FromBody] SaveTeamMemberRequest req)
+        => Ok(await _about.CreateTeamMemberAsync(req));
+
+    // PUT /api/admin/about/team/{id}
+    [HttpPut("about/team/{id:long}")]
+    public async Task<IActionResult> UpdateAboutTeamMember(long id, [FromBody] SaveTeamMemberRequest req)
+    {
+        try   { return Ok(await _about.UpdateTeamMemberAsync(id, req)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+    }
+
+    // DELETE /api/admin/about/team/{id}
+    [HttpDelete("about/team/{id:long}")]
+    public async Task<IActionResult> DeleteAboutTeamMember(long id)
+        => await _about.DeleteTeamMemberAsync(id) ? NoContent() : NotFound();
 
     // ── Exception logs ────────────────────────────────────────────────────────
 

@@ -1,4 +1,8 @@
+using HindIndisk.Api.Application.DTOs.About;
 using HindIndisk.Api.Application.DTOs.Closure;
+using HindIndisk.Api.Application.DTOs.Homepage;
+using HindIndisk.Api.Application.DTOs.Gallery;
+using HindIndisk.Api.Application.DTOs.HeroSlide;
 using HindIndisk.Api.Application.DTOs.Location;
 using HindIndisk.Api.Application.DTOs.Schedule;
 using HindIndisk.Api.Application.Services;
@@ -13,12 +17,25 @@ public class LocationsController : ControllerBase
     private readonly ILocationService    _locations;
     private readonly SlotService         _slots;
     private readonly BranchClosureService _closures;
+    private readonly IHeroSlideService   _heroSlides;
+    private readonly IGalleryImageService _gallery;
+    private readonly IAboutService            _about;
+    private readonly IWhyChooseUsService      _whyChooseUs;
+    private readonly IHomeStorySectionService _homeStory;
 
-    public LocationsController(ILocationService locations, SlotService slots, BranchClosureService closures)
+    public LocationsController(ILocationService locations, SlotService slots,
+        BranchClosureService closures, IHeroSlideService heroSlides,
+        IGalleryImageService gallery, IAboutService about,
+        IWhyChooseUsService whyChooseUs, IHomeStorySectionService homeStory)
     {
-        _locations = locations;
-        _slots     = slots;
-        _closures  = closures;
+        _locations   = locations;
+        _slots       = slots;
+        _closures    = closures;
+        _heroSlides  = heroSlides;
+        _gallery     = gallery;
+        _about       = about;
+        _whyChooseUs = whyChooseUs;
+        _homeStory   = homeStory;
     }
 
     /// <summary>All restaurant branches with address, hours, and contact details.</summary>
@@ -56,4 +73,34 @@ public class LocationsController : ControllerBase
         var result = await _slots.GetAvailableSlotsAsync(branchId, date, type);
         return Ok(result);
     }
+
+    /// <summary>Active hero banner slides for the homepage carousel.</summary>
+    [HttpGet("hero-slides")]
+    [ProducesResponseType(typeof(IReadOnlyList<HeroSlideDto>), 200)]
+    public async Task<IActionResult> GetHeroSlides()
+        => Ok(await _heroSlides.GetActiveAsync());
+
+    /// <summary>Active gallery images for the gallery page.</summary>
+    [HttpGet("gallery")]
+    [ProducesResponseType(typeof(IReadOnlyList<GalleryImageDto>), 200)]
+    public async Task<IActionResult> GetGallery()
+        => Ok(await _gallery.GetActiveAsync());
+
+    /// <summary>All About page content (settings, stats, MVV, timeline, team).</summary>
+    [HttpGet("about")]
+    [ProducesResponseType(typeof(AboutPageDto), 200)]
+    public async Task<IActionResult> GetAboutPage()
+        => Ok(await _about.GetPublicPageAsync());
+
+    /// <summary>Active Why Choose Us items for homepage.</summary>
+    [HttpGet("why-choose-us")]
+    [ProducesResponseType(typeof(IReadOnlyList<WhyChooseUsItemDto>), 200)]
+    public async Task<IActionResult> GetWhyChooseUs()
+        => Ok(await _whyChooseUs.GetActiveAsync());
+
+    /// <summary>Our Story section content and images for the homepage.</summary>
+    [HttpGet("home-story")]
+    [ProducesResponseType(typeof(HomeStorySectionDto), 200)]
+    public async Task<IActionResult> GetHomeStory()
+        => Ok(await _homeStory.GetAsync());
 }

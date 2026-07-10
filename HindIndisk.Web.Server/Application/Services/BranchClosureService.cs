@@ -45,6 +45,8 @@ public class BranchClosureService(ApplicationDbContext db, IHubContext<ClosureHu
             BranchId  = branchId,
             Scope     = scope,
             Note      = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
+            NoteDa    = string.IsNullOrWhiteSpace(request.NoteDa) ? null : request.NoteDa.Trim(),
+            DisplayBeforeDays = request.DisplayBeforeDays ?? 0,
             CreatedAt = DenmarkTime.Now,
             CreatedBy = adminEmail,
         };
@@ -253,5 +255,5 @@ public class BranchClosureService(ApplicationDbContext db, IHubContext<ClosureHu
             c.DayOfWeek is null ? null : (int)c.DayOfWeek.Value,
             c.StartTime?.ToString("HH:mm"),
             c.EndTime?.ToString("HH:mm"),
-            c.Note, c.CreatedAt, c.CreatedBy);
+            c.Note, c.NoteDa, c.DisplayBeforeDays, c.CreatedAt, c.CreatedBy);
 }

@@ -11,6 +11,8 @@ type ClosureRule = {
   startTime: string | null;
   endTime: string | null;
   note: string | null;
+  noteDa: string | null;
+  displayBeforeDays: number;
 };
 
 function scopeCovers(scope: string, service: string) {
@@ -59,5 +61,11 @@ export function usePublicClosures(branchIds: number[]) {
     return findActiveRule(results[idx]?.data ?? [], service)?.note ?? null;
   };
 
-  return { isClosedNow, closureNote };
+  const closureNoteDa = (branchId: number, service: string): string | null => {
+    const idx = branchIds.indexOf(branchId);
+    if (idx < 0) return null;
+    return findActiveRule(results[idx]?.data ?? [], service)?.noteDa ?? null;
+  };
+
+  return { isClosedNow, closureNote, closureNoteDa };
 }

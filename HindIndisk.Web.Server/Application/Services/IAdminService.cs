@@ -44,6 +44,17 @@ public interface IAdminService
     Task<AdminBranchDto>  CreateBranchAsync(CreateBranchRequest request);
     Task<AdminBranchDto>  UpdateBranchAsync(long branchId, UpdateBranchRequest request);
 
+    // ── Order Statuses ────────────────────────────────────────────────────────
+    Task<IReadOnlyList<OrderStatusDto>> GetOrderStatusesAsync();
+    Task<OrderStatusDto>               CreateOrderStatusAsync(CreateOrderStatusRequest request);
+    Task<OrderStatusDto>               UpdateOrderStatusMetaAsync(long id, UpdateOrderStatusMetaRequest request);
+    Task                               DeleteOrderStatusAsync(long id);
+
+    // ── Order Status Transitions ──────────────────────────────────────────────
+    Task<IReadOnlyList<OrderStatusTransitionDto>> GetOrderStatusTransitionsAsync();
+    Task<OrderStatusTransitionDto>               CreateOrderStatusTransitionAsync(CreateOrderStatusTransitionRequest request);
+    Task                                         DeleteOrderStatusTransitionAsync(long id);
+
     // ── Customers ─────────────────────────────────────────────────────────────
     Task<IReadOnlyList<AdminCustomerDto>> GetCustomersAsync(string? q);
     Task<AdminCustomerDetailDto>          GetCustomerDetailAsync(long customerId);

@@ -1,11 +1,32 @@
+import { useMemo } from "react";
 import { motion } from "framer-motion";
+import { Link } from "@tanstack/react-router";
+import { ArrowRight } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { galleryImages, faqs } from "@/data/mock";
 import { SectionHeading } from "./Branches";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useGalleryImages } from "@/hooks/useGalleryImages";
+import { BASE } from "@/lib/api/client";
+
+function resolveUrl(url: string) {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `${BASE}${url}`;
+}
 
 export function GalleryStrip() {
   const { t } = useI18n();
+  const { data: apiImages = [] } = useGalleryImages();
+
+  const images = useMemo(() => {
+    const pool = apiImages.length > 0
+      ? apiImages.map(img => resolveUrl(img.url))
+      : galleryImages;
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 12);
+  }, [apiImages]);
+
   return (
     <section className="py-24">
       <div className="mx-auto max-w-7xl px-6">
@@ -15,7 +36,7 @@ export function GalleryStrip() {
           subtitle={t("home.gallery.subtitle")}
         />
         <div className="mt-14 columns-2 gap-4 sm:columns-3 lg:columns-4 [&>*]:mb-4">
-          {galleryImages.map((src, i) => (
+          {images.map((src, i) => (
             <motion.div
               key={src}
               initial={{ opacity: 0, scale: 0.96 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}
@@ -26,6 +47,14 @@ export function GalleryStrip() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 transition group-hover:opacity-100" />
             </motion.div>
           ))}
+        </div>
+        <div className="mt-10 flex justify-center">
+          <Link
+            to="/gallery"
+            className="inline-flex items-center gap-2 rounded-full border border-primary/30 px-6 py-2.5 text-sm font-medium text-primary transition hover:bg-primary hover:text-primary-foreground"
+          >
+            {t("home.gallery.viewMore")} <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
       </div>
     </section>

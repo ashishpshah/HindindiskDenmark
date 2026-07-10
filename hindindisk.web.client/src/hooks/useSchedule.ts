@@ -9,6 +9,9 @@ export type DayScheduleDto = {
   slotIntervalMinutes: number;
   maxOrdersPerSlot: number;
   maxReservationsPerSlot: number;
+  isOpen: boolean;
+  offMessage: string | null;
+  offMessageDa: string | null;
 };
 
 export type UpsertDayScheduleInput = {
@@ -18,6 +21,9 @@ export type UpsertDayScheduleInput = {
   slotIntervalMinutes: number;
   maxOrdersPerSlot: number;
   maxReservationsPerSlot: number;
+  isOpen: boolean;
+  offMessage?: string | null;
+  offMessageDa?: string | null;
 };
 
 export function useSchedule(branchId: number) {

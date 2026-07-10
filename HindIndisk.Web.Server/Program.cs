@@ -52,6 +52,18 @@ namespace HindIndisk.Web.Server
 						IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
 						ClockSkew                = TimeSpan.Zero,
 					};
+					// SignalR WebSocket negotiation passes the token via query string
+					options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+					{
+						OnMessageReceived = ctx =>
+						{
+							var token = ctx.Request.Query["access_token"];
+							if (!string.IsNullOrEmpty(token) &&
+							    ctx.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+								ctx.Token = token;
+							return Task.CompletedTask;
+						}
+					};
 				});
 
 			builder.Services.AddAuthorization();
@@ -85,6 +97,11 @@ namespace HindIndisk.Web.Server
 			builder.Services.AddScoped<HindIndisk.Api.Application.Services.ScheduleService>();
 			builder.Services.AddScoped<HindIndisk.Api.Application.Services.BranchServiceStatusService>();
 			builder.Services.AddScoped<HindIndisk.Api.Application.Services.BranchClosureService>();
+			builder.Services.AddScoped<IHeroSlideService, HeroSlideService>();
+			builder.Services.AddScoped<IGalleryImageService, GalleryImageService>();
+			builder.Services.AddScoped<IAboutService, AboutService>();
+			builder.Services.AddScoped<IWhyChooseUsService, WhyChooseUsService>();
+			builder.Services.AddScoped<IHomeStorySectionService, HomeStorySectionService>();
 			builder.Services.AddTransient<IExceptionLogService, ExceptionLogService>();
 
 			// ── Email service ─────────────────────────────────────────────────────────────
@@ -171,6 +188,7 @@ namespace HindIndisk.Web.Server
 
 			app.MapControllers();
 			app.MapHub<ClosureHub>("/hubs/closures");
+			app.MapHub<CustomerHub>("/hubs/customer");
 			app.MapHealthChecks("/health");
 
 			app.MapFallbackToFile("/index.html");

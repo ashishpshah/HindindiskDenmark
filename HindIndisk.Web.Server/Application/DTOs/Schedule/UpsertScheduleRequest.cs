@@ -21,4 +21,12 @@ public class UpsertDayScheduleRequest
 
     [Range(1, 1000)]
     public int MaxReservationsPerSlot { get; set; } = 5;
+
+    public bool IsOpen { get; set; } = true;
+
+    [MaxLength(200)]
+    public string? OffMessage { get; set; }
+
+    [MaxLength(200)]
+    public string? OffMessageDa { get; set; }
 }

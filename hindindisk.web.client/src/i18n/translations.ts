@@ -204,6 +204,7 @@ export const translations = {
         eyebrow: "Galleri",
         title: "Et festmåltid for øjnene",
         subtitle: "Glimt af retterne og øjeblikke inde i Hind.",
+        viewMore: "Se hele galleriet",
       },
       faq: {
         eyebrow: "Godt at vide",
@@ -642,6 +643,7 @@ export const translations = {
         eyebrow: "Gallery",
         title: "A Feast For The Eyes",
         subtitle: "Glimpses of the dishes and moments inside Hind.",
+        viewMore: "View Full Gallery",
       },
       faq: {
         eyebrow: "Good To Know",

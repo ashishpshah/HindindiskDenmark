@@ -17,8 +17,8 @@ public class Order
     public decimal Discount { get; set; }
     public decimal Total { get; set; }
 
-    /// <summary>Placed | Accepted | Preparing | Ready | OutForDelivery | Completed | Cancelled</summary>
-    public string Status { get; set; } = "Placed";
+    public long OrderStatusId { get; set; }
+    public string Status { get; set; } = "New";
 
     // Contact details captured at order time
     public string  ContactName    { get; set; } = string.Empty;
@@ -42,6 +42,7 @@ public class Order
     // Populated when an admin/staff places the order on behalf of a customer
     public long? PlacedByUserId { get; set; }
 
+    public virtual OrderStatus OrderStatus { get; set; } = null!;
     public virtual User  User         { get; set; } = null!;
     public virtual User? PlacedByUser { get; set; }
     public virtual Branch Branch { get; set; } = null!;

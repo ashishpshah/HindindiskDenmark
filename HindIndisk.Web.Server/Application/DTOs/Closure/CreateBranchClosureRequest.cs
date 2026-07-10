@@ -8,5 +8,7 @@ public record CreateBranchClosureRequest(
     int?    DayOfWeek,    // 0 = Sunday .. 6 = Saturday (required for Weekly)
     string? StartTime,    // "HH:mm" optional — null = all-day
     string? EndTime,      // "HH:mm" optional — null = all-day
-    string? Note
+    string? Note,
+    string? NoteDa,
+    int?    DisplayBeforeDays
 );

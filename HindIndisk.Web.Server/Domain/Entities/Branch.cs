@@ -24,8 +24,7 @@ public class Branch
     public bool    DeliveryFeeEnabled { get; set; } = true;
     public bool    IsCloseOrder       { get; set; } = false;
     public string? CloseOrderNote     { get; set; }
-    public bool    IsCloseReservation { get; set; } = false;
-    public string? CloseReservationNote { get; set; }
+    public string? CloseOrderNoteDa   { get; set; }
     public int     MaxAdvanceDays     { get; set; } = 7;
 
     public virtual ICollection<BranchServiceClosure> ServiceClosures { get; set; } = [];

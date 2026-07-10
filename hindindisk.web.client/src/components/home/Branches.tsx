@@ -3,6 +3,13 @@ import { MapPin, Star } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useBranches } from "@/hooks/useBranches";
 import { useI18n } from "@/i18n/I18nProvider";
+import { BASE } from "@/lib/api/client";
+
+function resolveUrl(url: string) {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `${BASE}${url}`;
+}
 
 export function Branches() {
   const { t } = useI18n();
@@ -27,7 +34,7 @@ export function Branches() {
               className="group relative overflow-hidden rounded-3xl bg-card shadow-soft transition hover:shadow-elegant"
             >
               <div className="relative h-72 overflow-hidden">
-                <img src={b.imageUrl} alt={b.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-110" />
+                <img src={resolveUrl(b.imageUrl)} alt={b.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                 <div className="absolute left-5 top-5 inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1.5 text-xs font-medium">
                   <Star className="h-3.5 w-3.5 fill-primary text-primary" /> {b.rating} · {b.reviewCount.toLocaleString()} {t("home.branches.reviewsLabel")}

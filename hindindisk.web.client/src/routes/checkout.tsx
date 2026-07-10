@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronLeft, ChevronRight, Truck, Store, MapPin, CheckCircle2, Loader2, Banknote, UserCheck } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Truck, Store, MapPin, CheckCircle2, Loader2, Banknote, UserCheck, AlertTriangle } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { PageHero } from "@/components/PageHero";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import { useAvailableSlots } from "@/hooks/useAvailableSlots";
 import { useClosedDates } from "@/hooks/useClosedDates";
 import { useClosureHub } from "@/hooks/useClosureHub";
 import { usePublicClosures } from "@/hooks/usePublicClosures";
+import { useUpcomingClosures } from "@/hooks/useUpcomingClosures";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCustomerLookup, type CustomerAddress } from "@/hooks/useCustomerLookup";
 import { todayInDenmark } from "@/lib/denmarkTime";
@@ -106,8 +107,12 @@ function CheckoutPage() {
     return d.toISOString().slice(0, 10);
   }, [currentBranch, today]);
 
-  const { isOpen: branchOpen, slots: orderSlots, closeNote: slotsCloseNote, isLoading: slotsLoading } =
+  const { isOpen: branchOpen, slots: orderSlots, closeNote: slotsCloseNoteEn, closeNoteDa: slotsCloseNoteDa, isLoading: slotsLoading } =
     useAvailableSlots(currentBranch?.id, scheduledDate, orderType === "delivery" ? "delivery" : "pickup");
+  const slotsCloseNote = lang === "da" ? (slotsCloseNoteDa || slotsCloseNoteEn) : (slotsCloseNoteEn || slotsCloseNoteDa);
+
+  const upcomingClosures = useUpcomingClosures(currentBranch?.id);
+  const relevantUpcoming = upcomingClosures.filter(c => c.scope === "Restaurant" || c.scope.toLowerCase() === orderType);
 
   const isDateClosed   = useClosedDates(currentBranch?.id);
   const closedDateNote = isDateClosed(scheduledDate, orderType === "delivery" ? "Delivery" : "Pickup");
@@ -278,6 +283,28 @@ function CheckoutPage() {
 
         <div className="grid gap-8 lg:grid-cols-[1fr,380px]">
           <div className="rounded-3xl border bg-card p-6 sm:p-8 shadow-soft">
+            {relevantUpcoming.length > 0 && (
+              <div className="mb-6 space-y-2">
+                {relevantUpcoming.map((c, i) => (
+                  <div key={i} className="rounded-lg bg-orange-50 p-4 border border-orange-200 flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-orange-900">
+                        {lang === "da" ? "Kommende lukning" : "Upcoming Closure"}
+                      </p>
+                      <p className="text-sm text-orange-800 mt-1">
+                        {c.startDate === c.endDate ? formatDate(c.startDate + "T12:00:00") : `${formatDate(c.startDate + "T12:00:00")} - ${formatDate(c.endDate + "T12:00:00")}`}
+                      </p>
+                      {(lang === "da" ? c.noteDa : c.note) && (
+                        <p className="text-sm text-orange-800 italic mt-1">
+                          "{lang === "da" ? c.noteDa : c.note}"
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             <AnimatePresence mode="wait">
               <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
 

@@ -11,11 +11,11 @@ public class BranchServiceStatusService(ApplicationDbContext db, IHubContext<Clo
 {
     /// <summary>
     /// Toggle a service for a branch and record history.
-    /// "Order" and "Reservation" also flip the branch flag.
-    /// "Delivery" and "Pickup" only write history (the BranchClosure record is managed separately).
+    /// "Order" also flips the branch flag.
+    /// "Reservation", "Delivery" and "Pickup" only write history (the BranchClosure record is managed separately).
     /// </summary>
     public async Task<BranchServiceClosureDto> ToggleAsync(
-        long branchId, string serviceType, bool isClosed, string adminEmail, string? note = null)
+        long branchId, string serviceType, bool isClosed, string adminEmail, string? note = null, string? noteDa = null)
     {
         var branch = await db.Branches.FindAsync(branchId)
             ?? throw new KeyNotFoundException($"Branch {branchId} not found.");
@@ -24,13 +24,9 @@ public class BranchServiceStatusService(ApplicationDbContext db, IHubContext<Clo
         {
             branch.IsCloseOrder   = isClosed;
             branch.CloseOrderNote = isClosed ? (string.IsNullOrWhiteSpace(note) ? null : note.Trim()) : null;
+            branch.CloseOrderNoteDa = isClosed ? (string.IsNullOrWhiteSpace(noteDa) ? null : noteDa.Trim()) : null;
         }
-        else if (serviceType == "Reservation")
-        {
-            branch.IsCloseReservation   = isClosed;
-            branch.CloseReservationNote = isClosed ? (string.IsNullOrWhiteSpace(note) ? null : note.Trim()) : null;
-        }
-        // "Delivery" and "Pickup" — history only, no branch flag
+        // "Reservation", "Delivery" and "Pickup" — history only, no branch flag
 
         BranchServiceClosure history;
 
@@ -44,6 +40,7 @@ public class BranchServiceStatusService(ApplicationDbContext db, IHubContext<Clo
                 ClosedAt    = DenmarkTime.Now,
                 ClosedBy    = adminEmail,
                 Note        = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
+                NoteDa      = string.IsNullOrWhiteSpace(noteDa) ? null : noteDa.Trim(),
             };
             db.BranchServiceClosures.Add(history);
         }
@@ -87,7 +84,7 @@ public class BranchServiceStatusService(ApplicationDbContext db, IHubContext<Clo
         return new BranchServiceClosureDto(
             history.Id, branch.Id, branch.Name,
             history.ServiceType, history.ClosedAt,
-            history.ReopenedAt, history.ClosedBy, history.Note);
+            history.ReopenedAt, history.ClosedBy, history.Note, history.NoteDa);
     }
 
     /// <summary>Paginated history with optional filters.</summary>
@@ -115,17 +112,43 @@ public class BranchServiceStatusService(ApplicationDbContext db, IHubContext<Clo
 
         return rows.Select(c => new BranchServiceClosureDto(
             c.Id, c.BranchId, c.Branch.Name,
-            c.ServiceType, c.ClosedAt, c.ReopenedAt, c.ClosedBy, c.Note)).ToList();
+            c.ServiceType, c.ClosedAt, c.ReopenedAt, c.ClosedBy, c.Note, c.NoteDa)).ToList();
     }
 
     /// <summary>Current open/close status for all branches.</summary>
     public async Task<IReadOnlyList<AdminBranchDto>> GetAllStatusAsync()
     {
-        var branches = await db.Branches.OrderBy(b => b.Name).ToListAsync();
-        return branches.Select(b => new AdminBranchDto(
-            b.Id, b.Name, b.AddressLine1, b.AddressLine2, b.City, b.PostalCode, b.Country,
-            b.Phone, b.Email, b.GoogleMapsLink, b.ImageUrl, b.Rating, b.ReviewCount,
-            b.DeliveryFee, b.DeliveryFeeEnabled,
-            b.IsCloseOrder, b.IsCloseReservation, b.MaxAdvanceDays)).ToList();
+        var today = DenmarkTime.Today;
+
+        var branches = await db.Branches
+            .Include(b => b.Closures)
+            .Include(b => b.ServiceClosures)
+            .OrderBy(b => b.Name)
+            .ToListAsync();
+
+        return branches.Select(b =>
+        {
+            // Active all-day closures for Delivery / Pickup (today only)
+            var deliveryClosure = b.Closures.FirstOrDefault(c =>
+                c.ClosureType == "DateRange" && c.Scope == "Delivery" && c.StartTime == null
+                && (c.StartDate ?? today) <= today && (c.EndDate ?? c.StartDate ?? today) >= today);
+            var pickupClosure = b.Closures.FirstOrDefault(c =>
+                c.ClosureType == "DateRange" && c.Scope == "Pickup" && c.StartTime == null
+                && (c.StartDate ?? today) <= today && (c.EndDate ?? c.StartDate ?? today) >= today);
+
+            // Active reservation closure (no reopen time)
+            var reservationClosure = b.ServiceClosures.FirstOrDefault(c =>
+                c.ServiceType == "Reservation" && c.ReopenedAt == null);
+
+            return new AdminBranchDto(
+                b.Id, b.Name, b.AddressLine1, b.AddressLine2, b.City, b.PostalCode, b.Country,
+                b.Phone, b.Email, b.GoogleMapsLink, b.ImageUrl, b.Rating, b.ReviewCount,
+                b.DeliveryFee, b.DeliveryFeeEnabled,
+                b.IsCloseOrder, b.CloseOrderNote, b.CloseOrderNoteDa,
+                reservationClosure != null, reservationClosure?.Note, reservationClosure?.NoteDa,
+                deliveryClosure != null, deliveryClosure?.Note, deliveryClosure?.NoteDa,
+                pickupClosure != null, pickupClosure?.Note, pickupClosure?.NoteDa,
+                b.MaxAdvanceDays);
+        }).ToList();
     }
 }

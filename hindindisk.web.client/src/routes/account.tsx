@@ -1,5 +1,6 @@
 import { createFileRoute, Link, Outlet, useRouter, useRouterState, type LinkProps } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { CustomerHubProvider } from "@/context/CustomerHubContext";
 import {
   LayoutDashboard, User, ShoppingBag, CalendarCheck,
   MapPin, Ticket, LogOut,
@@ -185,7 +186,9 @@ function AccountLayout() {
 
           {/* Page content */}
           <main className="min-w-0">
-            <Outlet />
+            <CustomerHubProvider userId={user?.id}>
+              <Outlet />
+            </CustomerHubProvider>
           </main>
 
         </div>

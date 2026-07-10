@@ -93,7 +93,7 @@ export function BranchFields({ form, f, onImageChange, onSave, isSaving, onCance
           <Input value={form.googleMapsLink} onChange={f("googleMapsLink")} placeholder="https://maps.google.com/…" /></div>
         <div className="space-y-1.5 sm:col-span-2">
           <Label>Branch Photo</Label>
-          <ImagePicker value={form.imageUrl} onChange={onImageChange} />
+          <ImagePicker value={form.imageUrl} onChange={onImageChange} uploadUrl="/api/admin/upload/branches" />
         </div>
         <div className="space-y-1.5"><Label>Rating <span className="text-xs text-muted-foreground">(0–5)</span></Label>
           <Input type="number" min="0" max="5" step="0.1" value={form.rating} onChange={f("rating")} placeholder="4.8" /></div>

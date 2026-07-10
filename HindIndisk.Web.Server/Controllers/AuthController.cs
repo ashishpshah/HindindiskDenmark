@@ -104,7 +104,7 @@ public class AuthController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            // Surface rate-limit errors (cooldown / daily limit) to the client
+            // Surfaces rate-limit errors and email delivery failures to the client
             return BadRequest(new { message = ex.Message });
         }
     }

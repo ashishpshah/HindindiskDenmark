@@ -142,17 +142,28 @@ public class AuthService : IAuthService
 
         var otp = Random.Shared.Next(100_000, 1_000_000).ToString();
 
-        _db.PasswordOtps.Add(new PasswordOtp
+        var otpEntity = new PasswordOtp
         {
             Email     = normalizedEmail,
             OtpCode   = otp,
             CreatedAt = now,
             ExpiresAt = now.AddMinutes(OtpExpiryMinutes),
             IsUsed    = false,
-        });
+        };
+        _db.PasswordOtps.Add(otpEntity);
         await _db.SaveChangesAsync();
 
-        _ = _email.SendOtpEmailAsync(email.Trim(), $"{user.Firstname} {user.Lastname}".Trim(), otp);
+        try
+        {
+            await _email.SendOtpEmailAsync(email.Trim(), $"{user.Firstname} {user.Lastname}".Trim(), otp);
+        }
+        catch
+        {
+            // Roll back the saved OTP so the user can retry immediately without hitting the active-OTP block.
+            _db.PasswordOtps.Remove(otpEntity);
+            await _db.SaveChangesAsync();
+            throw;
+        }
     }
 
     public async Task<VerifyOtpResponse> VerifyOtpAsync(VerifyOtpRequest request)

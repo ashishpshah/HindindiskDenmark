@@ -13,11 +13,12 @@ function resolveUrl(url: string) {
 interface Props {
   value: string;
   onChange: (url: string) => void;
+  uploadUrl?: string;
 }
 
-export function ImagePicker({ value, onChange }: Props) {
+export function ImagePicker({ value, onChange, uploadUrl }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const upload   = useUploadImage();
+  const upload   = useUploadImage(uploadUrl);
 
   const handleFile = async (file: File) => {
     try {

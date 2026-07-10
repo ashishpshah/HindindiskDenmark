@@ -43,13 +43,15 @@ type ScheduleRow = {
   slotIntervalMinutes: number;
   maxOrdersPerSlot: number;
   maxReservationsPerSlot: number;
+  offMessage?: string;
+  offMessageDa?: string;
 };
 
 function buildDefaultRows(data: DayScheduleDto[]): ScheduleRow[] {
   return DAY_NAMES.map((_, day) => {
     const existing = data.find(d => d.dayOfWeek === day);
     return existing
-      ? { ...existing, dayOfWeek: day, isOpen: true }
+      ? { ...existing, dayOfWeek: day, isOpen: existing.isOpen, offMessage: existing.offMessage || undefined, offMessageDa: existing.offMessageDa || undefined }
       : { dayOfWeek: day, isOpen: false, openTime: "11:00", closeTime: "22:00",
           slotIntervalMinutes: 30, maxOrdersPerSlot: 10, maxReservationsPerSlot: 5 };
   });
@@ -217,7 +219,7 @@ function WeeklySchedulePanel({ branches }: { branches: AdminBranchDto[] }) {
 
   const handleSave = async () => {
     const openDays = rows.filter(r => r.isOpen).map(
-      ({ dayOfWeek, openTime, closeTime, slotIntervalMinutes, maxOrdersPerSlot, maxReservationsPerSlot }) => ({
+      ({ dayOfWeek, openTime, closeTime, slotIntervalMinutes, maxOrdersPerSlot, maxReservationsPerSlot }) => ({ isOpen: true,
         dayOfWeek, openTime, closeTime, slotIntervalMinutes, maxOrdersPerSlot, maxReservationsPerSlot,
       })
     );
@@ -277,7 +279,13 @@ function WeeklySchedulePanel({ branches }: { branches: AdminBranchDto[] }) {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground pt-1">Closed</p>
+                  <div className="flex flex-col gap-2 w-full pt-1 col-span-2 pl-4 pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">Closed for the day</span>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input placeholder="Weekly off message (EN) - optional" value={row.offMessage || ""} onChange={e => updateRow(row.dayOfWeek, { offMessage: e.target.value })} className="h-8 text-sm" />
+                      <Input placeholder="Weekly off message (DA) - optional" value={row.offMessageDa || ""} onChange={e => updateRow(row.dayOfWeek, { offMessageDa: e.target.value })} className="h-8 text-sm" />
+                    </div>
+                  </div>
                 )}
               </div>
             ))}
@@ -398,6 +406,7 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
   }, [instantBranchId, todaySchedule?.openTime, todaySchedule?.closeTime]);
 
   const [instantNotes, setInstantNotes] = useState<Record<ServiceKey, string>>({ Reservation: "", Delivery: "", Pickup: "" });
+  const [instantNotesDa, setInstantNotesDa] = useState<Record<ServiceKey, string>>({ Reservation: "", Delivery: "", Pickup: "" });
 
   // Instant Delivery/Pickup closes are stored as today-dated closures on the branch
   const { data: instantClosures = [] } = useClosures(instantBranchId ?? 0);
@@ -405,6 +414,7 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
   const deleteInstant = useDeleteClosure(instantBranchId ?? 0);
 
   const instantNoteFor = (s: ServiceKey) => instantNotes[s].trim() || undefined;
+  const instantNoteDaFor = (s: ServiceKey) => instantNotesDa[s].trim() || undefined;
 
   const instantOrderClosure = (scope: "Delivery" | "Pickup" | "Reservation") =>
     instantClosures.find(c => c.closureType === "DateRange" && c.scope === scope
@@ -468,8 +478,9 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
           startTime: hasTime ? t.from : undefined,
           endTime:   hasTime ? t.to   : undefined,
           note: instantNoteFor(s),
+          noteDa: instantNoteDaFor(s),
         });
-        await toggleService.mutateAsync({ branchId: instantBranchId!, serviceType: s, isClosed: true, note: instantNoteFor(s) });
+        await toggleService.mutateAsync({ branchId: instantBranchId!, serviceType: s, isClosed: true, note: instantNoteFor(s), noteDa: instantNoteDaFor(s) });
       }
       for (const s of toOpen) {
         const allExisting = instantClosures.filter(c =>
@@ -534,8 +545,8 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instantBranchId, today, instantClosures.length]);
 
-  type FutureRow = { closed: boolean; startDate: string; startTime: string; endDate: string; endTime: string; note: string; };
-  const defaultFutureRow = (): FutureRow => ({ closed: false, startDate: tomorrow, startTime: "00:00", endDate: tomorrow, endTime: "23:59", note: "" });
+  type FutureRow = { closed: boolean; startDate: string; startTime: string; endDate: string; endTime: string; note: string; noteDa: string; displayBeforeDays: number; };
+  const defaultFutureRow = (): FutureRow => ({ closed: false, startDate: tomorrow, startTime: "00:00", endDate: tomorrow, endTime: "23:59", note: "", noteDa: "", displayBeforeDays: 0 });
   const [futureRows, setFutureRows] = useState<Record<ServiceKey, FutureRow>>({
     Reservation: defaultFutureRow(),
     Pickup:      defaultFutureRow(),
@@ -555,6 +566,8 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
           startTime: hasTime ? row.startTime : undefined,
           endTime:   hasTime ? row.endTime   : undefined,
           note: row.note.trim() || undefined,
+          noteDa: row.noteDa.trim() || undefined,
+          displayBeforeDays: row.displayBeforeDays,
         });
       }
       toast.success(toAdd.length > 1 ? "Closures added." : "Closure added.");
@@ -692,9 +705,14 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
                         </>
                       )}
                     </div>
-                    <Input value={instantNotes[s]} maxLength={200} placeholder="Closing note (optional)"
-                      className="h-8 text-sm" disabled={isBlocked}
-                      onChange={e => setInstantNotes(prev => ({ ...prev, [s]: e.target.value }))} />
+                    <div className="flex gap-2 mt-2">
+                      <Input value={instantNotes[s] || ""} maxLength={200} placeholder="Closing note (EN) - optional"
+                        className="h-8 text-sm" disabled={isBlocked}
+                        onChange={e => setInstantNotes(prev => ({ ...prev, [s]: e.target.value }))} />
+                      <Input value={instantNotesDa[s] || ""} maxLength={200} placeholder="Closing note (DA) - optional"
+                        className="h-8 text-sm" disabled={isBlocked}
+                        onChange={e => setInstantNotesDa(prev => ({ ...prev, [s]: e.target.value }))} />
+                    </div>
                   </div>
                 );
               })}
@@ -763,9 +781,20 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
                   </div>
                 </div>
 
-                <Input value={row.note} maxLength={200} placeholder="Closing note (optional)"
-                  className="h-8 text-sm" disabled={!row.closed}
-                  onChange={e => updateFuture(s, { note: e.target.value })} />
+                <div className="flex gap-2 mt-1">
+                  <Input value={row.note} maxLength={200} placeholder="Closing note (EN) - optional"
+                    className="h-8 text-sm" disabled={!row.closed}
+                    onChange={e => updateFuture(s, { note: e.target.value })} />
+                  <Input value={row.noteDa} maxLength={200} placeholder="Closing note (DA) - optional"
+                    className="h-8 text-sm" disabled={!row.closed}
+                    onChange={e => updateFuture(s, { noteDa: e.target.value })} />
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Label className="text-xs text-muted-foreground whitespace-nowrap">Warn days before:</Label>
+                    <Input type="number" min={0} max={30} value={row.displayBeforeDays || ""} placeholder="Days"
+                      className="h-8 text-sm w-20" disabled={!row.closed}
+                      onChange={e => updateFuture(s, { displayBeforeDays: Number(e.target.value) })} />
+                  </div>
+                </div>
               </div>
             );
           })}

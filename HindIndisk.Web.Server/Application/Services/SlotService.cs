@@ -26,15 +26,19 @@ public class SlotService(ApplicationDbContext db, BranchClosureService closures)
         };
         var activeClosure = await closures.IsClosedAsync(branchId, date, closureService);
         if (activeClosure is not null)
-            return new SlotResultDto(false, [], activeClosure.Note);
+            return new SlotResultDto(false, [], activeClosure.Note, activeClosure.NoteDa);
 
         // Layer 1 — weekly schedule
         var schedule = await db.BranchDaySchedules
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.BranchId == branchId && s.DayOfWeek == dayOfWeek);
 
-        if (schedule is null)
-            return new SlotResultDto(false, []);
+        if (schedule is null || !schedule.IsOpen)
+        {
+            var note = schedule?.OffMessage ?? "We are closed today";
+            var noteDa = schedule?.OffMessageDa ?? "Vi har lukket i dag";
+            return new SlotResultDto(false, [], note, noteDa);
+        }
 
         // Layer 2 — generate raw slots
         var bufferMins = isReservation ? 90 : 30;

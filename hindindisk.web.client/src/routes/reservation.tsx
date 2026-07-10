@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormField } from "@/components/ui/FormField";
-import { CheckCircle2, Loader2, Users, UserCheck, AlertTriangle } from "lucide-react";
+import { CalendarDays, CheckCircle2, AlertCircle, Phone, Mail, FileText, Loader2, RefreshCw, XCircle, AlertTriangle, Users, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useBranches } from "@/hooks/useBranches";
 import { useCreateReservation, type ReservationDto } from "@/hooks/useCreateReservation";
@@ -21,6 +21,8 @@ import { useAvailableSlots } from "@/hooks/useAvailableSlots";
 import { useClosedDates } from "@/hooks/useClosedDates";
 import { useClosureHub } from "@/hooks/useClosureHub";
 import { usePublicClosures } from "@/hooks/usePublicClosures";
+import { useUpcomingClosures } from "@/hooks/useUpcomingClosures";
+import { formatDate } from "@/lib/dateFormat";
 import { nowInDenmark, todayInDenmark } from "@/lib/denmarkTime";
 import type { BranchDto } from "@/hooks/useBranches";
 
@@ -145,7 +147,7 @@ export const Route = createFileRoute("/reservation")({
 });
 
 function ReservationPage() {
-  const { t } = useI18n();
+  const { lang, t } = useI18n();
   const { user }                    = useAuth();
   const { branch: cartBranch } = useCart();
   const { data: branchesData = [] } = useBranches();
@@ -186,8 +188,12 @@ function ReservationPage() {
 
   const bannerBranch = selectedBranchObj?.name ?? cartBranch ?? "";
 
-  const { isOpen: branchOpen, slots, closeNote: slotsCloseNote, isLoading: slotsLoading } =
+  const { isOpen: branchOpen, slots, closeNote: slotsCloseNoteEn, closeNoteDa: slotsCloseNoteDa, isLoading: slotsLoading } =
     useAvailableSlots(selectedBranchObj?.id, form.date, "reservation");
+  const slotsCloseNote = lang === "da" ? (slotsCloseNoteDa || slotsCloseNoteEn) : (slotsCloseNoteEn || slotsCloseNoteDa);
+
+  const upcomingClosures = useUpcomingClosures(selectedBranchObj?.id);
+  const relevantUpcoming = upcomingClosures.filter(c => c.scope === "Restaurant" || c.scope === "Reservation");
 
   const isDateClosed   = useClosedDates(selectedBranchObj?.id);
   const closedDateNote = isDateClosed(form.date, "Reservation");
@@ -348,6 +354,28 @@ function ReservationPage() {
       )}
 
       <section className="mx-auto max-w-3xl px-6 py-20">
+        {relevantUpcoming.length > 0 && (
+          <div className="mb-6 space-y-2">
+            {relevantUpcoming.map((c, i) => (
+              <div key={i} className="rounded-lg bg-orange-50 p-4 border border-orange-200 flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-orange-900">
+                    {lang === "da" ? "Kommende lukning" : "Upcoming Closure"}
+                  </p>
+                  <p className="text-sm text-orange-800 mt-1">
+                    {c.startDate === c.endDate ? formatDate(c.startDate + "T12:00:00") : `${formatDate(c.startDate + "T12:00:00")} - ${formatDate(c.endDate + "T12:00:00")}`}
+                  </p>
+                  {(lang === "da" ? c.noteDa : c.note) && (
+                    <p className="text-sm text-orange-800 italic mt-1">
+                      "{lang === "da" ? c.noteDa : c.note}"
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         <form onSubmit={handleSubmit}
           className="rounded-3xl border bg-card p-8 shadow-elegant space-y-6 sm:p-10">
           <div className="grid gap-5 sm:grid-cols-2">
@@ -371,6 +399,7 @@ function ReservationPage() {
               <div className="grid gap-5 sm:grid-cols-2">
                 <FormField label={t("forms.dateLabel")}>
                   <Input type="date" required
+                    className="w-40"
                     min={todayInDenmark()}
                     value={form.date}
                     onChange={(e) => setForm({ ...form, date: e.target.value })} />
@@ -392,7 +421,7 @@ function ReservationPage() {
                     </div>
                   ) : slots.length > 0 ? (
                     <Select value={form.time} onValueChange={(v) => setForm({ ...form, time: v })}>
-                      <SelectTrigger className="rounded-full">
+                      <SelectTrigger className="w-36 rounded-full">
                         <SelectValue placeholder={t("forms.timeLabel")} />
                       </SelectTrigger>
                       <SelectContent>

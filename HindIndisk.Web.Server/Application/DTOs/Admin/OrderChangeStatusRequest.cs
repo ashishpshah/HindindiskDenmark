@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace HindIndisk.Api.Application.DTOs.Admin;
 
-public class UpdateOrderStatusRequest
+public class OrderChangeStatusRequest
 {
     [Required]
     public string  Status             { get; set; } = string.Empty;

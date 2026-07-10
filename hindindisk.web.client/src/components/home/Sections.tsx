@@ -4,12 +4,22 @@ import { Link } from "@tanstack/react-router";
 import { Plus, Star, ChefHat, Leaf, Bike, HeartHandshake, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { stats, whyChooseUs } from "@/data/mock";
+import { stats as mockStats, whyChooseUs as mockWhyChooseUs } from "@/data/mock";
 import { SectionHeading } from "./Branches";
 import { useMenuItems } from "@/hooks/useMenuItems";
 import { useBranches } from "@/hooks/useBranches";
 import { useCart } from "@/context/CartContext";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useAboutPage } from "@/hooks/useAboutPage";
+import { useWhyChooseUs } from "@/hooks/useWhyChooseUs";
+import { useHomeStorySection } from "@/hooks/useHomeStorySection";
+import { BASE } from "@/lib/api/client";
+
+function resolveUrl(url: string) {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `${BASE}${url}`;
+}
 
 const iconMap = { ChefHat, Leaf, Bike, HeartHandshake } as const;
 
@@ -35,42 +45,63 @@ function Counter({ value }: { value: string }) {
 
 export function About() {
   const { t, lang } = useI18n();
+  const { data: story } = useHomeStorySection();
+  const { data: about } = useAboutPage();
+
+  const da = lang === "da";
+
+  const mainImage    = resolveUrl(story?.mainImage    || "https://images.unsplash.com/photo-1505253758473-96b7015fcd40?auto=format&fit=crop&w=900&q=80");
+  const overlayImage = resolveUrl(story?.overlayImage || "https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=600&q=80");
+
+  const eyebrow       = (da ? story?.eyebrowDa            : story?.eyebrow)            || t("home.about.eyebrow");
+  const title         = (da ? story?.titleDa              : story?.title)              || t("home.about.title");
+  const subtitle      = (da ? story?.subtitleDa           : story?.subtitle)           || t("home.about.subtitle");
+  const badgeLabel    = (da ? story?.heritageBadgeLabelDa : story?.heritageBadgeLabel) || t("home.about.heritageLabel");
+  const badgeSince    = (da ? story?.heritageBadgeSinceDa : story?.heritageBadgeSince) || t("home.about.since");
+  const buttonText    = (da ? story?.buttonTextDa         : story?.buttonText)         || t("home.about.discoverBtn");
+  const buttonLink    = story?.buttonLink || "/about";
+
+  const stats = about?.stats.length
+    ? about.stats
+    : mockStats.map((s, i) => ({ id: i, value: s.value, label: s.label, labelDa: s.labelDa, sortOrder: i }));
+
   return (
     <section className="py-24">
       <div className="mx-auto grid max-w-7xl gap-14 px-6 lg:grid-cols-2 lg:items-center">
         <div className="relative">
           <motion.img
             initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-            src="https://images.unsplash.com/photo-1505253758473-96b7015fcd40?auto=format&fit=crop&w=900&q=80"
+            src={mainImage}
             className="aspect-[4/5] w-full rounded-3xl object-cover shadow-elegant"
             alt="Chef preparing dish"
           />
           <motion.img
             initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
-            src="https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=600&q=80"
+            src={overlayImage}
             className="absolute -bottom-10 -right-6 hidden h-56 w-44 rounded-3xl border-8 border-background object-cover shadow-soft sm:block"
             alt="Spices"
           />
           <div className="absolute -left-6 top-10 hidden rounded-2xl glass px-5 py-4 shadow-soft sm:flex sm:items-center sm:gap-3">
             <div className="grid h-12 w-12 place-items-center rounded-full gradient-primary text-primary-foreground"><ChefHat className="h-5 w-5" /></div>
             <div>
-              <div className="text-xs uppercase text-muted-foreground">{t("home.about.heritageLabel")}</div>
-              <div className="font-display text-lg font-semibold">{t("home.about.since")}</div>
+              <div className="text-xs uppercase text-muted-foreground">{badgeLabel}</div>
+              <div className="font-display text-lg font-semibold">{badgeSince}</div>
             </div>
           </div>
         </div>
         <div>
-          <SectionHeading center={false} eyebrow={t("home.about.eyebrow")} title={t("home.about.title")}
-            subtitle={t("home.about.subtitle")} />
+          <SectionHeading center={false} eyebrow={eyebrow} title={title} subtitle={subtitle} />
           <div className="mt-10 grid grid-cols-2 gap-6">
             {stats.map((s) => (
-              <div key={s.label} className="rounded-2xl border bg-card p-5 shadow-soft">
+              <div key={s.id} className="rounded-2xl border bg-card p-5 shadow-soft">
                 <Counter value={s.value} />
-                <div className="mt-1 text-sm text-muted-foreground">{lang === "da" ? s.labelDa : s.label}</div>
+                <div className="mt-1 text-sm text-muted-foreground">{da ? s.labelDa : s.label}</div>
               </div>
             ))}
           </div>
-          <Button asChild className="mt-10 gradient-primary text-primary-foreground"><Link to="/about">{t("home.about.discoverBtn")} <ArrowRight className="ml-1 h-4 w-4" /></Link></Button>
+          <Button asChild className="mt-10 gradient-primary text-primary-foreground">
+            <Link to={buttonLink as any}>{buttonText} <ArrowRight className="ml-1 h-4 w-4" /></Link>
+          </Button>
         </div>
       </div>
     </section>
@@ -160,7 +191,7 @@ export function FeaturedMenu() {
                 className="group relative w-full shrink-0 sm:w-[calc(50%-10px)] lg:w-[calc(33.333%-14px)] overflow-hidden rounded-3xl bg-card shadow-soft hover:shadow-elegant"
               >
                 <Link to="/menu/$name" params={{ name: m.name }} className="block relative h-56 overflow-hidden">
-                  <img src={m.imageUrl} alt={loc(m.name, m.nameDa)} className="h-full w-full object-cover transition duration-700 group-hover:scale-110" />
+                  <img src={resolveUrl(m.imageUrl)} alt={loc(m.name, m.nameDa)} className="h-full w-full object-cover transition duration-700 group-hover:scale-110" />
                   <div className="absolute left-4 top-4 rounded-full bg-white/95 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-black">{loc(m.category, m.categoryDa)}</div>
                 </Link>
                 <div className="p-5">
@@ -192,12 +223,18 @@ export function FeaturedMenu() {
 
 export function WhyChooseUs() {
   const { t, lang } = useI18n();
+  const { data: apiItems } = useWhyChooseUs();
+
+  const items = apiItems?.length
+    ? apiItems.map(w => ({ title: w.title, titleDa: w.titleDa, desc: w.description, descDa: w.descriptionDa, icon: w.icon }))
+    : mockWhyChooseUs;
+
   return (
     <section className="py-24">
       <div className="mx-auto max-w-7xl px-6">
         <SectionHeading eyebrow={t("home.whyChoose.eyebrow")} title={t("home.whyChoose.title")} subtitle={t("home.whyChoose.subtitle")} />
         <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {whyChooseUs.map((w, i) => {
+          {items.map((w, i) => {
             const Icon = iconMap[w.icon as keyof typeof iconMap];
             return (
               <motion.div
@@ -208,7 +245,7 @@ export function WhyChooseUs() {
                 className="group rounded-3xl border bg-card p-7 text-center shadow-soft transition hover:shadow-elegant"
               >
                 <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl gradient-primary text-primary-foreground shadow-glow">
-                  <Icon className="h-7 w-7" />
+                  {Icon && <Icon className="h-7 w-7" />}
                 </div>
                 <h3 className="mt-5 font-display text-xl font-semibold">{lang === "da" ? w.titleDa : w.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{lang === "da" ? w.descDa : w.desc}</p>

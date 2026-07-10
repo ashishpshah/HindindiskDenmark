@@ -13,4 +13,7 @@ public class ToggleServiceRequest
 
     [MaxLength(200)]
     public string? Note { get; set; }
+
+    [MaxLength(200)]
+    public string? NoteDa { get; set; }
 }

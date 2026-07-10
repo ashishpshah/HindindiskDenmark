@@ -17,6 +17,16 @@ public record AdminBranchDto(
     decimal DeliveryFee,
     bool    DeliveryFeeEnabled,
     bool    IsCloseOrder,
+    string? CloseOrderNote,
+    string? CloseOrderNoteDa,
     bool    IsCloseReservation,
+    string? CloseReservationNote,
+    string? CloseReservationNoteDa,
+    bool    IsCloseDelivery,
+    string? CloseDeliveryNote,
+    string? CloseDeliveryNoteDa,
+    bool    IsClosePickup,
+    string? ClosePickupNote,
+    string? ClosePickupNoteDa,
     int     MaxAdvanceDays
 );

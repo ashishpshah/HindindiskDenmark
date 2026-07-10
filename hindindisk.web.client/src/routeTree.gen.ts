@@ -25,9 +25,11 @@ import { Route as MenuIndexRouteImport } from './routes/menu.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AccountIndexRouteImport } from './routes/account.index'
 import { Route as MenuNameRouteImport } from './routes/menu.$name'
+import { Route as AdminWebsiteRouteImport } from './routes/admin.website'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminReservationsRouteImport } from './routes/admin.reservations'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
+import { Route as AdminOrderStatusesRouteImport } from './routes/admin.order-statuses'
 import { Route as AdminMenusRouteImport } from './routes/admin.menus'
 import { Route as AdminMenuRouteImport } from './routes/admin.menu'
 import { Route as AdminExceptionLogsRouteImport } from './routes/admin.exception-logs'
@@ -40,6 +42,9 @@ import { Route as AccountAddressesRouteImport } from './routes/account.addresses
 import { Route as AdminMenusIndexRouteImport } from './routes/admin.menus.index'
 import { Route as AdminMenuIndexRouteImport } from './routes/admin.menu.index'
 import { Route as AdminBranchesIndexRouteImport } from './routes/admin.branches.index'
+import { Route as AdminWebsiteHomepageRouteImport } from './routes/admin.website.Homepage'
+import { Route as AdminWebsiteGalleryRouteImport } from './routes/admin.website.Gallery'
+import { Route as AdminWebsiteAboutRouteImport } from './routes/admin.website.About'
 import { Route as AdminMenusNewRouteImport } from './routes/admin.menus.new'
 import { Route as AdminMenusMenuIdRouteImport } from './routes/admin.menus.$menuId'
 import { Route as AdminMenuNewRouteImport } from './routes/admin.menu.new'
@@ -127,6 +132,11 @@ const MenuNameRoute = MenuNameRouteImport.update({
   path: '/$name',
   getParentRoute: () => MenuRoute,
 } as any)
+const AdminWebsiteRoute = AdminWebsiteRouteImport.update({
+  id: '/website',
+  path: '/website',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -140,6 +150,11 @@ const AdminReservationsRoute = AdminReservationsRouteImport.update({
 const AdminOrdersRoute = AdminOrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminOrderStatusesRoute = AdminOrderStatusesRouteImport.update({
+  id: '/order-statuses',
+  path: '/order-statuses',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminMenusRoute = AdminMenusRouteImport.update({
@@ -202,6 +217,21 @@ const AdminBranchesIndexRoute = AdminBranchesIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminBranchesRoute,
 } as any)
+const AdminWebsiteHomepageRoute = AdminWebsiteHomepageRouteImport.update({
+  id: '/Homepage',
+  path: '/Homepage',
+  getParentRoute: () => AdminWebsiteRoute,
+} as any)
+const AdminWebsiteGalleryRoute = AdminWebsiteGalleryRouteImport.update({
+  id: '/Gallery',
+  path: '/Gallery',
+  getParentRoute: () => AdminWebsiteRoute,
+} as any)
+const AdminWebsiteAboutRoute = AdminWebsiteAboutRouteImport.update({
+  id: '/About',
+  path: '/About',
+  getParentRoute: () => AdminWebsiteRoute,
+} as any)
 const AdminMenusNewRoute = AdminMenusNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -255,9 +285,11 @@ export interface FileRoutesByFullPath {
   '/admin/exception-logs': typeof AdminExceptionLogsRoute
   '/admin/menu': typeof AdminMenuRouteWithChildren
   '/admin/menus': typeof AdminMenusRouteWithChildren
+  '/admin/order-statuses': typeof AdminOrderStatusesRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/reservations': typeof AdminReservationsRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/website': typeof AdminWebsiteRouteWithChildren
   '/menu/$name': typeof MenuNameRoute
   '/account/': typeof AccountIndexRoute
   '/admin/': typeof AdminIndexRoute
@@ -268,6 +300,9 @@ export interface FileRoutesByFullPath {
   '/admin/menu/new': typeof AdminMenuNewRoute
   '/admin/menus/$menuId': typeof AdminMenusMenuIdRoute
   '/admin/menus/new': typeof AdminMenusNewRoute
+  '/admin/website/About': typeof AdminWebsiteAboutRoute
+  '/admin/website/Gallery': typeof AdminWebsiteGalleryRoute
+  '/admin/website/Homepage': typeof AdminWebsiteHomepageRoute
   '/admin/branches/': typeof AdminBranchesIndexRoute
   '/admin/menu/': typeof AdminMenuIndexRoute
   '/admin/menus/': typeof AdminMenusIndexRoute
@@ -288,9 +323,11 @@ export interface FileRoutesByTo {
   '/account/reservations': typeof AccountReservationsRoute
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/exception-logs': typeof AdminExceptionLogsRoute
+  '/admin/order-statuses': typeof AdminOrderStatusesRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/reservations': typeof AdminReservationsRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/website': typeof AdminWebsiteRouteWithChildren
   '/menu/$name': typeof MenuNameRoute
   '/account': typeof AccountIndexRoute
   '/admin': typeof AdminIndexRoute
@@ -301,6 +338,9 @@ export interface FileRoutesByTo {
   '/admin/menu/new': typeof AdminMenuNewRoute
   '/admin/menus/$menuId': typeof AdminMenusMenuIdRoute
   '/admin/menus/new': typeof AdminMenusNewRoute
+  '/admin/website/About': typeof AdminWebsiteAboutRoute
+  '/admin/website/Gallery': typeof AdminWebsiteGalleryRoute
+  '/admin/website/Homepage': typeof AdminWebsiteHomepageRoute
   '/admin/branches': typeof AdminBranchesIndexRoute
   '/admin/menu': typeof AdminMenuIndexRoute
   '/admin/menus': typeof AdminMenusIndexRoute
@@ -328,9 +368,11 @@ export interface FileRoutesById {
   '/admin/exception-logs': typeof AdminExceptionLogsRoute
   '/admin/menu': typeof AdminMenuRouteWithChildren
   '/admin/menus': typeof AdminMenusRouteWithChildren
+  '/admin/order-statuses': typeof AdminOrderStatusesRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/reservations': typeof AdminReservationsRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/website': typeof AdminWebsiteRouteWithChildren
   '/menu/$name': typeof MenuNameRoute
   '/account/': typeof AccountIndexRoute
   '/admin/': typeof AdminIndexRoute
@@ -341,6 +383,9 @@ export interface FileRoutesById {
   '/admin/menu/new': typeof AdminMenuNewRoute
   '/admin/menus/$menuId': typeof AdminMenusMenuIdRoute
   '/admin/menus/new': typeof AdminMenusNewRoute
+  '/admin/website/About': typeof AdminWebsiteAboutRoute
+  '/admin/website/Gallery': typeof AdminWebsiteGalleryRoute
+  '/admin/website/Homepage': typeof AdminWebsiteHomepageRoute
   '/admin/branches/': typeof AdminBranchesIndexRoute
   '/admin/menu/': typeof AdminMenuIndexRoute
   '/admin/menus/': typeof AdminMenusIndexRoute
@@ -369,9 +414,11 @@ export interface FileRouteTypes {
     | '/admin/exception-logs'
     | '/admin/menu'
     | '/admin/menus'
+    | '/admin/order-statuses'
     | '/admin/orders'
     | '/admin/reservations'
     | '/admin/settings'
+    | '/admin/website'
     | '/menu/$name'
     | '/account/'
     | '/admin/'
@@ -382,6 +429,9 @@ export interface FileRouteTypes {
     | '/admin/menu/new'
     | '/admin/menus/$menuId'
     | '/admin/menus/new'
+    | '/admin/website/About'
+    | '/admin/website/Gallery'
+    | '/admin/website/Homepage'
     | '/admin/branches/'
     | '/admin/menu/'
     | '/admin/menus/'
@@ -402,9 +452,11 @@ export interface FileRouteTypes {
     | '/account/reservations'
     | '/admin/customers'
     | '/admin/exception-logs'
+    | '/admin/order-statuses'
     | '/admin/orders'
     | '/admin/reservations'
     | '/admin/settings'
+    | '/admin/website'
     | '/menu/$name'
     | '/account'
     | '/admin'
@@ -415,6 +467,9 @@ export interface FileRouteTypes {
     | '/admin/menu/new'
     | '/admin/menus/$menuId'
     | '/admin/menus/new'
+    | '/admin/website/About'
+    | '/admin/website/Gallery'
+    | '/admin/website/Homepage'
     | '/admin/branches'
     | '/admin/menu'
     | '/admin/menus'
@@ -441,9 +496,11 @@ export interface FileRouteTypes {
     | '/admin/exception-logs'
     | '/admin/menu'
     | '/admin/menus'
+    | '/admin/order-statuses'
     | '/admin/orders'
     | '/admin/reservations'
     | '/admin/settings'
+    | '/admin/website'
     | '/menu/$name'
     | '/account/'
     | '/admin/'
@@ -454,6 +511,9 @@ export interface FileRouteTypes {
     | '/admin/menu/new'
     | '/admin/menus/$menuId'
     | '/admin/menus/new'
+    | '/admin/website/About'
+    | '/admin/website/Gallery'
+    | '/admin/website/Homepage'
     | '/admin/branches/'
     | '/admin/menu/'
     | '/admin/menus/'
@@ -588,6 +648,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MenuNameRouteImport
       parentRoute: typeof MenuRoute
     }
+    '/admin/website': {
+      id: '/admin/website'
+      path: '/website'
+      fullPath: '/admin/website'
+      preLoaderRoute: typeof AdminWebsiteRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/settings': {
       id: '/admin/settings'
       path: '/settings'
@@ -607,6 +674,13 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/admin/orders'
       preLoaderRoute: typeof AdminOrdersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/order-statuses': {
+      id: '/admin/order-statuses'
+      path: '/order-statuses'
+      fullPath: '/admin/order-statuses'
+      preLoaderRoute: typeof AdminOrderStatusesRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/menus': {
@@ -692,6 +766,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/branches/'
       preLoaderRoute: typeof AdminBranchesIndexRouteImport
       parentRoute: typeof AdminBranchesRoute
+    }
+    '/admin/website/Homepage': {
+      id: '/admin/website/Homepage'
+      path: '/Homepage'
+      fullPath: '/admin/website/Homepage'
+      preLoaderRoute: typeof AdminWebsiteHomepageRouteImport
+      parentRoute: typeof AdminWebsiteRoute
+    }
+    '/admin/website/Gallery': {
+      id: '/admin/website/Gallery'
+      path: '/Gallery'
+      fullPath: '/admin/website/Gallery'
+      preLoaderRoute: typeof AdminWebsiteGalleryRouteImport
+      parentRoute: typeof AdminWebsiteRoute
+    }
+    '/admin/website/About': {
+      id: '/admin/website/About'
+      path: '/About'
+      fullPath: '/admin/website/About'
+      preLoaderRoute: typeof AdminWebsiteAboutRouteImport
+      parentRoute: typeof AdminWebsiteRoute
     }
     '/admin/menus/new': {
       id: '/admin/menus/new'
@@ -805,15 +900,33 @@ const AdminMenusRouteWithChildren = AdminMenusRoute._addFileChildren(
   AdminMenusRouteChildren,
 )
 
+interface AdminWebsiteRouteChildren {
+  AdminWebsiteAboutRoute: typeof AdminWebsiteAboutRoute
+  AdminWebsiteGalleryRoute: typeof AdminWebsiteGalleryRoute
+  AdminWebsiteHomepageRoute: typeof AdminWebsiteHomepageRoute
+}
+
+const AdminWebsiteRouteChildren: AdminWebsiteRouteChildren = {
+  AdminWebsiteAboutRoute: AdminWebsiteAboutRoute,
+  AdminWebsiteGalleryRoute: AdminWebsiteGalleryRoute,
+  AdminWebsiteHomepageRoute: AdminWebsiteHomepageRoute,
+}
+
+const AdminWebsiteRouteWithChildren = AdminWebsiteRoute._addFileChildren(
+  AdminWebsiteRouteChildren,
+)
+
 interface AdminRouteChildren {
   AdminBranchesRoute: typeof AdminBranchesRouteWithChildren
   AdminCustomersRoute: typeof AdminCustomersRoute
   AdminExceptionLogsRoute: typeof AdminExceptionLogsRoute
   AdminMenuRoute: typeof AdminMenuRouteWithChildren
   AdminMenusRoute: typeof AdminMenusRouteWithChildren
+  AdminOrderStatusesRoute: typeof AdminOrderStatusesRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminReservationsRoute: typeof AdminReservationsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminWebsiteRoute: typeof AdminWebsiteRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
@@ -823,9 +936,11 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminExceptionLogsRoute: AdminExceptionLogsRoute,
   AdminMenuRoute: AdminMenuRouteWithChildren,
   AdminMenusRoute: AdminMenusRouteWithChildren,
+  AdminOrderStatusesRoute: AdminOrderStatusesRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminReservationsRoute: AdminReservationsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
+  AdminWebsiteRoute: AdminWebsiteRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
 }
 

@@ -3,10 +3,12 @@ import { useRef } from "react";
 import { motion, useScroll, useSpring, useInView } from "framer-motion";
 import { Layout } from "@/components/Layout";
 import { PageHero } from "@/components/PageHero";
-import { teamMembers, timeline, stats } from "@/data/mock";
-import { Target, Sparkles, Heart } from "lucide-react";
+import { stats as mockStats, teamMembers as mockTeam, timeline as mockTimeline } from "@/data/mock";
+import { Target, Sparkles, Heart, Star, Shield, Leaf } from "lucide-react";
 import { WhyChooseUs } from "@/components/home/Sections";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useAboutPage, type AboutTimelineDto } from "@/hooks/useAboutPage";
+import { BASE } from "@/lib/api/client";
 
 export const Route = createFileRoute("/about")({
   head: () => ({
@@ -20,8 +22,20 @@ export const Route = createFileRoute("/about")({
   component: AboutPage,
 });
 
+function resolveUrl(url: string) {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `${BASE}${url}`;
+}
+
+const ICON_MAP: Record<string, React.ElementType> = {
+  Target, Sparkles, Heart, Star, Shield, Leaf,
+};
+
 function AboutPage() {
   const { t, lang } = useI18n();
+  const { data: about } = useAboutPage();
+
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -29,11 +43,28 @@ function AboutPage() {
   });
   const scaleY = useSpring(scrollYProgress, { stiffness: 80, damping: 25, restDelta: 0.001 });
 
-  const mvvItems = [
-    { title: t("pages.about.missionTitle"), desc: t("pages.about.missionDesc"), icon: Target },
-    { title: t("pages.about.visionTitle"),  desc: t("pages.about.visionDesc"),  icon: Sparkles },
-    { title: t("pages.about.valuesTitle"),  desc: t("pages.about.valuesDesc"),  icon: Heart },
-  ];
+  const heroImage  = about?.settings.heroImage  || "https://images.unsplash.com/photo-1505253758473-96b7015fcd40?auto=format&fit=crop&w=1920&q=80";
+  const storyImage = about?.settings.storyImage || "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=900&q=80";
+
+  const stats = about?.stats.length
+    ? about.stats
+    : mockStats.map((s, i) => ({ id: i, value: s.value, label: s.label, labelDa: s.labelDa, sortOrder: i }));
+
+  const mvvItems = about?.mvv.length
+    ? about.mvv
+    : [
+        { id: 1, title: t("pages.about.missionTitle"), titleDa: t("pages.about.missionTitle"), description: t("pages.about.missionDesc"), descriptionDa: t("pages.about.missionDesc"), icon: "Target", sortOrder: 0 },
+        { id: 2, title: t("pages.about.visionTitle"),  titleDa: t("pages.about.visionTitle"),  description: t("pages.about.visionDesc"),  descriptionDa: t("pages.about.visionDesc"),  icon: "Sparkles", sortOrder: 1 },
+        { id: 3, title: t("pages.about.valuesTitle"),  titleDa: t("pages.about.valuesTitle"),  description: t("pages.about.valuesDesc"),  descriptionDa: t("pages.about.valuesDesc"),  icon: "Heart", sortOrder: 2 },
+      ];
+
+  const timeline = about?.timeline.length
+    ? about.timeline
+    : mockTimeline.map((tm, i) => ({ id: i, year: tm.year, title: tm.title, titleDa: tm.titleDa, description: tm.desc, descriptionDa: tm.descDa, sortOrder: i }));
+
+  const team = about?.team.length
+    ? about.team
+    : mockTeam.map((m, i) => ({ id: i, name: m.name, role: m.role, roleDa: m.roleDa, image: m.image, sortOrder: i, isActive: true }));
 
   return (
     <Layout>
@@ -41,16 +72,16 @@ function AboutPage() {
         eyebrow={t("pages.about.eyebrow")}
         title={t("pages.about.title")}
         subtitle={t("pages.about.subtitle")}
-        image="https://images.unsplash.com/photo-1505253758473-96b7015fcd40?auto=format&fit=crop&w=1920&q=80"
+        image={resolveUrl(heroImage)}
       />
 
       <section className="mx-auto grid max-w-7xl gap-14 px-6 py-24 lg:grid-cols-2 lg:items-center">
         {/* Left Column: Image and Stats */}
         <div className="space-y-6">
-          <img src="https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=900&q=80" alt="Restaurant interior" className="aspect-[16/10] w-full rounded-3xl object-cover shadow-elegant" />
+          <img src={resolveUrl(storyImage)} alt="Restaurant interior" className="aspect-[16/10] w-full rounded-3xl object-cover shadow-elegant" />
           <div className="grid grid-cols-2 gap-4">
             {stats.map((s) => (
-              <div key={s.label} className="rounded-2xl border bg-card p-5 shadow-soft">
+              <div key={s.id} className="rounded-2xl border bg-card p-5 shadow-soft">
                 <div className="font-display text-3xl font-bold text-gradient">{s.value}</div>
                 <div className="mt-1 text-sm text-muted-foreground">{lang === "da" ? s.labelDa : s.label}</div>
               </div>
@@ -66,10 +97,12 @@ function AboutPage() {
 
           <div className="mt-8 space-y-4">
             {mvvItems.map((item, idx) => {
-              const IconComponent = item.icon;
+              const IconComponent = ICON_MAP[item.icon] ?? Target;
+              const title = lang === "da" ? item.titleDa : item.title;
+              const desc  = lang === "da" ? item.descriptionDa : item.description;
               return (
                 <motion.div
-                  key={item.title}
+                  key={item.id}
                   initial={{ opacity: 0, x: 20 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
@@ -80,8 +113,8 @@ function AboutPage() {
                     <IconComponent className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="font-display text-lg font-bold text-foreground">{item.title}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
+                    <h3 className="font-display text-lg font-bold text-foreground">{title}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{desc}</p>
                   </div>
                 </motion.div>
               );
@@ -100,18 +133,14 @@ function AboutPage() {
           </div>
 
           <div ref={containerRef} className="mt-20 relative">
-            {/* Background Timeline Line */}
             <div className="absolute left-4 top-4 bottom-4 w-[3px] bg-border sm:left-1/2 sm:-translate-x-1/2 rounded-full" />
-
-            {/* Active Highlight Progress Line */}
             <motion.div
               style={{ scaleY }}
               className="absolute left-4 top-4 bottom-4 w-[3px] bg-primary sm:left-1/2 sm:-translate-x-1/2 origin-top rounded-full shadow-glow"
             />
-
             <div className="space-y-16">
               {timeline.map((tm, idx) => (
-                <TimelineItem key={tm.year} tm={tm} idx={idx} lang={lang} />
+                <TimelineItem key={tm.id} tm={tm} idx={idx} lang={lang} />
               ))}
             </div>
           </div>
@@ -125,11 +154,11 @@ function AboutPage() {
             <h2 className="mt-3 font-display text-4xl font-bold">{t("pages.about.teamTitle")}</h2>
           </div>
           <div className="mt-14 grid gap-8 sm:grid-cols-3">
-            {teamMembers.map((m, i) => (
-              <motion.div key={m.name} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
+            {team.map((m, i) => (
+              <motion.div key={m.id} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
                 className="group overflow-hidden rounded-3xl bg-card shadow-soft hover:shadow-elegant transition">
                 <div className="overflow-hidden">
-                  <img src={m.image} alt={m.name} className="aspect-[3/4] w-full object-cover transition duration-700 group-hover:scale-110" />
+                  <img src={resolveUrl(m.image)} alt={m.name} className="aspect-[3/4] w-full object-cover transition duration-700 group-hover:scale-110" />
                 </div>
                 <div className="p-5 text-center">
                   <div className="font-display text-xl font-semibold">{m.name}</div>
@@ -144,7 +173,7 @@ function AboutPage() {
   );
 }
 
-function TimelineItem({ tm, idx, lang }: { tm: typeof timeline[number]; idx: number; lang: string }) {
+function TimelineItem({ tm, idx, lang }: { tm: AboutTimelineDto; idx: number; lang: string }) {
   const elementRef = useRef<HTMLDivElement>(null);
   const isActive = useInView(elementRef, {
     once: false,
@@ -152,14 +181,10 @@ function TimelineItem({ tm, idx, lang }: { tm: typeof timeline[number]; idx: num
   });
 
   const itemTitle = lang === "da" ? tm.titleDa : tm.title;
-  const itemDesc  = lang === "da" ? tm.descDa  : tm.desc;
+  const itemDesc  = lang === "da" ? tm.descriptionDa : tm.description;
 
   return (
-    <div
-      ref={elementRef}
-      className="relative grid gap-8 pl-12 sm:grid-cols-2 sm:pl-0"
-    >
-      {/* Central Bullet dot with active styling */}
+    <div ref={elementRef} className="relative grid gap-8 pl-12 sm:grid-cols-2 sm:pl-0">
       <div className="absolute left-2 top-8 z-10 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2">
         <motion.div
           animate={{
@@ -173,10 +198,7 @@ function TimelineItem({ tm, idx, lang }: { tm: typeof timeline[number]; idx: num
           className="grid h-6 w-6 place-items-center rounded-full border-[3px] border-background"
         >
           <motion.div
-            animate={{
-              backgroundColor: isActive ? "#FFFFFF" : "#94A3B8",
-              scale: isActive ? 1 : 0.8
-            }}
+            animate={{ backgroundColor: isActive ? "#FFFFFF" : "#94A3B8", scale: isActive ? 1 : 0.8 }}
             className="h-2 w-2 rounded-full"
           />
         </motion.div>
@@ -185,17 +207,11 @@ function TimelineItem({ tm, idx, lang }: { tm: typeof timeline[number]; idx: num
       {idx % 2 === 0 ? (
         <>
           <motion.div
-            animate={{
-              opacity: isActive ? 1 : 0.45,
-              x: isActive ? 0 : -20,
-              scale: isActive ? 1 : 0.96,
-            }}
+            animate={{ opacity: isActive ? 1 : 0.45, x: isActive ? 0 : -20, scale: isActive ? 1 : 0.96 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
             className="bg-card border p-7 rounded-3xl shadow-soft hover:shadow-elegant transition duration-300 sm:mr-8 sm:text-right"
           >
-            <div className={`font-display text-4xl font-extrabold transition duration-300 ${isActive ? "text-primary text-shadow-glow" : "text-muted-foreground/60"}`}>
-              {tm.year}
-            </div>
+            <div className={`font-display text-4xl font-extrabold transition duration-300 ${isActive ? "text-primary text-shadow-glow" : "text-muted-foreground/60"}`}>{tm.year}</div>
             <div className="mt-2 text-xl font-bold text-foreground">{itemTitle}</div>
             <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{itemDesc}</p>
           </motion.div>
@@ -205,17 +221,11 @@ function TimelineItem({ tm, idx, lang }: { tm: typeof timeline[number]; idx: num
         <>
           <div className="hidden sm:block" />
           <motion.div
-            animate={{
-              opacity: isActive ? 1 : 0.45,
-              x: isActive ? 0 : 20,
-              scale: isActive ? 1 : 0.96,
-            }}
+            animate={{ opacity: isActive ? 1 : 0.45, x: isActive ? 0 : 20, scale: isActive ? 1 : 0.96 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
             className="bg-card border p-7 rounded-3xl shadow-soft hover:shadow-elegant transition duration-300 sm:ml-8 sm:text-left"
           >
-            <div className={`font-display text-4xl font-extrabold transition duration-300 ${isActive ? "text-primary text-shadow-glow" : "text-muted-foreground/60"}`}>
-              {tm.year}
-            </div>
+            <div className={`font-display text-4xl font-extrabold transition duration-300 ${isActive ? "text-primary text-shadow-glow" : "text-muted-foreground/60"}`}>{tm.year}</div>
             <div className="mt-2 text-xl font-bold text-foreground">{itemTitle}</div>
             <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{itemDesc}</p>
           </motion.div>

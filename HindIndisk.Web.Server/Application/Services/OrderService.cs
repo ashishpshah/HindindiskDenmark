@@ -159,6 +159,9 @@ public class OrderService : IOrderService
                     ? "Delivery is not available on the selected date."
                     : "Pickup is not available on the selected date.");
 
+        var newStatus = await _db.OrderStatuses
+            .FirstAsync(s => s.Name == "New" && s.IsActive);
+
         // Persist order
         var order = new Order
         {
@@ -170,7 +173,8 @@ public class OrderService : IOrderService
             Tax             = tax,
             Discount        = discount,
             Total           = total,
-            Status          = "Placed",
+            Status          = "New",
+            OrderStatusId   = newStatus.Id,
             ContactName     = $"{request.Firstname?.Trim()} {request.Lastname?.Trim()}".Trim(),
             ContactPhone    = request.Phone?.Trim() ?? string.Empty,
             ContactEmail    = request.Email.Trim(),
@@ -217,7 +221,7 @@ public class OrderService : IOrderService
         _db.OrderStatusHistories.Add(new Domain.Entities.OrderStatusHistory
         {
             OrderId   = order.Id,
-            Status    = "Placed",
+            Status    = "New",
         });
 
         if (appliedOffer is not null)
@@ -248,7 +252,7 @@ public class OrderService : IOrderService
 
         var dto = new OrderDto(order.Id, order.OrderType, branch.Name,
             order.Subtotal, order.DeliveryFee, order.Tax, order.Discount, order.Total,
-            order.Status, order.CreatedAt, itemDtos, appliedOffer?.CouponCode,
+            order.Status, newStatus.Color, newStatus.NameDa, order.CreatedAt, itemDtos, appliedOffer?.CouponCode,
             order.ContactName, order.ContactPhone, order.ContactEmail,
             order.DeliveryAddress, order.PaymentMethod,
             order.ScheduledDate, order.ScheduledTime, order.SpecialInstructions,
@@ -271,6 +275,7 @@ public class OrderService : IOrderService
     {
         var order = await _db.Orders
             .Include(o => o.Branch)
+            .Include(o => o.OrderStatus)
             .Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem)
             .Include(o => o.AppliedOffers).ThenInclude(ao => ao.Offer)
             .Include(o => o.PlacedByUser)
@@ -286,6 +291,7 @@ public class OrderService : IOrderService
         var orders = await _db.Orders
             .Where(o => o.UserId == userId)
             .Include(o => o.Branch)
+            .Include(o => o.OrderStatus)
             .Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem)
             .Include(o => o.AppliedOffers).ThenInclude(ao => ao.Offer)
             .Include(o => o.PlacedByUser)
@@ -314,7 +320,7 @@ public class OrderService : IOrderService
 
         return new OrderDto(o.Id, o.OrderType, o.Branch.Name,
             o.Subtotal, o.DeliveryFee, o.Tax, o.Discount, o.Total,
-            o.Status, o.CreatedAt, items, couponCode,
+            o.Status, o.OrderStatus?.Color, o.OrderStatus?.NameDa, o.CreatedAt, items, couponCode,
             o.ContactName, o.ContactPhone, o.ContactEmail,
             o.DeliveryAddress, o.PaymentMethod,
             o.ScheduledDate, o.ScheduledTime, o.SpecialInstructions,

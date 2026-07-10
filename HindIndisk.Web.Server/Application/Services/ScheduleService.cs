@@ -43,6 +43,9 @@ public class ScheduleService(ApplicationDbContext db)
             SlotIntervalMinutes    = r.SlotIntervalMinutes,
             MaxOrdersPerSlot       = r.MaxOrdersPerSlot,
             MaxReservationsPerSlot = r.MaxReservationsPerSlot,
+            IsOpen                 = r.IsOpen,
+            OffMessage             = string.IsNullOrWhiteSpace(r.OffMessage) ? null : r.OffMessage.Trim(),
+            OffMessageDa           = string.IsNullOrWhiteSpace(r.OffMessageDa) ? null : r.OffMessageDa.Trim(),
         }).ToList();
 
         await db.BranchDaySchedules.AddRangeAsync(newRows);
@@ -53,5 +56,6 @@ public class ScheduleService(ApplicationDbContext db)
     private static BranchDayScheduleDto ToDto(BranchDaySchedule s) =>
         new((int)s.DayOfWeek, DayNames[(int)s.DayOfWeek],
             s.OpenTime.ToString("HH:mm"), s.CloseTime.ToString("HH:mm"),
-            s.SlotIntervalMinutes, s.MaxOrdersPerSlot, s.MaxReservationsPerSlot);
+            s.SlotIntervalMinutes, s.MaxOrdersPerSlot, s.MaxReservationsPerSlot,
+            s.IsOpen, s.OffMessage, s.OffMessageDa);
 }

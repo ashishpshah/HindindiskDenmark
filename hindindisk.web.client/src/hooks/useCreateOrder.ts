@@ -34,6 +34,8 @@ export type OrderDto = {
   discount: number;
   total: number;
   status: string;
+  statusColor?: string;
+  statusNameDa?: string;
   createdAt: string;
   items: OrderItemDto[];
   couponCode?: string;

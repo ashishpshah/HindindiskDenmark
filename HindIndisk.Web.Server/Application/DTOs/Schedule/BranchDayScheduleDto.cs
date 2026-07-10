@@ -7,5 +7,8 @@ public record BranchDayScheduleDto(
     string CloseTime,
     int    SlotIntervalMinutes,
     int    MaxOrdersPerSlot,
-    int    MaxReservationsPerSlot
+    int    MaxReservationsPerSlot,
+    bool   IsOpen,
+    string? OffMessage,
+    string? OffMessageDa
 );

@@ -10,6 +10,8 @@ public record OrderDto(
     decimal Discount,
     decimal Total,
     string Status,
+    string? StatusColor,
+    string? StatusNameDa,
     DateTime CreatedAt,
     IReadOnlyList<OrderItemDto> Items,
     string? CouponCode,

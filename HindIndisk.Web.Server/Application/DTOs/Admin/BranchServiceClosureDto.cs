@@ -8,5 +8,6 @@ public record BranchServiceClosureDto(
     DateTime  ClosedAt,
     DateTime? ReopenedAt,    // null = still closed
     string?   ClosedBy,
-    string?   Note
+    string?   Note,
+    string?   NoteDa
 );
