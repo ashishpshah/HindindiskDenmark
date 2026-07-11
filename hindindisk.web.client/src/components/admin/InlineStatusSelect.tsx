@@ -7,6 +7,7 @@ interface Props {
 export function InlineStatusSelect({ active, onToggle, disabled }: Props) {
   return (
     <select
+      data-tagid="inline-status-select-toggle"
       value={active ? "1" : "0"}
       disabled={disabled}
       onChange={onToggle}

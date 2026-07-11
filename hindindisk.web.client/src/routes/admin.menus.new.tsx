@@ -47,12 +47,12 @@ function MenuNewPage() {
             <Label>Name *</Label>
             <Input autoFocus placeholder="e.g. Starters" value={name}
               onChange={e => setName(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleSave()} />
+              onKeyDown={e => e.key === "Enter" && handleSave()} data-tagid="input-menus-name" />
           </div>
           <div className="space-y-1.5">
             <Label>Name <span className="text-xs text-muted-foreground">(Danish)</span></Label>
             <Input placeholder="e.g. Forretter" value={nameDa}
-              onChange={e => setNameDa(e.target.value)} />
+              onChange={e => setNameDa(e.target.value)} data-tagid="input-menus-nameda" />
           </div>
         </div>
 
@@ -61,12 +61,12 @@ function MenuNewPage() {
           <div className="space-y-1.5">
             <Label>Description</Label>
             <Input placeholder="Short description" value={desc}
-              onChange={e => setDesc(e.target.value)} />
+              onChange={e => setDesc(e.target.value)} data-tagid="input-menus-description" />
           </div>
           <div className="space-y-1.5">
             <Label>Description <span className="text-xs text-muted-foreground">(Danish)</span></Label>
             <Input placeholder="Kort beskrivelse" value={descDa}
-              onChange={e => setDescDa(e.target.value)} />
+              onChange={e => setDescDa(e.target.value)} data-tagid="input-menus-descriptionda" />
           </div>
         </div>
 
@@ -82,11 +82,12 @@ function MenuNewPage() {
 
         <div className="flex gap-2 pt-4 border-t">
           <Button className="gradient-primary text-primary-foreground"
-            disabled={!name.trim() || create.isPending} onClick={handleSave}>
+            disabled={!name.trim() || create.isPending} onClick={handleSave}
+            data-tagid="button-menus-create">
             {create.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-1.5 h-4 w-4" />}
             Create Menu
           </Button>
-          <Button variant="outline" onClick={() => navigate({ to: "/admin/menus" })}>Cancel</Button>
+          <Button variant="outline" onClick={() => navigate({ to: "/admin/menus" })} data-tagid="button-menus-cancel">Cancel</Button>
         </div>
       </div>
     </FormPage>

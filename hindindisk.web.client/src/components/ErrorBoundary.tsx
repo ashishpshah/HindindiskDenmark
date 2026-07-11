@@ -21,6 +21,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <h1 className="font-display text-3xl font-bold text-destructive">Something went wrong</h1>
           <p className="text-muted-foreground">{this.state.error?.message ?? "An unexpected error occurred."}</p>
           <button
+            data-tagid="button-error-home"
             className="rounded-full gradient-primary px-6 py-2 text-primary-foreground font-semibold"
             onClick={() => { this.setState({ hasError: false, error: null }); window.location.href = "/"; }}
           >

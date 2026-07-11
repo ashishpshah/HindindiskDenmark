@@ -43,13 +43,13 @@ function iconForStatus(name: string) {
 }
 
 // Build tracking stages from statuses filtered by order type
-function buildStages(statuses: OrderStatusDto[], orderType: string | undefined) {
+function buildStages(statuses: OrderStatusDto[], orderType: string | undefined, lang: string) {
   return statuses
     .filter(s => s.isActive && !s.isTerminal && (s.serviceType === "All" || s.serviceType === orderType))
     .concat(statuses.filter(s => s.isActive && s.isTerminal))
     .sort((a, b) => a.displayOrder - b.displayOrder)
     .map(s => ({
-      label: s.nameDa ?? s.name,
+      label: lang === "da" ? (s.nameDa ?? s.name) : s.name,
       icon: iconForStatus(s.name),
       name: s.name,
     }));
@@ -70,7 +70,7 @@ function loadLegacyOrder(id: string): LegacyOrder | null {
 function TrackPage() {
   const { id }                    = Route.useSearch();
   const navigate                  = useNavigate();
-  const { t }                     = useI18n();
+  const { t, lang }               = useI18n();
   const { user, openModal }       = useAuth();
   const [stage, setStage]         = useState(0);
   const [code, setCode]           = useState(id || "");
@@ -91,7 +91,7 @@ function TrackPage() {
 
   // Build stages from order type
   const orderType = apiOrder?.orderType ?? legacyOrder?.type;
-  const STAGES = useMemo(() => buildStages(activeStatuses, orderType), [activeStatuses, orderType]);
+  const STAGES = useMemo(() => buildStages(activeStatuses, orderType, lang), [activeStatuses, orderType, lang]);
 
   useEffect(() => {
     if (!id) return;
@@ -116,21 +116,21 @@ function TrackPage() {
             <LogIn className="h-7 w-7" />
           </div>
           <div className="space-y-2">
-            <h2 className="font-display text-xl font-semibold">Log in to track your order</h2>
+            <h2 className="font-display text-xl font-semibold">{t("pages.tracking.loginTitle")}</h2>
             <p className="text-sm text-muted-foreground">
-              Please log in or register with the same email you used when placing your order.
+              {t("pages.tracking.loginDesc")}
             </p>
           </div>
           <div className="flex justify-center gap-2">
-            <Button onClick={() => openModal("login")} className="gradient-primary text-primary-foreground">
-              Log in
+            <Button data-tagid="button-tracking-login" onClick={() => openModal("login")} className="gradient-primary text-primary-foreground">
+              {t("actions.login")}
             </Button>
-            <Button variant="outline" onClick={() => openModal("register")}>
-              Register
+            <Button data-tagid="button-tracking-register" variant="outline" onClick={() => openModal("register")}>
+              {t("actions.register")}
             </Button>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/" })}>
-            Back to home
+          <Button data-tagid="button-tracking-back-home" variant="ghost" size="sm" onClick={() => navigate({ to: "/" })}>
+            {t("pages.tracking.backToHome")}
           </Button>
         </section>
       </Layout>
@@ -148,8 +148,8 @@ function TrackPage() {
             className="mx-auto max-w-md flex gap-2"
             onSubmit={(e) => { e.preventDefault(); if (code) navigate({ to: "/order-tracking", search: { id: code } }); }}
           >
-            <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder={t("pages.tracking.placeholder")} />
-            <Button className="gradient-primary text-primary-foreground">{t("pages.tracking.trackBtn")}</Button>
+            <Input data-tagid="input-tracking-order-id" value={code} onChange={(e) => setCode(e.target.value)} placeholder={t("pages.tracking.placeholder")} />
+            <Button data-tagid="button-tracking-track" className="gradient-primary text-primary-foreground">{t("pages.tracking.trackBtn")}</Button>
           </form>
         ) : (
           <div className="grid gap-8 md:grid-cols-2">
@@ -198,7 +198,7 @@ function TrackPage() {
                   </div>
                   {apiOrder.specialInstructions && (
                     <div className="flex justify-between gap-4">
-                      <span className="text-muted-foreground shrink-0">Special instructions</span>
+                      <span className="text-muted-foreground shrink-0">{t("pages.tracking.specialInstructions")}</span>
                       <span className="font-medium text-right">{apiOrder.specialInstructions}</span>
                     </div>
                   )}
@@ -237,7 +237,7 @@ function TrackPage() {
                   />
                   {apiOrder.couponCode && (
                     <p className="mt-1.5 text-xs text-primary font-medium">
-                      Coupon applied: {apiOrder.couponCode}
+                      {t("pages.tracking.couponApplied")} {apiOrder.couponCode}
                     </p>
                   )}
                 </div>
@@ -250,7 +250,7 @@ function TrackPage() {
                 <div>
                   <h3 className="font-display text-xl font-semibold">{t("pages.tracking.orderDetails")}</h3>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Placed on {formatDateTime(legacyOrder.date)}
+                    {t("pages.tracking.placedOn")} {formatDateTime(legacyOrder.date)}
                   </p>
                 </div>
                 <div className="space-y-3 border-t pt-4 text-sm">

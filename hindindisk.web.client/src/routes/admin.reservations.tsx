@@ -51,13 +51,13 @@ function ReservationExpandedRow({
         <div className="flex gap-2 flex-wrap">
           {r.status !== "Confirmed" && (
             <Button size="sm" variant="outline" className="text-green-700 border-green-200 hover:bg-green-50"
-              disabled={isUpdating} onClick={() => onStatus(r.id, "Confirmed")}>
+              disabled={isUpdating} onClick={() => onStatus(r.id, "Confirmed")} data-tagid={`button-reservations-confirm-${r.id}`}>
               <UserCheck className="mr-1.5 h-3.5 w-3.5" /> Confirm
             </Button>
           )}
           {r.status !== "Cancelled" && (
             <Button size="sm" variant="outline" className="text-red-700 border-red-200 hover:bg-red-50"
-              disabled={isUpdating} onClick={() => onStatus(r.id, "Cancelled")}>
+              disabled={isUpdating} onClick={() => onStatus(r.id, "Cancelled")} data-tagid={`button-reservations-cancel-${r.id}`}>
               <UserX className="mr-1.5 h-3.5 w-3.5" /> Cancel
             </Button>
           )}
@@ -182,9 +182,9 @@ function AdminReservations() {
         </SelectContent>
       </Select>
       <div className="flex items-center gap-1.5">
-        <Input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="h-8 w-36 text-xs" />
+        <Input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="h-8 w-36 text-xs" data-tagid="input-reservations-date" />
         {filterDate && (
-          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setFilterDate("")}>Clear</Button>
+          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setFilterDate("")} data-tagid="button-reservations-clear-date">Clear</Button>
         )}
       </div>
     </>

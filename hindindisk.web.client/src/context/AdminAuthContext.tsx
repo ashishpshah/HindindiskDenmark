@@ -29,12 +29,9 @@ export function isAdminUser(user: AdminUser | null): boolean {
 }
 
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
-  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
-
-  useEffect(() => {
-    const saved = lsGet<AdminUser | null>("hind-admin-user", null);
-    if (saved) setAdminUser(saved);
-  }, []);
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(
+    () => lsGet<AdminUser | null>("hind-admin-user", null),
+  );
 
   const persist = useCallback((u: AdminUser | null) => {
     setAdminUser(u);

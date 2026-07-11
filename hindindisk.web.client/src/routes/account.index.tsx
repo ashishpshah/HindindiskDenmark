@@ -46,13 +46,15 @@ function fmtCountdown(totalSec: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-function fmtAgo(date: Date, nowMs: number): string {
-  const diffSec = Math.floor((nowMs - date.getTime()) / 1000);
-  if (diffSec < 5)  return "just now";
-  if (diffSec < 60) return `${diffSec}s ago`;
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  return formatDate(date);
+function makeFmtAgo(t: (k: string) => string) {
+  return function fmtAgo(date: Date, nowMs: number): string {
+    const diffSec = Math.floor((nowMs - date.getTime()) / 1000);
+    if (diffSec < 5)  return t("timeago.justNow");
+    if (diffSec < 60) return `${diffSec}${t("timeago.secondsAgo")}`;
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}${t("timeago.minutesAgo")}`;
+    return formatDate(date);
+  };
 }
 
 // ── Countdown hook ────────────────────────────────────────────────────────────
@@ -101,6 +103,7 @@ function useNowMs() {
 function Dashboard() {
   const { user } = useAuth();
   const { t }    = useI18n();
+  const fmtAgo   = makeFmtAgo(t);
   const { activities, clearActivities } = useCustomerActivities();
   const nowMs = useNowMs();
 
@@ -133,6 +136,7 @@ function Dashboard() {
             <Link
               key={s.to}
               to={s.to as any}
+              data-tagid={`link-account-index-stat-${s.to.replace("/account/", "")}`}
               className="group flex items-center gap-4 rounded-2xl border bg-card p-5 shadow-soft transition hover:shadow-elegant hover:-translate-y-0.5"
             >
               <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${s.color}`}>
@@ -164,17 +168,17 @@ function Dashboard() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold text-green-800 dark:text-green-200">
-                Reservation coming up!
+                {t("account.reservationComingUp")}
               </div>
               <div className="mt-0.5 text-xs text-green-700/80 dark:text-green-300/80 truncate">
-                {countdown.reservation.branchName} · {formatDateStr(countdown.reservation.date)} {formatTimeStr(countdown.reservation.timeSlot)} · {countdown.reservation.guestCount} guest{countdown.reservation.guestCount !== 1 ? "s" : ""}
+                {countdown.reservation.branchName} · {formatDateStr(countdown.reservation.date)} {formatTimeStr(countdown.reservation.timeSlot)} · {countdown.reservation.guestCount} {countdown.reservation.guestCount !== 1 ? t("reservations.guests") : t("reservations.guest")}
               </div>
             </div>
             <div className="shrink-0 text-right">
               <div className="font-mono text-xl font-bold text-green-700 dark:text-green-300 tabular-nums">
                 {fmtCountdown(countdown.secondsLeft)}
               </div>
-              <div className="text-xs text-green-600/70 dark:text-green-400/70">remaining</div>
+              <div className="text-xs text-green-600/70 dark:text-green-400/70">{t("account.remaining")}</div>
             </div>
           </motion.div>
         )}
@@ -186,10 +190,10 @@ function Dashboard() {
           <div className="flex items-center justify-between px-0.5">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               <Bell className="h-3.5 w-3.5" />
-              Live Activity
+              {t("account.liveActivity")}
             </h3>
-            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground" onClick={clearActivities}>
-              <X className="h-3 w-3 mr-1" /> Clear
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground" onClick={clearActivities} data-tagid="button-account-index-clear-activity">
+              <X className="h-3 w-3 mr-1" /> {t("account.clearActivity")}
             </Button>
           </div>
 
@@ -205,6 +209,7 @@ function Dashboard() {
                 >
                   <Link
                     to="/account/orders"
+                    data-tagid={`link-account-index-activity-${a.orderId}`}
                     className="flex items-center gap-3 px-4 py-3 hover:bg-accent/40 transition"
                   >
                     <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-blue-50 text-blue-600">
@@ -241,6 +246,7 @@ function Dashboard() {
           {lastOrder && (
             <Link
               to="/account/orders"
+              data-tagid="link-account-index-last-order"
               className="group flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-soft transition hover:shadow-elegant"
             >
               <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-600">
@@ -264,6 +270,7 @@ function Dashboard() {
           {nextResv && (
             <Link
               to="/account/reservations"
+              data-tagid="link-account-index-next-reservation"
               className="group flex items-center gap-4 rounded-2xl border bg-card p-4 shadow-soft transition hover:shadow-elegant"
             >
               <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-green-50 text-green-600">
@@ -289,6 +296,7 @@ function Dashboard() {
         <div className="grid gap-3 sm:grid-cols-2">
           <Link
             to="/menu"
+            data-tagid="link-account-index-browse-menu"
             className="flex items-center gap-3 rounded-2xl border bg-card p-4 shadow-soft transition hover:shadow-elegant group"
           >
             <div className="grid h-9 w-9 place-items-center rounded-xl gradient-primary text-primary-foreground shrink-0">
@@ -302,6 +310,7 @@ function Dashboard() {
           </Link>
           <Link
             to="/reservation"
+            data-tagid="link-account-index-book-table"
             className="flex items-center gap-3 rounded-2xl border bg-card p-4 shadow-soft transition hover:shadow-elegant group"
           >
             <div className="grid h-9 w-9 place-items-center rounded-xl gradient-primary text-primary-foreground shrink-0">

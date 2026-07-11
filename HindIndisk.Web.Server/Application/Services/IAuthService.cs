@@ -11,4 +11,5 @@ public interface IAuthService
     Task                    ForgotPasswordAsync(string email);
     Task<VerifyOtpResponse> VerifyOtpAsync(VerifyOtpRequest request);
     Task                    ResetPasswordAsync(ResetPasswordRequest request);
+    Task                    VerifyPasswordAsync(long userId, string password);
 }

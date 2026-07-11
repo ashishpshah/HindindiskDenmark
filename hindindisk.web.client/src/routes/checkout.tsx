@@ -250,7 +250,7 @@ function CheckoutPage() {
         <PageHero eyebrow={t("checkout.title")} title={t("checkout.title")} subtitle="Your cart is empty."
           image="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1920&q=80" />
         <div className="mx-auto max-w-md px-6 py-16 text-center">
-          <Button asChild className="gradient-primary text-primary-foreground"><Link to="/menu">Browse menu</Link></Button>
+          <Button data-tagid="a-checkout-empty-browse-menu" asChild className="gradient-primary text-primary-foreground"><Link to="/menu">Browse menu</Link></Button>
         </div>
       </Layout>
     );
@@ -319,6 +319,7 @@ function CheckoutPage() {
                         return (
                           <button
                             key={b.name}
+                            data-tagid={`button-checkout-branch-${b.name.toLowerCase().replace(/\s+/g, "-")}`}
                             onClick={() => setBranch(b.name)}
                             className={`rounded-2xl border p-5 text-left transition
                               ${branch === b.name ? "border-primary bg-primary/5 shadow-soft" : "hover:border-primary/40"}`}
@@ -355,6 +356,7 @@ function CheckoutPage() {
                     <div className="grid gap-3 sm:grid-cols-2">
                       {/* Delivery tile */}
                       <button
+                        data-tagid="button-checkout-order-type-delivery"
                         onClick={() => setOrderType("delivery")}
                         className={`rounded-2xl border p-6 text-left transition
                           ${orderType === "delivery" ? "border-primary bg-primary/5" : "hover:border-primary/40"}`}
@@ -371,6 +373,7 @@ function CheckoutPage() {
 
                       {/* Pickup tile */}
                       <button
+                        data-tagid="button-checkout-order-type-pickup"
                         onClick={() => setOrderType("pickup")}
                         className={`rounded-2xl border p-6 text-left transition
                           ${orderType === "pickup" ? "border-primary bg-primary/5" : "hover:border-primary/40"}`}
@@ -393,6 +396,7 @@ function CheckoutPage() {
                           <div className="space-y-2">
                             <p className="text-sm font-medium">{t("forms.orderDateLabel")}</p>
                             <Input
+                              data-tagid="input-checkout-order-date"
                               type="date"
                               value={scheduledDate}
                               min={today}
@@ -425,7 +429,7 @@ function CheckoutPage() {
                             </div>
                           ) : orderSlots.length > 0 ? (
                             <Select value={scheduledTime} onValueChange={setScheduledTime}>
-                              <SelectTrigger className="w-44 rounded-full">
+                              <SelectTrigger data-tagid="button-checkout-time-slot" className="w-44 rounded-full">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -447,6 +451,7 @@ function CheckoutPage() {
                     <div className="border-t pt-4">
                       <FormField label={loc("Special instructions", "Særlige instrukser")}>
                         <Textarea
+                          data-tagid="textarea-checkout-special-instructions"
                           rows={3}
                           placeholder={loc("Allergies, preferences, notes for the kitchen…", "Allergier, præferencer, noter til køkkenet…")}
                           value={specialInstructions}
@@ -467,6 +472,7 @@ function CheckoutPage() {
                     <div className="relative">
                       <FormField label={t("forms.phoneLabelOpt")}>
                         <Input
+                          data-tagid="input-checkout-phone"
                           type="tel"
                           placeholder="+45 …"
                           value={details.phone}
@@ -487,12 +493,14 @@ function CheckoutPage() {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <FormField label={t("forms.firstNameLabelOpt")}>
                         <Input
+                          data-tagid="input-checkout-firstname"
                           value={details.firstname}
                           onChange={(e) => setDetails({ ...details, firstname: e.target.value })}
                         />
                       </FormField>
                       <FormField label={t("forms.lastNameLabelOpt")}>
                         <Input
+                          data-tagid="input-checkout-lastname"
                           value={details.lastname}
                           onChange={(e) => setDetails({ ...details, lastname: e.target.value })}
                         />
@@ -500,7 +508,7 @@ function CheckoutPage() {
                       <div className="sm:col-span-2">
                         <div className="relative">
                           <FormField label="Email *">
-                            <Input type="email" required placeholder="you@email.dk"
+                            <Input data-tagid="input-checkout-email" type="email" required placeholder="you@email.dk"
                               value={details.email}
                               onChange={(e) => setDetails({ ...details, email: e.target.value })} />
                           </FormField>
@@ -535,6 +543,7 @@ function CheckoutPage() {
                               {savedAddresses.length > 0 && (
                                 <button
                                   type="button"
+                                  data-tagid="button-checkout-use-saved-address"
                                   onClick={() => setAddressDialogOpen(true)}
                                   className="text-xs text-primary hover:underline"
                                 >
@@ -552,6 +561,7 @@ function CheckoutPage() {
                                     <button
                                       key={addr.id}
                                       type="button"
+                                      data-tagid={`button-checkout-saved-address-${addr.id}`}
                                       onClick={() => handleAddressSelect(addr)}
                                       className={`rounded-full border px-3 py-1.5 text-xs font-medium transition
                                         ${isActive ? "gradient-primary text-primary-foreground border-transparent" : "bg-muted text-muted-foreground hover:bg-accent"}`}
@@ -567,30 +577,30 @@ function CheckoutPage() {
                             <div className="grid gap-3 sm:grid-cols-2">
                               <div className="sm:col-span-2">
                                 <FormField label={t("forms.addressLine1Label")}>
-                                  <Input required placeholder={t("forms.addressLine1Placeholder")}
-                                    value={details.addressLine1}
-                                    onChange={(e) => setDetails({ ...details, addressLine1: e.target.value })} />
+                                <Input data-tagid="input-checkout-address-line1" required placeholder={t("forms.addressLine1Placeholder")}
+                                  value={details.addressLine1}
+                                  onChange={(e) => setDetails({ ...details, addressLine1: e.target.value })} />
                                 </FormField>
                               </div>
                               <div className="sm:col-span-2">
                                 <FormField label={t("forms.addressLine2Label")}>
-                                  <Input placeholder={t("forms.addressLine2Placeholder")}
-                                    value={details.addressLine2}
-                                    onChange={(e) => setDetails({ ...details, addressLine2: e.target.value })} />
+                                <Input data-tagid="input-checkout-address-line2" placeholder={t("forms.addressLine2Placeholder")}
+                                  value={details.addressLine2}
+                                  onChange={(e) => setDetails({ ...details, addressLine2: e.target.value })} />
                                 </FormField>
                               </div>
                               <FormField label={t("forms.cityLabel")}>
-                                <Input required value={details.city}
+                                <Input data-tagid="input-checkout-city" required value={details.city}
                                   onChange={(e) => setDetails({ ...details, city: e.target.value })} />
                               </FormField>
                               <FormField label={t("forms.postalCodeLabel")}>
-                                <Input required value={details.postalCode}
+                                <Input data-tagid="input-checkout-postal-code" required value={details.postalCode}
                                   onChange={(e) => setDetails({ ...details, postalCode: e.target.value })} />
                               </FormField>
                               <div className="sm:col-span-2">
-                                <FormField label={t("forms.countryLabel")}>
-                                  <Input value={details.country}
-                                    onChange={(e) => setDetails({ ...details, country: e.target.value })} />
+                              <FormField label={t("forms.countryLabel")}>
+                                <Input data-tagid="input-checkout-country" value={details.country}
+                                  onChange={(e) => setDetails({ ...details, country: e.target.value })} />
                                 </FormField>
                               </div>
                             </div>
@@ -646,15 +656,15 @@ function CheckoutPage() {
             </AnimatePresence>
 
             <div className="mt-8 flex items-center justify-between">
-              <Button variant="ghost" onClick={back} disabled={currentIdx === 0}>
+              <Button data-tagid="button-checkout-back" variant="ghost" onClick={back} disabled={currentIdx === 0}>
                 <ChevronLeft className="mr-1 h-4 w-4" /> {t("actions.back")}
               </Button>
               {currentIdx < STEPS.length - 1 ? (
-                <Button onClick={next} className="gradient-primary text-primary-foreground">
+                <Button data-tagid="button-checkout-next" onClick={next} className="gradient-primary text-primary-foreground">
                   {t("actions.next")} <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
               ) : (
-                <Button onClick={place} disabled={createOrder.isPending} className="gradient-primary text-primary-foreground min-w-[130px]">
+                <Button data-tagid="button-checkout-place-order" onClick={place} disabled={createOrder.isPending} className="gradient-primary text-primary-foreground min-w-[130px]">
                   {createOrder.isPending
                     ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("checkout.placing")}</>
                     : t("actions.placeOrder")}
@@ -721,11 +731,12 @@ function CheckoutPage() {
               {user ? (
                 <div className="mt-6 flex justify-center gap-2">
                   <Button
+                    data-tagid="button-checkout-track-order"
                     onClick={() => navigate({ to: "/order-tracking", search: { id: String(confirmedOrder.id) } })}
                     className="gradient-primary text-primary-foreground">
                     {t("checkout.trackOrder")}
                   </Button>
-                  <Button variant="outline" onClick={() => navigate({ to: "/" })}>{t("checkout.done")}</Button>
+                  <Button data-tagid="button-checkout-done" variant="outline" onClick={() => navigate({ to: "/" })}>{t("checkout.done")}</Button>
                 </div>
               ) : (
                 <div className="mt-6 space-y-4">
@@ -740,7 +751,7 @@ function CheckoutPage() {
                     </p>
                   </div>
                   <div className="flex justify-center gap-2 flex-wrap">                    
-                    <Button variant="ghost" onClick={() => navigate({ to: "/" })} className="gradient-primary text-primary-foreground">
+                    <Button data-tagid="button-checkout-done-guest" variant="ghost" onClick={() => navigate({ to: "/" })} className="gradient-primary text-primary-foreground">
                       {t("checkout.done")}
                     </Button>
                   </div>

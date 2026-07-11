@@ -211,6 +211,13 @@ public class AuthService : IAuthService
         await _db.SaveChangesAsync();
     }
 
+    public async Task VerifyPasswordAsync(long userId, string password)
+    {
+        var user = await _db.Users.FindAsync(userId);
+        if (user is null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+            throw new InvalidOperationException("Current password is incorrect.");
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private string GenerateToken(User user)

@@ -20,6 +20,7 @@ export function FormPage({
       <div className="flex items-center gap-3">
         <Link
           to={backTo}
+          data-tagid="form-page-back"
           className="rounded-xl border p-2 text-muted-foreground hover:bg-accent hover:text-primary transition"
         >
           <ArrowLeft className="h-4 w-4" />

@@ -29,6 +29,7 @@ function NavItem({
   return (
     <Link
       to={to}
+      data-tagid={`link-account-nav-${label.toLowerCase().replace(/\s+/g, '-')}`}
       className={cn(
         "relative flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all select-none",
         isActive
@@ -57,6 +58,7 @@ function MobileTab({
   return (
     <Link
       to={to}
+      data-tagid={`link-account-mobiletab-${label.toLowerCase().replace(/\s+/g, '-')}`}
       className={cn(
         "flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium whitespace-nowrap transition-all",
         isActive
@@ -93,14 +95,14 @@ function AccountLayout() {
     return (
       <Layout>
         <PageHero
-          eyebrow="Account"
-          title="Please sign in"
-          subtitle="Log in to access your account."
+          eyebrow={t("account.eyebrow")}
+          title={t("account.signInTitle")}
+          subtitle={t("account.signInSubtitle")}
           image="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1920&q=80"
         />
         <div className="mx-auto max-w-md px-6 py-16 text-center">
-          <Button onClick={() => openModal("login")} className="gradient-primary text-primary-foreground">
-            Sign in
+          <Button onClick={() => openModal("login")} className="gradient-primary text-primary-foreground" data-tagid="button-account-login">
+            {t("actions.login")}
           </Button>
         </div>
       </Layout>
@@ -122,9 +124,9 @@ function AccountLayout() {
   return (
     <Layout>
       <PageHero
-        eyebrow="Account"
+        eyebrow={t("account.eyebrow")}
         title={`${t("account.welcome")}, ${user.name.split(" ")[0]}`}
-        subtitle="Manage your profile, orders and reservations."
+        subtitle={t("account.manageSubtitle")}
         image="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1920&q=80"
       />
 
@@ -138,6 +140,7 @@ function AccountLayout() {
             ))}
             <button
               onClick={handleLogout}
+              data-tagid="button-account-logout-mobile"
               className="flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-3.5 py-1.5 text-xs font-medium text-destructive whitespace-nowrap transition hover:bg-destructive/10"
             >
               <LogOut className="h-3.5 w-3.5 shrink-0" />
@@ -175,6 +178,7 @@ function AccountLayout() {
               <div className="border-t border-border/60 p-3">
                 <button
                   onClick={handleLogout}
+                  data-tagid="button-account-logout-desktop"
                   className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-destructive transition hover:bg-destructive/10"
                 >
                   <LogOut className="h-4 w-4 shrink-0" />

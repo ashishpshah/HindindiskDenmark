@@ -57,6 +57,7 @@ function HomepageSettings() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
+            data-tagid={`button-website-homepage-tab-${t.key}`}
             className={`px-4 py-2.5 text-sm font-medium transition border-b-2 -mb-px ${
               tab === t.key
                 ? "border-primary text-primary"
@@ -125,7 +126,7 @@ function HeroTab() {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button size="sm" className="gradient-primary text-primary-foreground h-9" onClick={openCreate}>
+        <Button size="sm" className="gradient-primary text-primary-foreground h-9" data-tagid="button-website-homepage-addslide" onClick={openCreate}>
           <Plus className="mr-1.5 h-4 w-4" /> Add Slide
         </Button>
       </div>
@@ -153,46 +154,46 @@ function HeroTab() {
       {showModal && (
         <Modal title={editId !== null ? "Edit Slide" : "New Slide"} wide onClose={() => setShowModal(false)}>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Title (EN)"><Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} /></Field>
-            <Field label="Title (DA)"><Input value={form.titleDa} onChange={e => setForm(p => ({ ...p, titleDa: e.target.value }))} /></Field>
+            <Field label="Title (EN)"><Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} data-tagid="input-website-homepage-slide-title" /></Field>
+            <Field label="Title (DA)"><Input value={form.titleDa} onChange={e => setForm(p => ({ ...p, titleDa: e.target.value }))} data-tagid="input-website-homepage-slide-titleda" /></Field>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Subtitle (EN)"><Input value={form.subtitle} onChange={e => setForm(p => ({ ...p, subtitle: e.target.value }))} /></Field>
-            <Field label="Subtitle (DA)"><Input value={form.subtitleDa} onChange={e => setForm(p => ({ ...p, subtitleDa: e.target.value }))} /></Field>
+            <Field label="Subtitle (EN)"><Input value={form.subtitle} onChange={e => setForm(p => ({ ...p, subtitle: e.target.value }))} data-tagid="input-website-homepage-slide-subtitle" /></Field>
+            <Field label="Subtitle (DA)"><Input value={form.subtitleDa} onChange={e => setForm(p => ({ ...p, subtitleDa: e.target.value }))} data-tagid="input-website-homepage-slide-subtitleda" /></Field>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Tagline (EN)"><Input value={form.tagline} onChange={e => setForm(p => ({ ...p, tagline: e.target.value }))} placeholder="Denmark's #1 Indian Restaurant" /></Field>
-            <Field label="Tagline (DA)"><Input value={form.taglineDa} onChange={e => setForm(p => ({ ...p, taglineDa: e.target.value }))} placeholder="Danmarks #1 indiske restaurant" /></Field>
+            <Field label="Tagline (EN)"><Input value={form.tagline} onChange={e => setForm(p => ({ ...p, tagline: e.target.value }))} placeholder="Denmark's #1 Indian Restaurant" data-tagid="input-website-homepage-slide-tagline" /></Field>
+            <Field label="Tagline (DA)"><Input value={form.taglineDa} onChange={e => setForm(p => ({ ...p, taglineDa: e.target.value }))} placeholder="Danmarks #1 indiske restaurant" data-tagid="input-website-homepage-slide-taglineda" /></Field>
           </div>
           <Field label="Hero Image">
             <ImagePicker value={form.imageUrl} onChange={url => setForm(p => ({ ...p, imageUrl: url }))} uploadUrl="/api/admin/upload/hero-slides" />
           </Field>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2.5">
-              <Switch checked={form.isActive} onCheckedChange={v => setForm(p => ({ ...p, isActive: v }))} />
+              <Switch checked={form.isActive} onCheckedChange={v => setForm(p => ({ ...p, isActive: v }))} data-tagid="button-website-homepage-slide-active" />
               <span className="text-sm font-medium">{form.isActive ? "Active" : "Inactive"}</span>
             </div>
             <div className="flex items-center gap-2">
               <Label className="text-sm">Sort Order</Label>
-              <Input type="number" min={0} value={form.sortOrder} onChange={e => setForm(p => ({ ...p, sortOrder: Number(e.target.value) }))} className="h-8 w-20 text-sm" />
+              <Input type="number" min={0} value={form.sortOrder} onChange={e => setForm(p => ({ ...p, sortOrder: Number(e.target.value) }))} className="h-8 w-20 text-sm" data-tagid="input-website-homepage-slide-sortorder" />
             </div>
           </div>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-semibold">Call-to-Action Buttons</Label>
-              <Button size="sm" variant="outline" onClick={addCta} className="h-7 text-xs"><Plus className="mr-1 h-3 w-3" /> Add CTA</Button>
+              <Button size="sm" variant="outline" data-tagid="button-website-homepage-addcta" onClick={addCta} className="h-7 text-xs"><Plus className="mr-1 h-3 w-3" /> Add CTA</Button>
             </div>
             {form.ctas.length === 0 && <p className="text-xs text-muted-foreground">No CTAs — the slide will display default buttons</p>}
             {form.ctas.map((cta, idx) => (
               <div key={idx} className="rounded-lg border bg-gray-50 p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-gray-500">CTA #{idx + 1}</span>
-                  <button onClick={() => removeCta(idx)} className="text-red-500 hover:text-red-700"><X className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => removeCta(idx)} data-tagid={`button-website-homepage-removecta-${idx}`} className="text-red-500 hover:text-red-700"><X className="h-3.5 w-3.5" /></button>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                  <Input placeholder="Text (EN)" value={cta.text} onChange={e => updateCta(idx, { text: e.target.value })} className="h-8 text-sm" />
-                  <Input placeholder="Text (DA)" value={cta.textDa} onChange={e => updateCta(idx, { textDa: e.target.value })} className="h-8 text-sm" />
-                  <Input placeholder="Link (e.g. /menu)" value={cta.link} onChange={e => updateCta(idx, { link: e.target.value })} className="h-8 text-sm" />
+                  <Input placeholder="Text (EN)" value={cta.text} onChange={e => updateCta(idx, { text: e.target.value })} className="h-8 text-sm" data-tagid={`input-website-homepage-cta-text-${idx}`} />
+                  <Input placeholder="Text (DA)" value={cta.textDa} onChange={e => updateCta(idx, { textDa: e.target.value })} className="h-8 text-sm" data-tagid={`input-website-homepage-cta-textda-${idx}`} />
+                  <Input placeholder="Link (e.g. /menu)" value={cta.link} onChange={e => updateCta(idx, { link: e.target.value })} className="h-8 text-sm" data-tagid={`input-website-homepage-cta-link-${idx}`} />
                 </div>
               </div>
             ))}
@@ -251,19 +252,19 @@ function OurStoryTab() {
       <div className="space-y-4">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Section Text</h3>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Eyebrow (EN)"><Input value={val("eyebrow")}   onChange={set("eyebrow")}   placeholder="Our Story" /></Field>
-          <Field label="Eyebrow (DA)"><Input value={val("eyebrowDa")} onChange={set("eyebrowDa")} placeholder="Vores historie" /></Field>
+          <Field label="Eyebrow (EN)"><Input value={val("eyebrow")}   onChange={set("eyebrow")}   placeholder="Our Story" data-tagid="input-website-homepage-ourstory-eyebrow" /></Field>
+          <Field label="Eyebrow (DA)"><Input value={val("eyebrowDa")} onChange={set("eyebrowDa")} placeholder="Vores historie" data-tagid="input-website-homepage-ourstory-eyebrowda" /></Field>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Title (EN)"><Input value={val("title")}   onChange={set("title")}   placeholder="A Family Kitchen, Rooted In Denmark" /></Field>
-          <Field label="Title (DA)"><Input value={val("titleDa")} onChange={set("titleDa")} placeholder="Et familiekøkken, forankret i Danmark" /></Field>
+          <Field label="Title (EN)"><Input value={val("title")}   onChange={set("title")}   placeholder="A Family Kitchen, Rooted In Denmark" data-tagid="input-website-homepage-ourstory-title" /></Field>
+          <Field label="Title (DA)"><Input value={val("titleDa")} onChange={set("titleDa")} placeholder="Et familiekøkken, forankret i Danmark" data-tagid="input-website-homepage-ourstory-titleda" /></Field>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Subtitle / Description (EN)">
-            <Textarea rows={3} value={val("subtitle")}   onChange={set("subtitle")}   placeholder="Two decades of crafting…" />
+            <Textarea rows={3} value={val("subtitle")}   onChange={set("subtitle")}   placeholder="Two decades of crafting…" data-tagid="textarea-website-homepage-ourstory-subtitle" />
           </Field>
           <Field label="Subtitle / Description (DA)">
-            <Textarea rows={3} value={val("subtitleDa")} onChange={set("subtitleDa")} placeholder="To årtier med autentisk…" />
+            <Textarea rows={3} value={val("subtitleDa")} onChange={set("subtitleDa")} placeholder="To årtier med autentisk…" data-tagid="textarea-website-homepage-ourstory-subtitleda" />
           </Field>
         </div>
       </div>
@@ -271,22 +272,22 @@ function OurStoryTab() {
       <div className="space-y-4 border-t pt-6">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Heritage Badge</h3>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Badge Label (EN)"><Input value={val("heritageBadgeLabel")}   onChange={set("heritageBadgeLabel")}   placeholder="Heritage" /></Field>
-          <Field label="Badge Label (DA)"><Input value={val("heritageBadgeLabelDa")} onChange={set("heritageBadgeLabelDa")} placeholder="Arv" /></Field>
+          <Field label="Badge Label (EN)"><Input value={val("heritageBadgeLabel")}   onChange={set("heritageBadgeLabel")}   placeholder="Heritage" data-tagid="input-website-homepage-ourstory-badgelabel" /></Field>
+          <Field label="Badge Label (DA)"><Input value={val("heritageBadgeLabelDa")} onChange={set("heritageBadgeLabelDa")} placeholder="Arv" data-tagid="input-website-homepage-ourstory-badgelabelda" /></Field>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Badge Since (EN)"><Input value={val("heritageBadgeSince")}   onChange={set("heritageBadgeSince")}   placeholder="Since 2004" /></Field>
-          <Field label="Badge Since (DA)"><Input value={val("heritageBadgeSinceDa")} onChange={set("heritageBadgeSinceDa")} placeholder="Siden 2004" /></Field>
+          <Field label="Badge Since (EN)"><Input value={val("heritageBadgeSince")}   onChange={set("heritageBadgeSince")}   placeholder="Since 2004" data-tagid="input-website-homepage-ourstory-badgesince" /></Field>
+          <Field label="Badge Since (DA)"><Input value={val("heritageBadgeSinceDa")} onChange={set("heritageBadgeSinceDa")} placeholder="Siden 2004" data-tagid="input-website-homepage-ourstory-badgesinceda" /></Field>
         </div>
       </div>
 
       <div className="space-y-4 border-t pt-6">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Button</h3>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Button Text (EN)"><Input value={val("buttonText")}   onChange={set("buttonText")}   placeholder="Discover Our Story" /></Field>
-          <Field label="Button Text (DA)"><Input value={val("buttonTextDa")} onChange={set("buttonTextDa")} placeholder="Opdage vores historie" /></Field>
+          <Field label="Button Text (EN)"><Input value={val("buttonText")}   onChange={set("buttonText")}   placeholder="Discover Our Story" data-tagid="input-website-homepage-ourstory-buttontext" /></Field>
+          <Field label="Button Text (DA)"><Input value={val("buttonTextDa")} onChange={set("buttonTextDa")} placeholder="Opdage vores historie" data-tagid="input-website-homepage-ourstory-buttontextda" /></Field>
         </div>
-        <Field label="Button Link"><Input value={val("buttonLink")} onChange={set("buttonLink")} placeholder="/about" /></Field>
+        <Field label="Button Link"><Input value={val("buttonLink")} onChange={set("buttonLink")} placeholder="/about" data-tagid="input-website-homepage-ourstory-buttonlink" /></Field>
       </div>
 
       <div className="space-y-4 border-t pt-6">
@@ -310,7 +311,7 @@ function OurStoryTab() {
       </div>
 
       <div className="border-t pt-4">
-        <Button className="gradient-primary text-primary-foreground" onClick={handleSave} disabled={update.isPending}>
+        <Button className="gradient-primary text-primary-foreground" onClick={handleSave} disabled={update.isPending} data-tagid="button-website-homepage-ourstory-save">
           {update.isPending
             ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Saving…</>
             : <><Save className="mr-1.5 h-4 w-4" /> Save Our Story</>}
@@ -357,7 +358,7 @@ function WhyChooseUsTab() {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button size="sm" className="gradient-primary text-primary-foreground h-9" onClick={openCreate}>
+        <Button size="sm" className="gradient-primary text-primary-foreground h-9" data-tagid="button-website-homepage-whychooseus-add" onClick={openCreate}>
           <Plus className="mr-1.5 h-4 w-4" /> Add Item
         </Button>
       </div>
@@ -380,8 +381,8 @@ function WhyChooseUsTab() {
                 <span className="mt-2 inline-block rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">Hidden</span>
               )}
               <div className="absolute right-2 top-2 flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                <button onClick={() => openEdit(w)} className="grid h-6 w-6 place-items-center rounded-full bg-white shadow text-gray-600 hover:text-primary"><Pencil className="h-3 w-3" /></button>
-                <button onClick={() => deleteItem.mutate(w.id, { onSuccess: () => toast.success("Deleted"), onError: () => toast.error("Failed") })} className="grid h-6 w-6 place-items-center rounded-full bg-white shadow text-red-400 hover:text-red-600"><Trash2 className="h-3 w-3" /></button>
+                <button onClick={() => openEdit(w)} data-tagid={`button-website-homepage-whychooseus-edit-${w.id}`} className="grid h-6 w-6 place-items-center rounded-full bg-white shadow text-gray-600 hover:text-primary"><Pencil className="h-3 w-3" /></button>
+                <button onClick={() => deleteItem.mutate(w.id, { onSuccess: () => toast.success("Deleted"), onError: () => toast.error("Failed") })} data-tagid={`button-website-homepage-whychooseus-delete-${w.id}`} className="grid h-6 w-6 place-items-center rounded-full bg-white shadow text-red-400 hover:text-red-600"><Trash2 className="h-3 w-3" /></button>
               </div>
             </div>
           ))}
@@ -391,21 +392,21 @@ function WhyChooseUsTab() {
       {showModal && (
         <Modal title={editId !== null ? "Edit Item" : "Add Item"} onClose={() => setShowModal(false)}>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Title (EN)"><Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} /></Field>
-            <Field label="Title (DA)"><Input value={form.titleDa} onChange={e => setForm(p => ({ ...p, titleDa: e.target.value }))} /></Field>
+            <Field label="Title (EN)"><Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} data-tagid="input-website-homepage-whychooseus-title" /></Field>
+            <Field label="Title (DA)"><Input value={form.titleDa} onChange={e => setForm(p => ({ ...p, titleDa: e.target.value }))} data-tagid="input-website-homepage-whychooseus-titleda" /></Field>
           </div>
-          <Field label="Description (EN)"><Textarea rows={2} value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} /></Field>
-          <Field label="Description (DA)"><Textarea rows={2} value={form.descriptionDa} onChange={e => setForm(p => ({ ...p, descriptionDa: e.target.value }))} /></Field>
+          <Field label="Description (EN)"><Textarea rows={2} value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} data-tagid="textarea-website-homepage-whychooseus-description" /></Field>
+          <Field label="Description (DA)"><Textarea rows={2} value={form.descriptionDa} onChange={e => setForm(p => ({ ...p, descriptionDa: e.target.value }))} data-tagid="textarea-website-homepage-whychooseus-descriptionda" /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Icon">
-              <select value={form.icon} onChange={e => setForm(p => ({ ...p, icon: e.target.value }))} className="w-full rounded-md border bg-background px-3 py-2 text-sm">
+              <select value={form.icon} onChange={e => setForm(p => ({ ...p, icon: e.target.value }))} className="w-full rounded-md border bg-background px-3 py-2 text-sm" data-tagid="select-website-homepage-whychooseus-icon">
                 {WHY_ICONS.map(i => <option key={i} value={i}>{i}</option>)}
               </select>
             </Field>
-            <Field label="Sort Order"><Input type="number" min={0} value={form.sortOrder} onChange={e => setForm(p => ({ ...p, sortOrder: Number(e.target.value) }))} /></Field>
+            <Field label="Sort Order"><Input type="number" min={0} value={form.sortOrder} onChange={e => setForm(p => ({ ...p, sortOrder: Number(e.target.value) }))} data-tagid="input-website-homepage-whychooseus-sortorder" /></Field>
           </div>
           <div className="flex items-center gap-2.5">
-            <Switch checked={form.isActive} onCheckedChange={v => setForm(p => ({ ...p, isActive: v }))} />
+            <Switch checked={form.isActive} onCheckedChange={v => setForm(p => ({ ...p, isActive: v }))} data-tagid="button-website-homepage-whychooseus-active" />
             <span className="text-sm font-medium">{form.isActive ? "Visible" : "Hidden"}</span>
           </div>
           <ModalFooter onClose={() => setShowModal(false)} onSave={handleSave} isSaving={isSaving} isEdit={editId !== null} />
@@ -438,13 +439,13 @@ function SlideRow({ slide, onEdit, onDelete, onReorder }: {
         {slide.subtitle && <div className="text-xs text-muted-foreground mt-0.5 truncate">{slide.subtitle}</div>}
       </div>
       <div className="flex items-center gap-1 shrink-0">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onReorder("up")}>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onReorder("up")} data-tagid={`button-website-homepage-slide-reorder-${slide.id}`}>
           <GripVertical className="h-4 w-4 text-muted-foreground rotate-90" />
         </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit}>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit} data-tagid={`button-website-homepage-slide-edit-${slide.id}`}>
           <Pencil className="h-4 w-4 text-muted-foreground" />
         </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700" onClick={onDelete}>
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700" onClick={onDelete} data-tagid={`button-website-homepage-slide-delete-${slide.id}`}>
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
@@ -482,11 +483,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-black/50" onClick={onClose} />
+      <div className="fixed inset-0 z-50 bg-black/50" onClick={onClose} data-tagid="button-website-homepage-modal-backdrop" />
       <div className={`fixed left-1/2 top-1/2 z-50 w-[95%] ${wide ? "max-w-2xl" : "max-w-lg"} -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto`}>
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onClose}><X className="h-4 w-4 text-muted-foreground" /></button>
+          <button onClick={onClose} data-tagid="button-website-homepage-modal-close"><X className="h-4 w-4 text-muted-foreground" /></button>
         </div>
         {children}
       </div>
@@ -497,8 +498,8 @@ function Modal({ title, onClose, children, wide }: { title: string; onClose: () 
 function ModalFooter({ onClose, onSave, isSaving, isEdit }: { onClose: () => void; onSave: () => void; isSaving: boolean; isEdit: boolean }) {
   return (
     <div className="flex items-center justify-end gap-2 pt-2 border-t">
-      <Button variant="outline" onClick={onClose} disabled={isSaving}>Cancel</Button>
-      <Button className="gradient-primary text-primary-foreground" onClick={onSave} disabled={isSaving}>
+      <Button variant="outline" onClick={onClose} disabled={isSaving} data-tagid="button-website-homepage-modal-cancel">Cancel</Button>
+      <Button className="gradient-primary text-primary-foreground" onClick={onSave} disabled={isSaving} data-tagid="button-website-homepage-modal-save">
         {isSaving ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Saving…</> : (isEdit ? "Update" : "Save")}
       </Button>
     </div>

@@ -35,7 +35,7 @@ export function ImagePicker({ value, onChange, uploadUrl }: Props) {
     <div className="space-y-2">
       {/* Clickable image area */}
       <div
-        role="button"
+        role="button" data-tagid="image-picker-dropzone"
         tabIndex={upload.isPending ? -1 : 0}
         onClick={() => !upload.isPending && inputRef.current?.click()}
         onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && !upload.isPending) inputRef.current?.click(); }}
@@ -65,6 +65,7 @@ export function ImagePicker({ value, onChange, uploadUrl }: Props) {
         {resolved && !upload.isPending && (
           <button
             type="button"
+            data-tagid="image-picker-clear"
             onClick={e => { e.stopPropagation(); onChange(""); }}
             className="absolute right-2 top-2 rounded-full bg-background/80 p-1 text-muted-foreground shadow hover:text-destructive transition"
             title="Remove image"
@@ -78,6 +79,7 @@ export function ImagePicker({ value, onChange, uploadUrl }: Props) {
       <div className="flex items-center gap-2">
         <button
           type="button"
+          data-tagid="image-picker-change"
           disabled={upload.isPending}
           onClick={() => inputRef.current?.click()}
           className="text-xs text-primary hover:underline disabled:opacity-50"
@@ -88,6 +90,7 @@ export function ImagePicker({ value, onChange, uploadUrl }: Props) {
         {/* URL input fallback */}
         <input
           type="text"
+          data-tagid="image-picker-url"
           placeholder="or paste URL…"
           value={value.startsWith("/images/") ? "" : value}
           onChange={e => onChange(e.target.value)}
@@ -98,6 +101,7 @@ export function ImagePicker({ value, onChange, uploadUrl }: Props) {
       <input
         ref={inputRef}
         type="file"
+        data-tagid="image-picker-file"
         accept=".jpg,.jpeg,.png,.webp,.gif"
         className="hidden"
         onChange={e => {

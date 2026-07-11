@@ -1,12 +1,34 @@
 using HindIndisk.Api.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace HindIndisk.Api.Infrastructure;
 
 public static class DataSeeder
 {
-    public static async Task SeedAsync(ApplicationDbContext context)
+    public static async Task SeedAsync(ApplicationDbContext context, IConfiguration config)
     {
+        // ── Email settings — seed from appsettings.json on first run ──────────
+        if (!await context.EmailConfigs.AnyAsync())
+        {
+            var sec = config.GetSection("Email");
+            context.EmailConfigs.Add(new EmailConfig
+            {
+                Id          = 1,
+                SmtpHost    = sec["SmtpHost"]    ?? "smtp.gmail.com",
+                SmtpPort    = sec.GetValue<int>("SmtpPort", 587),
+                SmtpUser    = sec["SmtpUser"]    ?? string.Empty,
+                SmtpPass    = sec["SmtpPass"]    ?? string.Empty,
+                FromName    = sec["FromName"]    ?? string.Empty,
+                FromAddress = sec["FromAddress"] ?? string.Empty,
+                AdminToMail = sec["AdminToMail"] ?? string.Empty,
+                CC          = sec["CC"]          ?? string.Empty,
+                BCC         = sec["BCC"]         ?? string.Empty,
+                Enabled     = sec.GetValue<bool>("Enabled", false),
+            });
+            await context.SaveChangesAsync();
+        }
+
         // ── Fixed admin user (Id = 1) ─────────────────────────────────────────
         if (!await context.Users.AnyAsync(u => u.Id == 1))
         {

@@ -8,6 +8,7 @@ using HindIndisk.Api.Application.DTOs.Schedule;
 using HindIndisk.Api.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using EmailSettingsDto = HindIndisk.Api.Application.DTOs.Admin.EmailSettingsDto;
 
 namespace HindIndisk.Api.Controllers;
 
@@ -30,6 +31,7 @@ public class AdminController : ControllerBase
     private readonly IWhyChooseUsService        _whyChooseUs;
     private readonly IHomeStorySectionService   _homeStory;
     private readonly IExceptionLogService       _exceptionLogs;
+    private readonly IEmailSettingsService      _emailSettings;
 
     public AdminController(
         IAdminService admin, IWebHostEnvironment env,
@@ -37,7 +39,7 @@ public class AdminController : ControllerBase
         BranchClosureService closures, IHeroSlideService heroSlides,
         IGalleryImageService gallery, IAboutService about,
         IWhyChooseUsService whyChooseUs, IHomeStorySectionService homeStory,
-        IExceptionLogService exceptionLogs)
+        IExceptionLogService exceptionLogs, IEmailSettingsService emailSettings)
     {
         _admin         = admin;
         _env           = env;
@@ -50,6 +52,7 @@ public class AdminController : ControllerBase
         _whyChooseUs   = whyChooseUs;
         _homeStory     = homeStory;
         _exceptionLogs = exceptionLogs;
+        _emailSettings = emailSettings;
     }
 
     // POST /api/admin/upload/image
@@ -97,7 +100,8 @@ public class AdminController : ControllerBase
         if (!AllowedExtensions.Contains(ext))
             return BadRequest(new { message = $"File type '{ext}' is not allowed. Use jpg, png, webp or gif." });
 
-        var folder = Path.Combine(_env.WebRootPath, "images", subfolder);
+        var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
+        var folder  = Path.Combine(webRoot, "images", subfolder);
         Directory.CreateDirectory(folder);
 
         var fileName = $"{Guid.NewGuid()}{ext}";
@@ -114,12 +118,45 @@ public class AdminController : ControllerBase
     public async Task<ActionResult<AdminDashboardDto>> Dashboard()
         => Ok(await _admin.GetDashboardAsync());
 
-    // GET /api/admin/orders?status=Placed&branchId=1
+    // GET /api/admin/dashboard/trends
+    [HttpGet("dashboard/trends")]
+    public async Task<ActionResult<AdminTrendDto>> Trends()
+        => Ok(await _admin.GetTrendsAsync());
+
+    // GET /api/admin/dashboard/revenue-history?days=7
+    [HttpGet("dashboard/revenue-history")]
+    public async Task<ActionResult<IReadOnlyList<RevenuePointDto>>> RevenueHistory([FromQuery] int days = 7)
+        => Ok(await _admin.GetRevenueHistoryAsync(days));
+
+    // GET /api/admin/dashboard/top-items?days=7
+    [HttpGet("dashboard/top-items")]
+    public async Task<ActionResult<IReadOnlyList<TopItemDto>>> TopItems([FromQuery] int days = 7)
+        => Ok(await _admin.GetTopItemsAsync(days));
+
+    // GET /api/admin/dashboard/branch-overview
+    [HttpGet("dashboard/branch-overview")]
+    public async Task<ActionResult<IReadOnlyList<BranchOverviewDto>>> BranchOverview()
+        => Ok(await _admin.GetBranchOverviewAsync());
+
+    // GET /api/admin/dashboard/hourly-volume?date=2026-07-10
+    [HttpGet("dashboard/hourly-volume")]
+    public async Task<ActionResult<IReadOnlyList<HourlyVolumeDto>>> HourlyVolume([FromQuery] string? date = null)
+        => Ok(await _admin.GetHourlyVolumeAsync(date));
+
+    // GET /api/admin/orders?page=1&pageSize=20&status=Placed&branchId=1&search=
     [HttpGet("orders")]
-    public async Task<ActionResult<IReadOnlyList<AdminOrderDto>>> Orders(
-        [FromQuery] string? status,
-        [FromQuery] long?   branchId)
-        => Ok(await _admin.GetOrdersAsync(status, branchId));
+    public async Task<ActionResult<OrderPageDto>> Orders(
+        [FromQuery] int     page     = 1,
+        [FromQuery] int     pageSize = 20,
+        [FromQuery] string? status   = null,
+        [FromQuery] long?   branchId = null,
+        [FromQuery] string? search   = null)
+        => Ok(await _admin.GetOrdersAsync(page, pageSize, status, branchId, search));
+
+    // GET /api/admin/orders/counts-by-status
+    [HttpGet("orders/counts-by-status")]
+    public async Task<ActionResult<IReadOnlyList<StatusCountDto>>> OrderCountsByStatus()
+        => Ok(await _admin.GetOrderCountsByStatusAsync());
 
     // ── Order Status CRUD ──────────────────────────────────────────────────
 
@@ -210,10 +247,14 @@ public class AdminController : ControllerBase
 
     // ── Menus (categories) ───────────────────────────────────────────────────
 
-    // GET /api/admin/menus
+    // GET /api/admin/menus?page=1&pageSize=20&search=&branchId=
     [HttpGet("menus")]
-    public async Task<ActionResult<IReadOnlyList<AdminMenuDto>>> GetMenus()
-        => Ok(await _admin.GetMenusAsync());
+    public async Task<ActionResult<MenuPageDto>> GetMenus(
+        [FromQuery] int?    page     = null,
+        [FromQuery] int?    pageSize = null,
+        [FromQuery] string? search   = null,
+        [FromQuery] long?   branchId = null)
+        => Ok(await _admin.GetMenusAsync(page, pageSize, search, branchId));
 
     // POST /api/admin/menus
     [HttpPost("menus")]
@@ -272,10 +313,14 @@ public class AdminController : ControllerBase
 
     // ── Menu items ────────────────────────────────────────────────────────────
 
-    // GET /api/admin/menu-items
+    // GET /api/admin/menu-items?page=1&pageSize=20&search=&branchId=
     [HttpGet("menu-items")]
-    public async Task<ActionResult<IReadOnlyList<AdminMenuItemDto>>> GetMenuItems()
-        => Ok(await _admin.GetMenuItemsAsync());
+    public async Task<ActionResult<MenuItemPageDto>> GetMenuItems(
+        [FromQuery] int?    page     = null,
+        [FromQuery] int?    pageSize = null,
+        [FromQuery] string? search   = null,
+        [FromQuery] long?   branchId = null)
+        => Ok(await _admin.GetMenuItemsAsync(page, pageSize, search, branchId));
 
     // POST /api/admin/menu-items
     [HttpPost("menu-items")]
@@ -473,10 +518,13 @@ public class AdminController : ControllerBase
 
     // ── Customers ─────────────────────────────────────────────────────────────
 
-    // GET /api/admin/customers?q=
+    // GET /api/admin/customers?page=1&pageSize=20&q=
     [HttpGet("customers")]
-    public async Task<ActionResult<IReadOnlyList<AdminCustomerDto>>> GetCustomers([FromQuery] string? q)
-        => Ok(await _admin.GetCustomersAsync(q));
+    public async Task<ActionResult<CustomerPageDto>> GetCustomers(
+        [FromQuery] int     page     = 1,
+        [FromQuery] int     pageSize = 20,
+        [FromQuery] string? q        = null)
+        => Ok(await _admin.GetCustomersAsync(page, pageSize, q));
 
     // GET /api/admin/customers/{id}
     [HttpGet("customers/{id:long}")]
@@ -711,17 +759,31 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> DeleteAboutTeamMember(long id)
         => await _about.DeleteTeamMemberAsync(id) ? NoContent() : NotFound();
 
+    // ── Email settings ────────────────────────────────────────────────────────
+
+    // GET /api/admin/email-settings
+    [HttpGet("email-settings")]
+    public async Task<ActionResult<EmailSettingsDto>> GetEmailSettings()
+        => Ok(await _emailSettings.GetAsync());
+
+    // PATCH /api/admin/email-settings
+    [HttpPatch("email-settings")]
+    public async Task<ActionResult<EmailSettingsDto>> UpdateEmailSettings(
+        [FromBody] UpdateEmailSettingsRequest request)
+        => Ok(await _emailSettings.UpdateAsync(request));
+
     // ── Exception logs ────────────────────────────────────────────────────────
 
-    // GET /api/admin/exception-logs?page=1&pageSize=50&search=&from=&to=&module=
+    // GET /api/admin/exception-logs?page=1&pageSize=50&search=&from=&to=&module=&logLevel=
     [HttpGet("exception-logs")]
     [Authorize(Roles = "SystemAdmin")]
     public async Task<ActionResult<ExceptionLogPageDto>> GetExceptionLogs(
-        [FromQuery] int      page     = 1,
-        [FromQuery] int      pageSize = 50,
-        [FromQuery] string?  search   = null,
-        [FromQuery] DateTime? from    = null,
-        [FromQuery] DateTime? to      = null,
-        [FromQuery] string?  module   = null)
-        => Ok(await _exceptionLogs.GetRecentAsync(page, pageSize, search, from, to, module));
+        [FromQuery] int       page     = 1,
+        [FromQuery] int       pageSize = 50,
+        [FromQuery] string?   search   = null,
+        [FromQuery] DateTime? from     = null,
+        [FromQuery] DateTime? to       = null,
+        [FromQuery] string?   module   = null,
+        [FromQuery] string?   logLevel = null)
+        => Ok(await _exceptionLogs.GetRecentAsync(page, pageSize, search, from, to, module, logLevel));
 }

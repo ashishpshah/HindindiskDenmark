@@ -43,12 +43,22 @@ function PriceBreakdown({ item }: { item: AdminMenuItemDto }) {
 
 function AdminMenuIndex() {
   const navigate = useNavigate();
-  const { data: items = [], isLoading, refetch } = useAdminMenuItems();
   const { data: branches = [] } = useBranches();
   const deleteItem = useDeleteMenuItem();
 
-  const [pending,        setPending]        = useState<AdminMenuItemDto | null>(null);
+  const [page,           setPage]           = useState(1);
+  const [pageSize,       setPageSize]       = useState(20);
+  const [search,         setSearch]         = useState("");
   const [filterBranchId, setFilterBranchId] = useState<number | undefined>();
+  const [pending,        setPending]        = useState<AdminMenuItemDto | null>(null);
+
+  const { data, isLoading, refetch } = useAdminMenuItems({
+    page,
+    pageSize,
+    search:   search   || undefined,
+    branchId: filterBranchId,
+  });
+  const items = data?.items ?? [];
 
   const handleDelete = async () => {
     if (!pending) return;
@@ -61,11 +71,6 @@ function AdminMenuIndex() {
       setPending(null);
     }
   };
-
-  // Client-side branch filter — item is at a branch if it has a price entry for that branch
-  const filtered = filterBranchId
-    ? items.filter(item => item.prices.some(p => p.branchId === filterBranchId))
-    : items;
 
   const columns: ColumnDef<AdminMenuItemDto, unknown>[] = [
     {
@@ -91,7 +96,6 @@ function AdminMenuIndex() {
       cell: info => <span className="text-xs text-muted-foreground">{info.getValue<string>() || "—"}</span>,
     },
     {
-      // Branches column — derived from prices
       id: "branches",
       header: "Branches",
       accessorFn: row => row.prices.map(p => p.branchName).join(", "),
@@ -151,15 +155,16 @@ function AdminMenuIndex() {
       <DataTable
         title="Menu Items"
         columns={columns}
-        data={filtered}
+        data={items}
         isLoading={isLoading}
         getRowId={row => String(row.id)}
         toolbar={
           <>
-            {/* Branch filter */}
-            <Select value={filterBranchId?.toString() ?? "__all"}
-              onValueChange={v => setFilterBranchId(v === "__all" ? undefined : Number(v))}>
-              <SelectTrigger className="h-8 w-48 text-xs"><SelectValue placeholder="All branches" /></SelectTrigger>
+            <Select
+              value={filterBranchId?.toString() ?? "__all"}
+              onValueChange={v => { setFilterBranchId(v === "__all" ? undefined : Number(v)); setPage(1); }}
+            >
+              <SelectTrigger className="h-8 w-48 text-xs" data-tagid="select-menu-branchfilter"><SelectValue placeholder="All branches" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all" className="text-xs">All branches</SelectItem>
                 {branches.map(b => (
@@ -170,6 +175,7 @@ function AdminMenuIndex() {
               </SelectContent>
             </Select>
             <Button size="sm" className="gradient-primary text-primary-foreground h-8"
+              data-tagid="button-menu-newitem"
               onClick={() => navigate({ to: "/admin/menu/new" })}>
               <Plus className="mr-1.5 h-3.5 w-3.5" /> New Item
             </Button>
@@ -177,6 +183,14 @@ function AdminMenuIndex() {
         }
         onRefresh={refetch}
         expandedRow={(row: Row<AdminMenuItemDto>) => <PriceBreakdown item={row.original} />}
+        serverPagination={{
+          page,
+          pageSize,
+          total:            data?.total ?? 0,
+          onPageChange:     p => setPage(p),
+          onPageSizeChange: s => { setPageSize(s); setPage(1); },
+          onSearchChange:   q => { setSearch(q); setPage(1); },
+        }}
       />
 
       <ConfirmDialog

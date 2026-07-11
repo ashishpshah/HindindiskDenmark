@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
-import { Phone, MapPin, Package, Clock, Loader2, ChevronRight, ChevronLeft } from "lucide-react";
+import { Phone, MapPin, Package, Clock, Loader2, ChevronRight, ChevronLeft, Search, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { toast } from "sonner";
 import { useAdminOrders, type AdminOrderDto, type OrderStatusHistoryDto } from "@/hooks/useAdminOrders";
 import { useUpdateOrderStatus } from "@/hooks/useUpdateOrderStatus";
@@ -11,6 +11,7 @@ import { getPriority } from "@/lib/priority";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -18,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { formatDate, formatTime, formatDateStr, formatTimeStr } from "@/lib/dateFormat";
+import { useI18n } from "@/i18n/I18nProvider";
 
 function fmtDate(iso: string) {
   return { date: formatDate(iso), time: formatTime(iso) };
@@ -55,6 +57,7 @@ function statusStyle(statusName: string, statuses: OrderStatusDto[]) {
 
 function StatusPill({ status, allStatuses }: { status: string; allStatuses: OrderStatusDto[] }) {
   const { color, light, s } = statusStyle(status, allStatuses);
+  const { lang } = useI18n();
   return (
     <span
       className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
@@ -63,7 +66,7 @@ function StatusPill({ status, allStatuses }: { status: string; allStatuses: Orde
         color,
       }}
     >
-      {s?.nameDa ?? status}
+      {lang === "da" ? (s?.nameDa ?? status) : (s?.name ?? status)}
     </span>
   );
 }
@@ -104,6 +107,7 @@ function OrderModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [hasPrev, hasNext, onPrev, onNext]);
 
+  const { lang } = useI18n();
   const activeStatuses = allStatuses.filter(s => s.isActive);
   const transitionsFromCurrent = allTransitions.filter(t => t.fromStatusName === order.status);
   const availableTargets = transitionsFromCurrent
@@ -117,7 +121,7 @@ function OrderModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1 shrink-0">
-              <button
+              <button data-tagid="button-orders-prev-order"
                 onClick={onPrev} disabled={!hasPrev}
                 className="rounded p-1 hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 title="Previous order (←)"
@@ -125,7 +129,7 @@ function OrderModal({
                 <ChevronLeft className="h-5 w-5" />
               </button>
               <span className="font-mono text-2xl font-bold text-primary">#{order.id}</span>
-              <button
+              <button data-tagid="button-orders-next-order"
                 onClick={onNext} disabled={!hasNext}
                 className="rounded p-1 hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 title="Next order (→)"
@@ -157,7 +161,7 @@ function OrderModal({
               <p className="font-medium">{order.contactName}</p>
               <p className="flex items-center gap-1.5 text-muted-foreground">
                 <Phone className="h-3.5 w-3.5 shrink-0" />
-                <a href={`tel:${order.contactPhone}`} className="hover:text-primary">{order.contactPhone}</a>
+                <a href={`tel:${order.contactPhone}`} className="hover:text-primary" data-tagid="link-orders-phone">{order.contactPhone}</a>
               </p>
               {order.contactEmail && <p className="text-muted-foreground text-xs">{order.contactEmail}</p>}
             </div>
@@ -245,7 +249,7 @@ function OrderModal({
                 const isDisabled = isCurrent || isUpdating || !isAllowed;
                 const { color } = statusStyle(s.name, allStatuses);
                 return (
-                  <button
+                  <button data-tagid={`button-orders-status-${s.name}`}
                     key={s.name}
                     disabled={isDisabled}
                     onClick={() => onStatusChange(order.id, s.name)}
@@ -259,7 +263,7 @@ function OrderModal({
                       color: isCurrent ? "#ffffff" : isAllowed ? color : hexToRgba(color, 0.4),
                     }}
                   >
-                    {s.nameDa ?? s.name}
+                    {lang === "da" ? (s.nameDa ?? s.name) : s.name}
                     {isCurrent && <span className="ml-1.5 opacity-60">✓</span>}
                   </button>
                 );
@@ -319,18 +323,30 @@ function OrderModal({
   );
 }
 
+const PAGE_SIZES = [20, 50, 100];
+
 function AdminOrders() {
   const { tab } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
+  const { lang } = useI18n();
 
   const [filterBranchId, setFilterBranchId] = useState<number | undefined>();
+  const [search,         setSearch]         = useState("");
+  const [page,           setPage]           = useState(1);
+  const [pageSize,       setPageSize]       = useState(20);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [recentlyUpdated, setRecentlyUpdated] = useState<Record<number, string>>({});
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [cancelConfirm, setCancelConfirm] = useState<{ orderId: number } | null>(null);
   const [cancelReason, setCancelReason] = useState("");
 
-  const { data: rawOrders = [], isLoading, refetch } = useAdminOrders({ branchId: filterBranchId });
+  const { data, isLoading, refetch } = useAdminOrders({
+    page,
+    pageSize,
+    branchId: filterBranchId,
+    status:   tab !== "All" ? tab : undefined,
+    search:   search || undefined,
+  });
   const { data: branches = [] } = useBranches();
   const { data: statuses = [] } = useAdminOrderStatuses();
   const { data: transitions = [] } = useAdminOrderStatusTransitions();
@@ -344,18 +360,18 @@ function AdminOrders() {
   const statusNames = useMemo(() => activeStatuses.map(s => s.name), [activeStatuses]);
   const TABS = useMemo(() => ["All", ...statusNames], [statusNames]);
 
-  const orders = [...rawOrders].sort((a, b) =>
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  const countForTab = (t: string): number =>
+    t === "All" ? totalOrders : orders.filter(o => o.status === t).length;
+  const orders        = data?.items ?? [];
+  const totalOrders   = data?.total ?? 0;
+  const totalPages    = Math.max(1, Math.ceil(totalOrders / pageSize));
+  const filteredOrders = orders;
+  const selectedOrder  = selectedOrderId != null ? orders.find(o => o.id === selectedOrderId) ?? null : null;
 
-  const filteredOrders = tab === "All" ? orders : orders.filter(o => o.status === tab);
-  const selectedOrder = selectedOrderId != null ? orders.find(o => o.id === selectedOrderId) ?? null : null;
-
-  const countForTab = (t: string) =>
-    t === "All" ? orders.length : orders.filter(o => o.status === t).length;
-
-  const setTab = (t: string) =>
+  const setTab = (t: string) => {
     navigate({ search: (prev: Record<string, unknown>) => ({ ...prev, tab: t }) });
+    setPage(1);
+  };
 
   const handleStatusChange = async (id: number, status: string, cancellationReason?: string) => {
     setUpdatingId(id);
@@ -381,11 +397,25 @@ function AdminOrders() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h1 className="font-display text-3xl font-bold">Orders</h1>
-        <div className="flex items-center gap-2">
+        <div>
+          <h1 className="font-display text-3xl font-bold">Orders</h1>
+          {!isLoading && (
+            <p className="text-sm text-muted-foreground mt-0.5">{totalOrders.toLocaleString()} total</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input data-tagid="input-orders-search"
+              placeholder="Search orders…"
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
+              className="pl-8 h-8 w-44 text-sm"
+            />
+          </div>
           <Select
             value={filterBranchId?.toString() ?? "__all"}
-            onValueChange={v => setFilterBranchId(v === "__all" ? undefined : Number(v))}
+            onValueChange={v => { setFilterBranchId(v === "__all" ? undefined : Number(v)); setPage(1); }}
           >
             <SelectTrigger className="h-8 w-48 text-xs"><SelectValue placeholder="All branches" /></SelectTrigger>
             <SelectContent>
@@ -395,7 +425,7 @@ function AdminOrders() {
               ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" onClick={() => refetch()} className="h-8 text-xs">
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="h-8 text-xs" data-tagid="button-orders-refresh">
             Refresh
           </Button>
         </div>
@@ -405,10 +435,9 @@ function AdminOrders() {
       <div className="overflow-x-auto pb-1 -mx-1 px-1">
         <div className="inline-flex items-center rounded-lg bg-muted p-1 gap-0.5 min-w-max">
           {TABS.map(t => {
-            const count = countForTab(t);
             const isActive = tab === t;
             return (
-              <button
+              <button data-tagid={`button-orders-tab-${t}`}
                 key={t}
                 onClick={() => setTab(t)}
                 className={[
@@ -418,13 +447,12 @@ function AdminOrders() {
                     : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
                 ].join(" ")}
               >
-                {activeStatuses.find(s => s.name === t)?.nameDa ?? t}
-                <span className={[
-                  "inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold min-w-[18px]",
-                  isActive ? "bg-primary/10 text-primary" : "bg-muted-foreground/15 text-muted-foreground",
-                ].join(" ")}>
-                  {count}
-                </span>
+                {lang === "da" ? (activeStatuses.find(s => s.name === t)?.nameDa ?? t) : t}
+                {isActive && !isLoading && (
+                  <span className="inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold min-w-[18px] bg-primary/10 text-primary">
+                    {totalOrders}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -439,7 +467,7 @@ function AdminOrders() {
           </div>
         ) : filteredOrders.length === 0 ? (
           <div className="py-16 text-center text-sm text-muted-foreground">
-            No orders{tab !== "All" ? ` with status "${activeStatuses.find(s => s.name === tab)?.nameDa ?? tab}"` : ""}.
+            No orders{tab !== "All" ? ` with status "${lang === "da" ? (activeStatuses.find(s => s.name === tab)?.nameDa ?? tab) : tab}"` : ""}.
           </div>
         ) : (
           <div className="divide-y">
@@ -540,6 +568,46 @@ function AdminOrders() {
         )}
       </div>
 
+      {/* Pagination */}
+      {!isLoading && totalPages > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span>Rows per page</span>
+            <Select
+              value={String(pageSize)}
+              onValueChange={v => { setPageSize(Number(v)); setPage(1); }}
+            >
+              <SelectTrigger className="h-7 w-16 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PAGE_SIZES.map(n => (
+                  <SelectItem key={n} value={String(n)} className="text-xs">{n}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span>{totalOrders.toLocaleString()} total</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="mr-2">Page {page} of {totalPages}</span>
+            <Button size="sm" variant="outline" className="h-7 w-7 p-0" data-tagid="button-orders-first-page"
+              onClick={() => setPage(1)} disabled={page <= 1}>
+              <ChevronsLeft className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 w-7 p-0" data-tagid="button-orders-prev-page"
+              onClick={() => setPage(p => p - 1)} disabled={page <= 1}>
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 w-7 p-0" data-tagid="button-orders-next-page"
+              onClick={() => setPage(p => p + 1)} disabled={page >= totalPages}>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="sm" variant="outline" className="h-7 w-7 p-0" data-tagid="button-orders-last-page"
+              onClick={() => setPage(totalPages)} disabled={page >= totalPages}>
+              <ChevronsRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Cancel confirmation dialog */}
       {cancelConfirm && (
         <Dialog open onOpenChange={open => { if (!open) { setCancelConfirm(null); setCancelReason(""); } }}>
@@ -555,7 +623,7 @@ function AdminOrders() {
                 <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Reason <span className="font-normal normal-case">(optional)</span>
                 </Label>
-                <Textarea
+                <Textarea data-tagid="textarea-orders-cancel-reason"
                   rows={3}
                   placeholder="e.g. Item out of stock, branch closing early…"
                   value={cancelReason}
@@ -565,10 +633,10 @@ function AdminOrders() {
               </div>
             </div>
             <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => { setCancelConfirm(null); setCancelReason(""); }}>
+              <Button variant="outline" onClick={() => { setCancelConfirm(null); setCancelReason(""); }} data-tagid="button-orders-keep-order">
                 Keep Order
               </Button>
-              <Button
+              <Button data-tagid="button-orders-confirm-cancel"
                 variant="destructive"
                 disabled={updatingId === cancelConfirm.orderId}
                 onClick={async () => {
@@ -604,8 +672,8 @@ function AdminOrders() {
             hasNext={idx < filteredOrders.length - 1}
             onPrev={() => setSelectedOrderId(filteredOrders[idx - 1].id)}
             onNext={() => setSelectedOrderId(filteredOrders[idx + 1].id)}
-            position={idx + 1}
-            total={filteredOrders.length}
+            position={(page - 1) * pageSize + idx + 1}
+            total={totalOrders}
             allStatuses={activeStatuses}
             allTransitions={transitions}
           />

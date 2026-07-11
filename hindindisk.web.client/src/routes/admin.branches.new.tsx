@@ -76,38 +76,39 @@ export function BranchFields({ form, f, onImageChange, onSave, isSaving, onCance
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5 sm:col-span-2"><Label>Branch Name *</Label>
-          <Input autoFocus value={form.name} onChange={f("name")} placeholder="e.g. Hind Indisk Odense" /></div>
+          <Input autoFocus value={form.name} onChange={f("name")} placeholder="e.g. Hind Indisk Odense" data-tagid="input-branches-name" /></div>
         <div className="space-y-1.5 sm:col-span-2"><Label>Address Line 1 *</Label>
-          <Input value={form.addressLine1} onChange={f("addressLine1")} placeholder="Street and number" /></div>
+          <Input value={form.addressLine1} onChange={f("addressLine1")} placeholder="Street and number" data-tagid="input-branches-address1" /></div>
         <div className="space-y-1.5 sm:col-span-2">
           <Label>Address Line 2 <span className="text-xs text-muted-foreground">(optional)</span></Label>
-          <Input value={form.addressLine2} onChange={f("addressLine2")} placeholder="Floor, suite…" /></div>
-        <div className="space-y-1.5"><Label>City *</Label><Input value={form.city} onChange={f("city")} /></div>
-        <div className="space-y-1.5"><Label>Postal Code *</Label><Input value={form.postalCode} onChange={f("postalCode")} /></div>
-        <div className="space-y-1.5"><Label>Country</Label><Input value={form.country} onChange={f("country")} /></div>
+          <Input value={form.addressLine2} onChange={f("addressLine2")} placeholder="Floor, suite…" data-tagid="input-branches-address2" /></div>
+        <div className="space-y-1.5"><Label>City *</Label><Input value={form.city} onChange={f("city")} data-tagid="input-branches-city" /></div>
+        <div className="space-y-1.5"><Label>Postal Code *</Label><Input value={form.postalCode} onChange={f("postalCode")} data-tagid="input-branches-postalcode" /></div>
+        <div className="space-y-1.5"><Label>Country</Label><Input value={form.country} onChange={f("country")} data-tagid="input-branches-country" /></div>
         <div className="space-y-1.5"><Label>Phone No.</Label>
-          <Input value={form.phone} onChange={f("phone")} type="tel" placeholder="+45 …" /></div>
+          <Input value={form.phone} onChange={f("phone")} type="tel" placeholder="+45 …" data-tagid="input-branches-phone" /></div>
         <div className="space-y-1.5 sm:col-span-2"><Label>Email</Label>
-          <Input value={form.email} onChange={f("email")} type="email" /></div>
+          <Input value={form.email} onChange={f("email")} type="email" data-tagid="input-branches-email" /></div>
         <div className="space-y-1.5 sm:col-span-2"><Label>Google Maps Link</Label>
-          <Input value={form.googleMapsLink} onChange={f("googleMapsLink")} placeholder="https://maps.google.com/…" /></div>
+          <Input value={form.googleMapsLink} onChange={f("googleMapsLink")} placeholder="https://maps.google.com/…" data-tagid="input-branches-googlemaps" /></div>
         <div className="space-y-1.5 sm:col-span-2">
           <Label>Branch Photo</Label>
           <ImagePicker value={form.imageUrl} onChange={onImageChange} uploadUrl="/api/admin/upload/branches" />
         </div>
         <div className="space-y-1.5"><Label>Rating <span className="text-xs text-muted-foreground">(0–5)</span></Label>
-          <Input type="number" min="0" max="5" step="0.1" value={form.rating} onChange={f("rating")} placeholder="4.8" /></div>
+          <Input type="number" min="0" max="5" step="0.1" value={form.rating} onChange={f("rating")} placeholder="4.8" data-tagid="input-branches-rating" /></div>
         <div className="space-y-1.5"><Label>Review Count</Label>
-          <Input type="number" min="0" value={form.reviewCount} onChange={f("reviewCount")} placeholder="0" /></div>
+          <Input type="number" min="0" value={form.reviewCount} onChange={f("reviewCount")} placeholder="0" data-tagid="input-branches-reviewcount" /></div>
       </div>
 
       <div className="flex gap-2 pt-4 border-t">
         <Button className="gradient-primary text-primary-foreground"
-          disabled={!form.name.trim() || !form.addressLine1.trim() || isSaving} onClick={onSave}>
+          disabled={!form.name.trim() || !form.addressLine1.trim() || isSaving} onClick={onSave}
+          data-tagid="button-branches-save">
           {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-1.5 h-4 w-4" />}
           {saveLabel}
         </Button>
-        <Button variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button variant="outline" onClick={onCancel} data-tagid="button-branches-cancel">Cancel</Button>
       </div>
     </div>
   );

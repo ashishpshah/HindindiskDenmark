@@ -60,7 +60,7 @@ export function Hero() {
 
     if (isExternal) {
       return (
-        <Button key={idx} asChild size="lg" className={isPrimary ? primaryClass : secondaryClass} variant={isPrimary ? "default" : "outline"}>
+        <Button key={idx} asChild size="lg" className={isPrimary ? primaryClass : secondaryClass} variant={isPrimary ? "default" : "outline"} data-tagid={`hero-cta-${isPrimary ? "primary" : "secondary"}-${idx}`}>
           <a href={link} target="_blank" rel="noopener noreferrer">
             {label} {isPrimary && <ArrowRight className="ml-1 h-4 w-4" />}
           </a>
@@ -69,11 +69,11 @@ export function Hero() {
     }
 
     return isPrimary ? (
-      <Button key={idx} asChild size="lg" className={primaryClass}>
+      <Button key={idx} asChild size="lg" className={primaryClass} data-tagid={`hero-cta-primary-${idx}`}>
         <Link to={link as any}>{label} <ArrowRight className="ml-1 h-4 w-4" /></Link>
       </Button>
     ) : (
-      <Button key={idx} asChild size="lg" variant="outline" className={secondaryClass}>
+      <Button key={idx} asChild size="lg" variant="outline" className={secondaryClass} data-tagid={`hero-cta-secondary-${idx}`}>
         <Link to={link as any}>{label}</Link>
       </Button>
     );
@@ -138,10 +138,10 @@ export function Hero() {
             </div>
           ) : !usingApi ? (
             <div className="mt-10 flex flex-wrap gap-3">
-              <Button asChild size="lg" className="gradient-primary text-primary-foreground shadow-elegant hover:opacity-95">
+              <Button asChild size="lg" className="gradient-primary text-primary-foreground shadow-elegant hover:opacity-95" data-tagid="hero-order-now">
                 <Link to="/menu">{t("home.hero.orderNow")} <ArrowRight className="ml-1 h-4 w-4" /></Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="border-white/30 bg-white/5 text-white backdrop-blur hover:bg-white/15 hover:text-white">
+              <Button asChild size="lg" variant="outline" className="border-white/30 bg-white/5 text-white backdrop-blur hover:bg-white/15 hover:text-white" data-tagid="hero-book-table">
                 <Link to="/reservation"><CalendarDays className="mr-2 h-4 w-4" /> {t("home.hero.bookTable")}</Link>
               </Button>
             </div>
@@ -154,6 +154,7 @@ export function Hero() {
                 onClick={() => setI(idx)}
                 className={`h-1.5 rounded-full transition-all ${idx === i ? "w-10 bg-primary" : "w-4 bg-white/40"}`}
                 aria-label={`${t("home.hero.slideLabel")} ${idx + 1}`}
+                data-tagid={`hero-slide-dot-${idx}`}
               />
             ))}
           </div>

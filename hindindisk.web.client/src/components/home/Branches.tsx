@@ -46,7 +46,7 @@ export function Branches() {
               </div>
               <div className="flex items-center justify-between p-6">
                 <div className="text-sm text-muted-foreground">{b.weekdayHours}</div>
-                <Link to="/locations" className="text-sm font-semibold text-primary hover:text-primary-dark">{t("home.branches.viewLink")}</Link>
+                <Link to="/locations" className="text-sm font-semibold text-primary hover:text-primary-dark" data-tagid={`branches-view-link-${i}`}>{t("home.branches.viewLink")}</Link>
               </div>
             </motion.div>
           ))}

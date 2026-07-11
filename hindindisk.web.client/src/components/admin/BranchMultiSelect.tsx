@@ -30,6 +30,7 @@ export function BranchMultiSelect({ branches, selected, onChange, label = "Branc
             <button
               key={b.id}
               type="button"
+              data-tagid={`branch-multi-select-branch-${b.id}`}
               onClick={() => toggle(b.id)}
               className={`rounded-full border px-3 py-1 text-xs font-medium transition
                 ${active

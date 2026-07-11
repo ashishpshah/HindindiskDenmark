@@ -29,11 +29,11 @@ export function Footer() {
           </p>
           <div className="flex gap-3">
             {[
-              { Icon: Facebook,  href: "https://www.facebook.com/Hind-Indisk-Restaurant-106301930914419" },
-              { Icon: Instagram, href: "https://www.instagram.com/hindindisk/" },
-              { Icon: Twitter,   href: "https://x.com/HindIndisk" },
-            ].map(({ Icon, href }) => (
-              <a key={href} href={href} target="_blank" rel="noopener noreferrer"
+              { Icon: Facebook,  href: "https://www.facebook.com/Hind-Indisk-Restaurant-106301930914419", id: "facebook" },
+              { Icon: Instagram, href: "https://www.instagram.com/hindindisk/", id: "instagram" },
+              { Icon: Twitter,   href: "https://x.com/HindIndisk", id: "twitter" },
+            ].map(({ Icon, href, id }) => (
+              <a key={href} href={href} target="_blank" rel="noopener noreferrer" data-tagid={`link-footer-social-${id}`}
                 className="grid h-10 w-10 place-items-center rounded-full border border-white/15 hover:border-primary hover:text-primary transition">
                 <Icon className="h-4 w-4" />
               </a>
@@ -45,7 +45,7 @@ export function Footer() {
           <h4 className="mb-4 font-display text-xl text-primary">{t("footer.quickLinks")}</h4>
           <ul className="space-y-2 text-base font-sans text-white/70">
             {navLinks.map((l) => (
-              <li key={l.to}><Link to={l.to} className="font-sans hover:text-primary">{t(NAV_KEY_MAP[l.to] ?? l.label)}</Link></li>
+              <li key={l.to}><Link to={l.to} data-tagid={`link-footer-nav-${l.to === "/" ? "home" : l.to.slice(1)}`} className="font-sans hover:text-primary">{t(NAV_KEY_MAP[l.to] ?? l.label)}</Link></li>
             ))}
           </ul>
         </div>
@@ -63,19 +63,19 @@ export function Footer() {
                 </div>
               </div>
               {b.phone && (
-                <a href={`tel:${b.phone}`} className="flex items-center gap-2 hover:text-primary transition">
+                <a href={`tel:${b.phone}`} data-tagid={`link-footer-phone-${b.id}`} className="flex items-center gap-2 hover:text-primary transition">
                   <Phone className="h-4 w-4 shrink-0 text-primary/70" />
                   {b.phone}
                 </a>
               )}
               {b.email && (
-                <a href={`mailto:${b.email}`} className="flex items-center gap-2 hover:text-primary transition">
+                <a href={`mailto:${b.email}`} data-tagid={`link-footer-email-${b.id}`} className="flex items-center gap-2 hover:text-primary transition">
                   <Mail className="h-4 w-4 shrink-0 text-primary/70" />
                   {b.email}
                 </a>
               )}
               {b.googleMapsLink && (
-                <a href={b.googleMapsLink} target="_blank" rel="noopener noreferrer"
+                <a href={b.googleMapsLink} target="_blank" rel="noopener noreferrer" data-tagid={`link-footer-maps-${b.id}`}
                   className="inline-block text-sm text-primary/80 hover:text-primary underline underline-offset-2 transition">
                   {t("footer.getDirections")} →
                 </a>

@@ -1,9 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { Plus, Pencil, Trash2, Loader2, ChevronRight, ArrowRight } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, Loader2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
-import { useAdminOrderStatuses, useCreateOrderStatus, useUpdateOrderStatusMeta, useDeleteOrderStatus, type OrderStatusDto, type CreateOrderStatusRequest, type UpdateOrderStatusMetaRequest } from "@/hooks/useAdminOrderStatuses";
-import { useAdminOrderStatusTransitions, useCreateOrderStatusTransition, useDeleteOrderStatusTransition, type OrderStatusTransitionDto } from "@/hooks/useAdminOrderStatusTransitions";
+import {
+  useAdminOrderStatuses, useCreateOrderStatus, useUpdateOrderStatusMeta, useDeleteOrderStatus,
+  type OrderStatusDto, type CreateOrderStatusRequest,
+} from "@/hooks/useAdminOrderStatuses";
+import {
+  useAdminOrderStatusTransitions, useCreateOrderStatusTransition, useDeleteOrderStatusTransition,
+  type OrderStatusTransitionDto,
+} from "@/hooks/useAdminOrderStatusTransitions";
+import { DataTable, type ColumnDef, ActionButtons } from "@/components/ui/data-table";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -19,61 +26,79 @@ export const Route = createFileRoute("/admin/order-statuses")({
 });
 
 const SERVICE_OPTIONS = [
-  { value: "All", label: "All services" },
+  { value: "All",      label: "All services" },
   { value: "Delivery", label: "Only Delivery" },
-  { value: "Pickup", label: "Only Pickup" },
+  { value: "Pickup",   label: "Only Pickup" },
 ];
 
-function StatusColorBadge({ color }: { color?: string | null }) {
-  return (
-    <span
-      className="inline-block h-5 w-5 rounded-full border"
-      style={{ backgroundColor: color ?? "#e5e7eb" }}
-    />
-  );
-}
+// ── Small helpers ─────────────────────────────────────────────────────────────
 
 function ServiceBadge({ type }: { type: string }) {
   const colors: Record<string, string> = {
-    All: "bg-gray-100 text-gray-700",
+    All:      "bg-gray-100 text-gray-700",
     Delivery: "bg-blue-100 text-blue-700",
-    Pickup: "bg-amber-100 text-amber-700",
-  };
-  const labels: Record<string, string> = {
-    All: "All",
-    Delivery: "Delivery",
-    Pickup: "Pickup",
+    Pickup:   "bg-amber-100 text-amber-700",
   };
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${colors[type] ?? "bg-gray-100 text-gray-700"}`}>
-      {labels[type] ?? type}
+      {type}
     </span>
   );
 }
+
+function ColorCell({ color }: { color?: string | null }) {
+  const hex = color ?? "#e5e7eb";
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        className="inline-block h-5 w-5 shrink-0 rounded-full border shadow-sm"
+        style={{ backgroundColor: hex }}
+      />
+      <span className="font-mono text-xs text-muted-foreground">{hex}</span>
+    </div>
+  );
+}
+
+function ActiveToggle({ status, onToggle }: { status: OrderStatusDto; onToggle: () => void }) {
+  return (
+    <label className="relative inline-flex cursor-pointer items-center" onClick={e => e.stopPropagation()}>
+      <input type="checkbox" className="sr-only peer" checked={status.isActive} onChange={onToggle} data-tagid={`input-order-statuses-active-${status.name}`} />
+      <div className="h-4 w-8 rounded-full bg-muted peer-checked:bg-primary after:absolute after:start-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-4" />
+      <span className={`ml-2 text-xs font-medium ${status.isActive ? "text-green-700" : "text-muted-foreground"}`}>
+        {status.isActive ? "Active" : "Inactive"}
+      </span>
+    </label>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 function AdminOrderStatuses() {
   const { tab } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
 
-  const { data: statuses = [], isLoading: loadingStatuses } = useAdminOrderStatuses();
+  const { data: statuses = [],    isLoading: loadingStatuses    } = useAdminOrderStatuses();
   const { data: transitions = [], isLoading: loadingTransitions } = useAdminOrderStatusTransitions();
-  const createStatus = useCreateOrderStatus();
-  const updateStatus = useUpdateOrderStatusMeta();
-  const deleteStatus = useDeleteOrderStatus();
+
+  const createStatus    = useCreateOrderStatus();
+  const updateStatus    = useUpdateOrderStatusMeta();
+  const deleteStatus    = useDeleteOrderStatus();
   const createTransition = useCreateOrderStatusTransition();
   const deleteTransition = useDeleteOrderStatusTransition();
 
-  const [editStatus, setEditStatus] = useState<OrderStatusDto | null>(null);
-  const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [editStatus,           setEditStatus]           = useState<OrderStatusDto | null>(null);
+  const [showStatusDialog,     setShowStatusDialog]     = useState(false);
   const [showTransitionDialog, setShowTransitionDialog] = useState(false);
-  const [statusForm, setStatusForm] = useState<CreateOrderStatusRequest>({
+  const [statusForm,           setStatusForm]           = useState<CreateOrderStatusRequest>({
     name: "", nameDa: "", serviceType: "All", displayOrder: 1, color: "#3B82F6",
   });
   const [transitionForm, setTransitionForm] = useState({ fromStatusId: 0, toStatusId: 0, serviceType: "All" });
   const [submitting, setSubmitting] = useState(false);
 
   const activeTab = tab === "transitions" ? "transitions" : "statuses";
-  const setTab = (t: string) => navigate({ search: { tab: t } });
+  const setTab    = (t: string) => navigate({ search: { tab: t } });
+
+  // ── Status dialog ───────────────────────────────────────────────────────────
 
   const openNewStatus = () => {
     setEditStatus(null);
@@ -95,10 +120,7 @@ function AdminOrderStatuses() {
     setSubmitting(true);
     try {
       if (editStatus) {
-        await updateStatus.mutateAsync({
-          id: editStatus.id,
-          data: { ...statusForm, isActive: editStatus.isActive },
-        });
+        await updateStatus.mutateAsync({ id: editStatus.id, data: { ...statusForm, isActive: editStatus.isActive } });
         toast.success("Status updated.");
       } else {
         await createStatus.mutateAsync(statusForm);
@@ -126,16 +148,14 @@ function AdminOrderStatuses() {
     try {
       await updateStatus.mutateAsync({
         id: s.id,
-        data: {
-          name: s.name, nameDa: s.nameDa ?? undefined,
-          serviceType: s.serviceType, displayOrder: s.displayOrder,
-          color: s.color ?? undefined, isActive: !s.isActive,
-        },
+        data: { name: s.name, nameDa: s.nameDa ?? undefined, serviceType: s.serviceType, displayOrder: s.displayOrder, color: s.color ?? undefined, isActive: !s.isActive },
       });
     } catch (e: unknown) {
       toast.error((e as Error).message ?? "Failed to toggle status.");
     }
   };
+
+  // ── Transition handlers ─────────────────────────────────────────────────────
 
   const handleCreateTransition = async () => {
     if (!transitionForm.fromStatusId || !transitionForm.toStatusId) {
@@ -166,122 +186,161 @@ function AdminOrderStatuses() {
 
   const activeStatuses = statuses.filter(s => s.isActive);
 
+  // ── Column definitions ──────────────────────────────────────────────────────
+
+  const statusColumns = useMemo<ColumnDef<OrderStatusDto>[]>(() => [
+    {
+      id: "name",
+      header: "Name EN",
+      accessorKey: "name",
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.name}</span>
+      ),
+    },
+    {
+      id: "nameDa",
+      header: "Name DA",
+      accessorKey: "nameDa",
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.original.nameDa ?? "—"}</span>
+      ),
+    },
+    {
+      id: "serviceType",
+      header: "Service",
+      accessorKey: "serviceType",
+      cell: ({ row }) => <ServiceBadge type={row.original.serviceType} />,
+    },
+    {
+      id: "color",
+      header: "Color",
+      accessorKey: "color",
+      enableSorting: false,
+      cell: ({ row }) => <ColorCell color={row.original.color} />,
+    },
+    {
+      id: "isActive",
+      header: "Status",
+      accessorKey: "isActive",
+      cell: ({ row }) => (
+        <ActiveToggle status={row.original} onToggle={() => handleToggleActive(row.original)} />
+      ),
+    },
+    {
+      id: "__actions",
+      header: "Actions",
+      enableSorting: false,
+      enableColumnFilter: false,
+      cell: ({ row }) => (
+        <ActionButtons
+          onEdit={() => openEditStatus(row.original)}
+          onDelete={() => handleDeleteStatus(row.original.id)}
+        />
+      ),
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [statuses]);
+
+  const transitionColumns = useMemo<ColumnDef<OrderStatusTransitionDto>[]>(() => [
+    {
+      id: "fromStatusName",
+      header: "From",
+      accessorKey: "fromStatusName",
+      cell: ({ row }) => <span className="font-medium">{row.original.fromStatusName}</span>,
+    },
+    {
+      id: "__arrow",
+      header: "",
+      enableSorting: false,
+      enableColumnFilter: false,
+      size: 32,
+      cell: () => <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />,
+    },
+    {
+      id: "toStatusName",
+      header: "To",
+      accessorKey: "toStatusName",
+      cell: ({ row }) => <span className="font-medium">{row.original.toStatusName}</span>,
+    },
+    {
+      id: "serviceType",
+      header: "Service",
+      accessorKey: "serviceType",
+      cell: ({ row }) => <ServiceBadge type={row.original.serviceType} />,
+    },
+    {
+      id: "__actions",
+      header: "Actions",
+      enableSorting: false,
+      enableColumnFilter: false,
+      cell: ({ row }) => (
+        <ActionButtons onDelete={() => handleDeleteTransition(row.original.id)} />
+      ),
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], []);
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-3xl font-bold">Order Statuses</h1>
-      </div>
+      <h1 className="font-display text-3xl font-bold">Order Statuses</h1>
 
-      {/* Tabs */}
+      {/* ── Tabs ── */}
       <div className="inline-flex items-center rounded-lg bg-muted p-1 gap-0.5">
-        <button
+        <button data-tagid="button-order-statuses-statuses-tab"
           onClick={() => setTab("statuses")}
           className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-            activeTab === "statuses" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            activeTab === "statuses"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           Statuses ({statuses.length})
         </button>
-        <button
+        <button data-tagid="button-order-statuses-transitions-tab"
           onClick={() => setTab("transitions")}
           className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-            activeTab === "transitions" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            activeTab === "transitions"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           Transitions ({transitions.length})
         </button>
       </div>
 
-      {/* Statuses tab */}
+      {/* ── Statuses tab ── */}
       {activeTab === "statuses" && (
-        <div className="rounded-xl border overflow-hidden">
-          {loadingStatuses ? (
-            <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" /> Loading…
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center justify-between px-4 py-2.5 bg-muted/50 border-b">
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {statuses.length} status{statuses.length !== 1 ? "es" : ""}
-                </span>
-                <Button size="sm" className="h-7 text-xs gap-1" onClick={openNewStatus}>
-                  <Plus className="h-3.5 w-3.5" /> New Status
-                </Button>
-              </div>
-              <div className="divide-y">
-                {statuses.map(s => (
-                  <div key={s.id} className="flex items-center gap-4 px-4 py-3 text-sm">
-                    <StatusColorBadge color={s.color} />
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium">{s.name}</span>
-                      {s.nameDa && <span className="ml-2 text-muted-foreground">({s.nameDa})</span>}
-                    </div>
-                    <ServiceBadge type={s.serviceType} />
-                    <span className="text-muted-foreground text-xs w-16 text-center">#{s.displayOrder}</span>
-                    {s.isTerminal && (
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Terminal</span>
-                    )}
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        checked={s.isActive}
-                        onChange={() => handleToggleActive(s)}
-                      />
-                      <div className="w-8 h-4 bg-muted rounded-full peer peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:after:translate-x-4" />
-                    </label>
-                    <button onClick={() => openEditStatus(s)} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground">
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button onClick={() => handleDeleteStatus(s.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        <DataTable
+          title="Order Statuses"
+          columns={statusColumns}
+          data={statuses}
+          isLoading={loadingStatuses}
+          toolbar={
+            <Button size="sm" className="h-8 gap-1 text-xs gradient-primary text-primary-foreground" onClick={openNewStatus} data-tagid="button-order-statuses-new-status">
+              <Plus className="h-3.5 w-3.5" /> New Status
+            </Button>
+          }
+        />
       )}
 
-      {/* Transitions tab */}
+      {/* ── Transitions tab ── */}
       {activeTab === "transitions" && (
-        <div className="rounded-xl border overflow-hidden">
-          {loadingTransitions ? (
-            <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" /> Loading…
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center justify-between px-4 py-2.5 bg-muted/50 border-b">
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {transitions.length} transition{transitions.length !== 1 ? "s" : ""}
-                </span>
-                <Button size="sm" className="h-7 text-xs gap-1" onClick={() => setShowTransitionDialog(true)}>
-                  <Plus className="h-3.5 w-3.5" /> Add Transition
-                </Button>
-              </div>
-              <div className="divide-y">
-                {transitions.map(t => (
-                  <div key={t.id} className="flex items-center gap-3 px-4 py-3 text-sm">
-                    <span className="font-medium">{t.fromStatusName}</span>
-                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="font-medium">{t.toStatusName}</span>
-                    <div className="flex-1" />
-                    <ServiceBadge type={t.serviceType} />
-                    <button onClick={() => handleDeleteTransition(t.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        <DataTable
+          title="Order Status Transitions"
+          columns={transitionColumns}
+          data={transitions}
+          isLoading={loadingTransitions}
+          toolbar={
+            <Button size="sm" className="h-8 gap-1 text-xs gradient-primary text-primary-foreground" onClick={() => setShowTransitionDialog(true)} data-tagid="button-order-statuses-add-transition">
+              <Plus className="h-3.5 w-3.5" /> Add Transition
+            </Button>
+          }
+        />
       )}
 
-      {/* Status Dialog */}
+      {/* ── Status Dialog ── */}
       <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -291,7 +350,7 @@ function AdminOrderStatuses() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs">Name (EN)</Label>
-                <Input
+                <Input data-tagid="input-order-statuses-name-en"
                   value={statusForm.name}
                   onChange={e => setStatusForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="e.g. New"
@@ -299,7 +358,7 @@ function AdminOrderStatuses() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Name (DA)</Label>
-                <Input
+                <Input data-tagid="input-order-statuses-name-da"
                   value={statusForm.nameDa ?? ""}
                   onChange={e => setStatusForm(f => ({ ...f, nameDa: e.target.value }))}
                   placeholder="e.g. Ny"
@@ -320,7 +379,7 @@ function AdminOrderStatuses() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Display Order</Label>
-                <Input
+                <Input data-tagid="input-order-statuses-display-order"
                   type="number" min={1}
                   value={statusForm.displayOrder}
                   onChange={e => setStatusForm(f => ({ ...f, displayOrder: parseInt(e.target.value) || 1 }))}
@@ -330,13 +389,13 @@ function AdminOrderStatuses() {
             <div className="space-y-1.5">
               <Label className="text-xs">Color</Label>
               <div className="flex items-center gap-3">
-                <input
+                <input data-tagid="input-order-statuses-color"
                   type="color"
                   value={statusForm.color ?? "#3B82F6"}
                   onChange={e => setStatusForm(f => ({ ...f, color: e.target.value }))}
-                  className="h-9 w-9 rounded border cursor-pointer"
+                  className="h-9 w-9 cursor-pointer rounded border"
                 />
-                <Input
+                <Input data-tagid="input-order-statuses-color-hex"
                   value={statusForm.color ?? ""}
                   onChange={e => setStatusForm(f => ({ ...f, color: e.target.value }))}
                   placeholder="#3B82F6"
@@ -346,15 +405,15 @@ function AdminOrderStatuses() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowStatusDialog(false)}>Cancel</Button>
-            <Button onClick={handleSaveStatus} disabled={submitting}>
-              {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Saving…</> : "Save"}
+            <Button variant="outline" onClick={() => setShowStatusDialog(false)} data-tagid="button-order-statuses-cancel-status-dialog">Cancel</Button>
+            <Button onClick={handleSaveStatus} disabled={submitting} data-tagid="button-order-statuses-save-status">
+              {submitting ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Saving…</> : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Transition Dialog */}
+      {/* ── Transition Dialog ── */}
       <Dialog open={showTransitionDialog} onOpenChange={setShowTransitionDialog}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -363,8 +422,11 @@ function AdminOrderStatuses() {
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label className="text-xs">From Status</Label>
-              <Select value={String(transitionForm.fromStatusId)} onValueChange={v => setTransitionForm(f => ({ ...f, fromStatusId: Number(v) }))}>
-                <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+              <Select
+                value={String(transitionForm.fromStatusId)}
+                onValueChange={v => setTransitionForm(f => ({ ...f, fromStatusId: Number(v) }))}
+              >
+                <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
                 <SelectContent>
                   {activeStatuses.map(s => (
                     <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
@@ -374,18 +436,26 @@ function AdminOrderStatuses() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">To Status</Label>
-              <Select value={String(transitionForm.toStatusId)} onValueChange={v => setTransitionForm(f => ({ ...f, toStatusId: Number(v) }))}>
-                <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+              <Select
+                value={String(transitionForm.toStatusId)}
+                onValueChange={v => setTransitionForm(f => ({ ...f, toStatusId: Number(v) }))}
+              >
+                <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
                 <SelectContent>
-                  {activeStatuses.filter(s => s.id !== transitionForm.fromStatusId).map(s => (
-                    <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-                  ))}
+                  {activeStatuses
+                    .filter(s => s.id !== transitionForm.fromStatusId)
+                    .map(s => (
+                      <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Service Type</Label>
-              <Select value={transitionForm.serviceType} onValueChange={v => setTransitionForm(f => ({ ...f, serviceType: v }))}>
+              <Select
+                value={transitionForm.serviceType}
+                onValueChange={v => setTransitionForm(f => ({ ...f, serviceType: v }))}
+              >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {SERVICE_OPTIONS.map(o => (
@@ -396,9 +466,9 @@ function AdminOrderStatuses() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowTransitionDialog(false)}>Cancel</Button>
-            <Button onClick={handleCreateTransition} disabled={submitting}>
-              {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Adding…</> : "Add"}
+            <Button variant="outline" onClick={() => setShowTransitionDialog(false)} data-tagid="button-order-statuses-cancel-transition-dialog">Cancel</Button>
+            <Button onClick={handleCreateTransition} disabled={submitting} data-tagid="button-order-statuses-add-transition-submit">
+              {submitting ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Adding…</> : "Add"}
             </Button>
           </DialogFooter>
         </DialogContent>

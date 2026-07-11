@@ -97,6 +97,7 @@ namespace HindIndisk.Web.Server
 			builder.Services.AddScoped<HindIndisk.Api.Application.Services.ScheduleService>();
 			builder.Services.AddScoped<HindIndisk.Api.Application.Services.BranchServiceStatusService>();
 			builder.Services.AddScoped<HindIndisk.Api.Application.Services.BranchClosureService>();
+			builder.Services.AddScoped<IEmailSettingsService, EmailSettingsService>();
 			builder.Services.AddScoped<IHeroSlideService, HeroSlideService>();
 			builder.Services.AddScoped<IGalleryImageService, GalleryImageService>();
 			builder.Services.AddScoped<IAboutService, AboutService>();
@@ -105,7 +106,6 @@ namespace HindIndisk.Web.Server
 			builder.Services.AddTransient<IExceptionLogService, ExceptionLogService>();
 
 			// ── Email service ─────────────────────────────────────────────────────────────
-			builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Email"));
 			builder.Services.AddScoped<IEmailService, EmailService>();
 
 			// ── Google Reviews ────────────────────────────────────────────────────────────
@@ -164,7 +164,7 @@ namespace HindIndisk.Web.Server
 
 				await db.Database.MigrateAsync();
 
-				await DataSeeder.SeedAsync(db);
+				await DataSeeder.SeedAsync(db, builder.Configuration);
 			}
 
 			app.UseMiddleware<ExceptionLoggingMiddleware>();
@@ -189,6 +189,7 @@ namespace HindIndisk.Web.Server
 			app.MapControllers();
 			app.MapHub<ClosureHub>("/hubs/closures");
 			app.MapHub<CustomerHub>("/hubs/customer");
+			app.MapHub<AdminHub>("/hubs/admin");
 			app.MapHealthChecks("/health");
 
 			app.MapFallbackToFile("/index.html");

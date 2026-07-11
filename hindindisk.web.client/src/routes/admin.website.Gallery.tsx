@@ -76,7 +76,7 @@ function GalleryAdmin() {
           <h1 className="font-display text-3xl font-bold">Gallery</h1>
           <p className="text-muted-foreground text-sm mt-1">Manage gallery images</p>
         </div>
-        <Button size="sm" className="gradient-primary text-primary-foreground h-9" onClick={openCreate}>
+        <Button size="sm" className="gradient-primary text-primary-foreground h-9" data-tagid="button-website-gallery-add" onClick={openCreate}>
           <Plus className="mr-1.5 h-4 w-4" /> Add Image
         </Button>
       </div>
@@ -106,6 +106,7 @@ function GalleryAdmin() {
               <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition group-hover:opacity-100">
                 <button
                   onClick={() => openEdit(img)}
+                  data-tagid={`button-website-gallery-edit-${img.id}`}
                   className="grid h-7 w-7 place-items-center rounded-full bg-white/90 text-gray-700 shadow hover:text-primary"
                 >
                   <Pencil className="h-3.5 w-3.5" />
@@ -117,6 +118,7 @@ function GalleryAdmin() {
                       onError:   () => toast.error("Failed to delete"),
                     });
                   }}
+                  data-tagid={`button-website-gallery-delete-${img.id}`}
                   className="grid h-7 w-7 place-items-center rounded-full bg-white/90 text-red-500 shadow hover:text-red-700"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -132,11 +134,11 @@ function GalleryAdmin() {
 
       {showModal && (
         <>
-          <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setShowModal(false)} />
+          <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setShowModal(false)} data-tagid="button-website-gallery-backdrop" />
           <div className="fixed left-1/2 top-1/2 z-50 w-[95%] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{editId !== null ? "Edit Image" : "Add Image"}</h2>
-              <button onClick={() => setShowModal(false)}><X className="h-4 w-4 text-muted-foreground" /></button>
+              <button onClick={() => setShowModal(false)} data-tagid="button-website-gallery-modalclose"><X className="h-4 w-4 text-muted-foreground" /></button>
             </div>
 
             <div className="space-y-1.5">
@@ -151,30 +153,30 @@ function GalleryAdmin() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Caption (EN)</Label>
-                <Input value={form.caption} onChange={e => setForm(p => ({ ...p, caption: e.target.value }))} placeholder="Optional caption" />
+                <Input value={form.caption} onChange={e => setForm(p => ({ ...p, caption: e.target.value }))} placeholder="Optional caption" data-tagid="input-website-gallery-caption" />
               </div>
               <div className="space-y-1.5">
                 <Label>Caption (DA)</Label>
-                <Input value={form.captionDa} onChange={e => setForm(p => ({ ...p, captionDa: e.target.value }))} placeholder="Valgfri billedtekst" />
+                <Input value={form.captionDa} onChange={e => setForm(p => ({ ...p, captionDa: e.target.value }))} placeholder="Valgfri billedtekst" data-tagid="input-website-gallery-captionda" />
               </div>
             </div>
 
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2.5">
-                <Switch checked={form.isActive} onCheckedChange={v => setForm(p => ({ ...p, isActive: v }))} />
+                <Switch checked={form.isActive} onCheckedChange={v => setForm(p => ({ ...p, isActive: v }))} data-tagid="button-website-gallery-active" />
                 <span className="text-sm font-medium">{form.isActive ? "Visible" : "Hidden"}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Label className="text-sm">Sort Order</Label>
                 <Input type="number" min={0} value={form.sortOrder}
                   onChange={e => setForm(p => ({ ...p, sortOrder: Number(e.target.value) }))}
-                  className="h-8 w-20 text-sm" />
+                  className="h-8 w-20 text-sm" data-tagid="input-website-gallery-sortorder" />
               </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t">
-              <Button variant="outline" onClick={() => setShowModal(false)} disabled={isSaving}>Cancel</Button>
-              <Button className="gradient-primary text-primary-foreground" onClick={handleSave} disabled={isSaving}>
+              <Button variant="outline" onClick={() => setShowModal(false)} disabled={isSaving} data-tagid="button-website-gallery-cancel">Cancel</Button>
+              <Button className="gradient-primary text-primary-foreground" onClick={handleSave} disabled={isSaving} data-tagid="button-website-gallery-save">
                 {isSaving ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Saving…</> : (editId !== null ? "Update" : "Add")}
               </Button>
             </div>

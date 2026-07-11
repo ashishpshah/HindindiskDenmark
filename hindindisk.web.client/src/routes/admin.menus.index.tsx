@@ -18,12 +18,23 @@ export const Route = createFileRoute("/admin/menus/")({ component: AdminMenusInd
 
 function AdminMenusIndex() {
   const navigate = useNavigate();
-  const { data: menus = [], isLoading, refetch } = useAdminMenus();
   const { data: branches = [] } = useBranches();
   const deleteMenu = useDeleteMenu();
   const toggleMenu = useToggleMenu();
-  const [pending,        setPending]        = useState<AdminMenuDto | null>(null);
+
+  const [page,           setPage]           = useState(1);
+  const [pageSize,       setPageSize]       = useState(20);
+  const [search,         setSearch]         = useState("");
   const [filterBranchId, setFilterBranchId] = useState<number | undefined>();
+  const [pending,        setPending]        = useState<AdminMenuDto | null>(null);
+
+  const { data, isLoading, refetch } = useAdminMenus({
+    page,
+    pageSize,
+    search:   search   || undefined,
+    branchId: filterBranchId,
+  });
+  const menus = data?.items ?? [];
 
   const handleDelete = async () => {
     if (!pending) return;
@@ -36,11 +47,6 @@ function AdminMenusIndex() {
       setPending(null);
     }
   };
-
-  // Client-side branch filter
-  const filtered = filterBranchId
-    ? menus.filter(m => m.branchIds.includes(filterBranchId))
-    : menus;
 
   const columns: ColumnDef<AdminMenuDto, unknown>[] = [
     {
@@ -67,7 +73,6 @@ function AdminMenusIndex() {
       ),
     },
     {
-      // Branches column
       id: "branches",
       header: "Branches",
       accessorFn: row => row.branchIds.length,
@@ -124,15 +129,16 @@ function AdminMenusIndex() {
       <DataTable
         title="Menus"
         columns={columns}
-        data={filtered}
+        data={menus}
         isLoading={isLoading}
         getRowId={row => String(row.id)}
         toolbar={
           <>
-            {/* Branch filter */}
-            <Select value={filterBranchId?.toString() ?? "__all"}
-              onValueChange={v => setFilterBranchId(v === "__all" ? undefined : Number(v))}>
-              <SelectTrigger className="h-8 w-48 text-xs"><SelectValue placeholder="All branches" /></SelectTrigger>
+            <Select
+              value={filterBranchId?.toString() ?? "__all"}
+              onValueChange={v => { setFilterBranchId(v === "__all" ? undefined : Number(v)); setPage(1); }}
+            >
+              <SelectTrigger className="h-8 w-48 text-xs" data-tagid="select-menus-branchfilter"><SelectValue placeholder="All branches" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all" className="text-xs">All branches</SelectItem>
                 {branches.map(b => (
@@ -143,12 +149,21 @@ function AdminMenusIndex() {
               </SelectContent>
             </Select>
             <Button size="sm" className="gradient-primary text-primary-foreground h-8"
+              data-tagid="button-menus-newmenu"
               onClick={() => navigate({ to: "/admin/menus/new" })}>
               <Plus className="mr-1.5 h-3.5 w-3.5" /> New Menu
             </Button>
           </>
         }
         onRefresh={refetch}
+        serverPagination={{
+          page,
+          pageSize,
+          total:            data?.total ?? 0,
+          onPageChange:     p => setPage(p),
+          onPageSizeChange: s => { setPageSize(s); setPage(1); },
+          onSearchChange:   q => { setSearch(q); setPage(1); },
+        }}
       />
 
       <ConfirmDialog

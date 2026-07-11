@@ -48,6 +48,7 @@ function GuestPicker({ value, onChange }: { value: string; onChange: (v: string)
         {QUICK_CHIPS.map((n) => (
           <button
             key={n}
+            data-tagid={`button-reservation-guests-${n}`}
             type="button"
             onClick={() => onChange(String(n))}
             className={`h-9 w-9 rounded-full border text-sm font-semibold transition-all
@@ -60,6 +61,7 @@ function GuestPicker({ value, onChange }: { value: string; onChange: (v: string)
         ))}
         <button
           type="button"
+          data-tagid="button-reservation-guests-6plus"
           onClick={() => { if (!isLarge) onChange("6"); }}
           className={`h-9 px-3 rounded-full border text-sm font-semibold transition-all flex items-center gap-1
             ${isLarge
@@ -81,6 +83,7 @@ function GuestPicker({ value, onChange }: { value: string; onChange: (v: string)
             <div className="flex items-center rounded-xl border bg-muted overflow-hidden">
               <button
                 type="button"
+                data-tagid="button-reservation-guests-decrease"
                 disabled={num <= 6}
                 onClick={() => onChange(String(num - 1))}
                 className="h-10 w-10 flex items-center justify-center text-lg font-bold text-muted-foreground hover:text-foreground hover:bg-accent transition disabled:opacity-30 disabled:cursor-not-allowed"
@@ -93,6 +96,7 @@ function GuestPicker({ value, onChange }: { value: string; onChange: (v: string)
                 max={MAX_GUESTS}
                 value={value}
                 autoFocus
+                data-tagid="input-reservation-guests-custom"
                 aria-label="Number of guests"
                 onChange={(e) => {
                   const v = Math.min(MAX_GUESTS, Math.max(6, Number(e.target.value) || 6));
@@ -102,6 +106,7 @@ function GuestPicker({ value, onChange }: { value: string; onChange: (v: string)
               />
               <button
                 type="button"
+                data-tagid="button-reservation-guests-increase"
                 disabled={num >= MAX_GUESTS}
                 onClick={() => onChange(String(num + 1))}
                 className="h-10 w-10 flex items-center justify-center text-lg font-bold text-muted-foreground hover:text-foreground hover:bg-accent transition disabled:opacity-30 disabled:cursor-not-allowed"
@@ -519,6 +524,7 @@ function ReservationPage() {
         {pendingDuplicates && pendingDuplicates.length > 0 && (
           <>
             <motion.div className="fixed inset-0 z-50 bg-black/60"
+              data-tagid="div-reservation-duplicate-backdrop"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setPendingDuplicates(null)} />
             <motion.div
@@ -575,6 +581,7 @@ function ReservationPage() {
         {confirmed && (
           <>
             <motion.div className="fixed inset-0 z-50 bg-black/60"
+              data-tagid="div-reservation-confirmation-backdrop"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={handleDone} />
             <motion.div

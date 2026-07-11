@@ -29,8 +29,10 @@ function MenuItemEditPage() {
   const navigate    = useNavigate();
   const { itemId }  = Route.useParams();
 
-  const { data: items    = [], isLoading } = useAdminMenuItems();
-  const { data: menus    = [] }            = useAdminMenus();
+  const { data: itemsPage, isLoading } = useAdminMenuItems();
+  const { data: menusPage }            = useAdminMenus();
+  const items = itemsPage?.items ?? [];
+  const menus = menusPage?.items ?? [];
   const { data: branches = [] }            = useBranches();
   const updateItem   = useUpdateMenuItem();
   const updatePrices = useUpdateMenuItemPrices();
@@ -128,11 +130,11 @@ function MenuItemEditPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Name *</Label>
-            <Input autoFocus value={name} onChange={e => setName(e.target.value)} />
+            <Input autoFocus value={name} onChange={e => setName(e.target.value)} data-tagid="input-menu-name" />
           </div>
           <div className="space-y-1.5">
             <Label>Name <span className="text-xs text-muted-foreground">(Danish)</span></Label>
-            <Input placeholder="Dansk navn" value={nameDa} onChange={e => setNameDa(e.target.value)} />
+            <Input placeholder="Dansk navn" value={nameDa} onChange={e => setNameDa(e.target.value)} data-tagid="input-menu-nameda" />
           </div>
         </div>
 
@@ -140,11 +142,11 @@ function MenuItemEditPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Description</Label>
-            <Input value={desc} onChange={e => setDesc(e.target.value)} />
+            <Input value={desc} onChange={e => setDesc(e.target.value)} data-tagid="input-menu-description" />
           </div>
           <div className="space-y-1.5">
             <Label>Description <span className="text-xs text-muted-foreground">(Danish)</span></Label>
-            <Input placeholder="Kort beskrivelse" value={descDa} onChange={e => setDescDa(e.target.value)} />
+            <Input placeholder="Kort beskrivelse" value={descDa} onChange={e => setDescDa(e.target.value)} data-tagid="input-menu-descriptionda" />
           </div>
         </div>
 
@@ -152,12 +154,12 @@ function MenuItemEditPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Code</Label>
-            <Input type="number" min={0} value={code} onChange={e => setCode(Number(e.target.value))} />
+            <Input type="number" min={0} value={code} onChange={e => setCode(Number(e.target.value))} data-tagid="input-menu-code" />
           </div>
           <div className="space-y-1.5">
             <Label>Spicy Level</Label>
             <Select value={String(spicyLevel)} onValueChange={v => setSpicyLevel(Number(v))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger data-tagid="select-menu-spicylevel"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {SPICY_OPTIONS.map(o => <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>)}
               </SelectContent>
@@ -177,7 +179,7 @@ function MenuItemEditPage() {
             <Label className="text-sm font-semibold">Signature Dish</Label>
             <p className="text-xs text-muted-foreground mt-0.5">Show on the home page "Signature Dishes" carousel</p>
           </div>
-          <Switch checked={isSignature} onCheckedChange={setIsSignature} />
+          <Switch checked={isSignature} onCheckedChange={setIsSignature} data-tagid="button-menu-signature" />
         </div>
 
         {/* Menus */}
@@ -189,6 +191,7 @@ function MenuItemEditPage() {
                 const active = menuIds.includes(m.id);
                 return (
                   <button key={m.id} type="button" onClick={() => toggleMenu(m.id)}
+                    data-tagid={`button-menu-togglemenu-${m.id}`}
                     className={`rounded-full border px-3 py-1 text-xs font-medium transition
                       ${active ? "gradient-primary text-primary-foreground border-transparent" : "bg-muted text-muted-foreground hover:bg-accent"}`}>
                     {m.name}
@@ -224,6 +227,7 @@ function MenuItemEditPage() {
                     <span className="text-sm text-muted-foreground flex-1">{b.name.replace("Hind Indisk ", "")}</span>
                     <Input type="number" min={0} step={0.01} className="w-28" placeholder="0"
                       value={prices[id] ?? ""}
+                      data-tagid={`input-menu-price-${id}`}
                       onChange={e => setPrices(p => ({ ...p, [id]: e.target.value }))} />
                     <span className="text-sm text-muted-foreground">DKK</span>
                   </div>
@@ -235,11 +239,12 @@ function MenuItemEditPage() {
 
         <div className="flex gap-2 pt-4 border-t">
           <Button className="gradient-primary text-primary-foreground"
-            disabled={!name.trim() || isSaving} onClick={handleSave}>
+            disabled={!name.trim() || isSaving} onClick={handleSave}
+            data-tagid="button-menu-save">
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-1.5 h-4 w-4" />}
             Save Changes
           </Button>
-          <Button variant="outline" onClick={() => navigate({ to: "/admin/menu" })}>Cancel</Button>
+          <Button variant="outline" onClick={() => navigate({ to: "/admin/menu" })} data-tagid="button-menu-cancel">Cancel</Button>
         </div>
       </div>
     </FormPage>

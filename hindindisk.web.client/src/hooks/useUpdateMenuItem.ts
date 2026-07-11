@@ -24,6 +24,7 @@ export function useUpdateMenuItem() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-menu-items"] });
+      qc.invalidateQueries({ queryKey: ["admin-menus"] });
     },
   });
 }

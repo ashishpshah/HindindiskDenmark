@@ -33,6 +33,7 @@ import { Route as AdminOrderStatusesRouteImport } from './routes/admin.order-sta
 import { Route as AdminMenusRouteImport } from './routes/admin.menus'
 import { Route as AdminMenuRouteImport } from './routes/admin.menu'
 import { Route as AdminExceptionLogsRouteImport } from './routes/admin.exception-logs'
+import { Route as AdminEmailSettingsRouteImport } from './routes/admin.email-settings'
 import { Route as AdminCustomersRouteImport } from './routes/admin.customers'
 import { Route as AdminBranchesRouteImport } from './routes/admin.branches'
 import { Route as AccountReservationsRouteImport } from './routes/account.reservations'
@@ -172,6 +173,11 @@ const AdminExceptionLogsRoute = AdminExceptionLogsRouteImport.update({
   path: '/exception-logs',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminEmailSettingsRoute = AdminEmailSettingsRouteImport.update({
+  id: '/email-settings',
+  path: '/email-settings',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminCustomersRoute = AdminCustomersRouteImport.update({
   id: '/customers',
   path: '/customers',
@@ -282,6 +288,7 @@ export interface FileRoutesByFullPath {
   '/account/reservations': typeof AccountReservationsRoute
   '/admin/branches': typeof AdminBranchesRouteWithChildren
   '/admin/customers': typeof AdminCustomersRoute
+  '/admin/email-settings': typeof AdminEmailSettingsRoute
   '/admin/exception-logs': typeof AdminExceptionLogsRoute
   '/admin/menu': typeof AdminMenuRouteWithChildren
   '/admin/menus': typeof AdminMenusRouteWithChildren
@@ -322,6 +329,7 @@ export interface FileRoutesByTo {
   '/account/profile': typeof AccountProfileRoute
   '/account/reservations': typeof AccountReservationsRoute
   '/admin/customers': typeof AdminCustomersRoute
+  '/admin/email-settings': typeof AdminEmailSettingsRoute
   '/admin/exception-logs': typeof AdminExceptionLogsRoute
   '/admin/order-statuses': typeof AdminOrderStatusesRoute
   '/admin/orders': typeof AdminOrdersRoute
@@ -365,6 +373,7 @@ export interface FileRoutesById {
   '/account/reservations': typeof AccountReservationsRoute
   '/admin/branches': typeof AdminBranchesRouteWithChildren
   '/admin/customers': typeof AdminCustomersRoute
+  '/admin/email-settings': typeof AdminEmailSettingsRoute
   '/admin/exception-logs': typeof AdminExceptionLogsRoute
   '/admin/menu': typeof AdminMenuRouteWithChildren
   '/admin/menus': typeof AdminMenusRouteWithChildren
@@ -411,6 +420,7 @@ export interface FileRouteTypes {
     | '/account/reservations'
     | '/admin/branches'
     | '/admin/customers'
+    | '/admin/email-settings'
     | '/admin/exception-logs'
     | '/admin/menu'
     | '/admin/menus'
@@ -451,6 +461,7 @@ export interface FileRouteTypes {
     | '/account/profile'
     | '/account/reservations'
     | '/admin/customers'
+    | '/admin/email-settings'
     | '/admin/exception-logs'
     | '/admin/order-statuses'
     | '/admin/orders'
@@ -493,6 +504,7 @@ export interface FileRouteTypes {
     | '/account/reservations'
     | '/admin/branches'
     | '/admin/customers'
+    | '/admin/email-settings'
     | '/admin/exception-logs'
     | '/admin/menu'
     | '/admin/menus'
@@ -702,6 +714,13 @@ declare module '@tanstack/react-router' {
       path: '/exception-logs'
       fullPath: '/admin/exception-logs'
       preLoaderRoute: typeof AdminExceptionLogsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/email-settings': {
+      id: '/admin/email-settings'
+      path: '/email-settings'
+      fullPath: '/admin/email-settings'
+      preLoaderRoute: typeof AdminEmailSettingsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/customers': {
@@ -919,6 +938,7 @@ const AdminWebsiteRouteWithChildren = AdminWebsiteRoute._addFileChildren(
 interface AdminRouteChildren {
   AdminBranchesRoute: typeof AdminBranchesRouteWithChildren
   AdminCustomersRoute: typeof AdminCustomersRoute
+  AdminEmailSettingsRoute: typeof AdminEmailSettingsRoute
   AdminExceptionLogsRoute: typeof AdminExceptionLogsRoute
   AdminMenuRoute: typeof AdminMenuRouteWithChildren
   AdminMenusRoute: typeof AdminMenusRouteWithChildren
@@ -933,6 +953,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminBranchesRoute: AdminBranchesRouteWithChildren,
   AdminCustomersRoute: AdminCustomersRoute,
+  AdminEmailSettingsRoute: AdminEmailSettingsRoute,
   AdminExceptionLogsRoute: AdminExceptionLogsRoute,
   AdminMenuRoute: AdminMenuRouteWithChildren,
   AdminMenusRoute: AdminMenusRouteWithChildren,

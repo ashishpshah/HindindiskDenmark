@@ -28,6 +28,7 @@ export function AddressSelectDialog({ open, onOpenChange, addresses, onSelect, o
             <button
               key={addr.id}
               type="button"
+              data-tagid={`button-address-dialog-select-${addr.id}`}
               onClick={() => { onSelect(addr); onOpenChange(false); }}
               className="w-full rounded-xl border bg-card p-4 text-left hover:border-primary hover:bg-primary/5 transition group"
             >
@@ -53,6 +54,7 @@ export function AddressSelectDialog({ open, onOpenChange, addresses, onSelect, o
         </div>
 
         <Button
+          data-tagid="button-address-dialog-new"
           variant="outline"
           className="w-full mt-1"
           onClick={() => { onNew(); onOpenChange(false); }}

@@ -70,7 +70,7 @@ function MenuPage() {
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">{t("pages.menu.changeLocation")}</span>
             <Select value={branch} onValueChange={setBranch}>
-              <SelectTrigger className="w-[220px] rounded-full bg-background border-input shadow-soft focus:ring-1 focus:ring-primary cursor-pointer">
+              <SelectTrigger data-tagid="button-menu-branch-select" className="w-[220px] rounded-full bg-background border-input shadow-soft focus:ring-1 focus:ring-primary cursor-pointer">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -88,17 +88,17 @@ function MenuPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative w-full sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("pages.menu.search")} className="pl-9 rounded-full" />
+            <Input data-tagid="input-menu-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("pages.menu.search")} className="pl-9 rounded-full" />
           </div>
         </div>
 
         <div className="mt-6 flex flex-wrap gap-2">
-          <button onClick={() => setCat("All")}
+          <button data-tagid="button-menu-category-all" onClick={() => setCat("All")}
             className={`rounded-full border px-5 py-2 text-sm font-medium transition ${cat === "All" ? "gradient-primary border-transparent text-primary-foreground shadow-elegant" : "hover:bg-accent"}`}>
             {t("pages.menu.allCategory")}
           </button>
           {categoriesData.map((c) => (
-            <button key={c.name} onClick={() => setCat(c.name)}
+            <button data-tagid={`button-menu-category-${c.name.toLowerCase().replace(/\s+/g, "-")}`} key={c.name} onClick={() => setCat(c.name)}
               className={`rounded-full border px-5 py-2 text-sm font-medium transition ${cat === c.name ? "gradient-primary border-transparent text-primary-foreground shadow-elegant" : "hover:bg-accent"}`}>
               {loc(c.name, c.nameDa)}
             </button>
@@ -121,7 +121,7 @@ function MenuPage() {
                   initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
                   className="group overflow-hidden rounded-3xl border bg-card shadow-soft transition hover:shadow-elegant"
                 >
-                  <Link to="/menu/$name" params={{ name: m.name }} className="relative h-48 overflow-hidden block">
+                  <Link data-tagid={`a-menu-item-link-${m.name.toLowerCase().replace(/\s+/g, "-")}`} to="/menu/$name" params={{ name: m.name }} className="relative h-48 overflow-hidden block">
                     <MenuItemPhoto src={m.imageUrl} alt={m.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-110" />
                     <div className="absolute left-3 top-3 flex gap-1.5">
                       {Array.from({ length: m.spicyLevel }).map((_, i) => <Flame key={i} className="h-4 w-4 fill-red-500 text-red-500 drop-shadow" />)}
@@ -135,7 +135,7 @@ function MenuPage() {
                   <div className="p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <Link to="/menu/$name" params={{ name: m.name }} className="hover:text-primary transition">
+                        <Link data-tagid={`a-menu-item-name-${m.name.toLowerCase().replace(/\s+/g, "-")}`} to="/menu/$name" params={{ name: m.name }} className="hover:text-primary transition">
                           <div className="font-display text-xl font-semibold">{loc(m.name, m.nameDa)}</div>
                         </Link>
                         <div className="mt-0.5 text-xs uppercase tracking-wider text-muted-foreground">{loc(m.category, m.categoryDa)}</div>
@@ -145,6 +145,7 @@ function MenuPage() {
                     <p className="mt-3 text-sm text-muted-foreground">{loc(m.description, m.descriptionDa)}</p>
                     <div className="mt-4 flex items-center justify-between">
                       <Button
+                        data-tagid={`button-menu-item-add-${m.name.toLowerCase().replace(/\s+/g, "-")}`}
                         onClick={() => onAdd(m)}
                         size="sm"
                         className="rounded-full gradient-primary text-primary-foreground cursor-pointer flex items-center justify-center gap-1.5 min-w-[96px]"
@@ -168,6 +169,7 @@ function MenuPage() {
 
       {totalQty > 0 && (
         <button
+          data-tagid="button-cart-floating-summary"
           onClick={() => setCartOpen(true)}
           className="fixed bottom-6 left-6 z-30 inline-flex items-center gap-2 rounded-full gradient-primary px-5 py-3.5 text-primary-foreground shadow-elegant transition hover:scale-105 cursor-pointer"
         >

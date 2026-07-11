@@ -22,9 +22,31 @@ export type AdminMenuItemDto = {
   code: number;
 };
 
-export function useAdminMenuItems() {
+export type MenuItemPageDto = {
+  items: AdminMenuItemDto[];
+  total: number;
+};
+
+export type MenuItemFilters = {
+  page: number;
+  pageSize: number;
+  search?: string;
+  branchId?: number;
+};
+
+export function useAdminMenuItems(filters?: MenuItemFilters) {
+  const qs = new URLSearchParams();
+  if (filters) {
+    qs.set("page",     String(filters.page));
+    qs.set("pageSize", String(filters.pageSize));
+    if (filters.search)   qs.set("search",   filters.search);
+    if (filters.branchId) qs.set("branchId", String(filters.branchId));
+  }
+
   return useQuery({
-    queryKey: ["admin-menu-items"],
-    queryFn:  () => apiFetch<AdminMenuItemDto[]>("/api/admin/menu-items"),
+    queryKey: filters ? ["admin-menu-items", filters] : ["admin-menu-items"],
+    queryFn:  () => apiFetch<MenuItemPageDto>(
+      `/api/admin/menu-items${filters ? `?${qs}` : ""}`
+    ),
   });
 }

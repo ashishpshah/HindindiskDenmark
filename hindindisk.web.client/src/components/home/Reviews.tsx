@@ -103,6 +103,7 @@ export function Testimonials() {
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+              data-tagid="reviews-see-all"
             >
               {t("home.reviews.seeAll")} <ExternalLink className="h-3.5 w-3.5" />
             </a>

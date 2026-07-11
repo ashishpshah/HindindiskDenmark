@@ -46,11 +46,26 @@ export type AdminCustomerDetailDto = {
   reservations: AdminCustomerReservationDto[];
 };
 
-export function useAdminCustomers(q?: string) {
-  const qs = q ? `?q=${encodeURIComponent(q)}` : "";
+export type CustomerPageDto = {
+  items: AdminCustomerDto[];
+  total: number;
+};
+
+export type CustomerFilters = {
+  page: number;
+  pageSize: number;
+  q?: string;
+};
+
+export function useAdminCustomers(filters: CustomerFilters) {
+  const qs = new URLSearchParams();
+  qs.set("page",     String(filters.page));
+  qs.set("pageSize", String(filters.pageSize));
+  if (filters.q) qs.set("q", filters.q);
+
   return useQuery({
-    queryKey: ["admin-customers", q],
-    queryFn:  () => apiFetch<AdminCustomerDto[]>(`/api/admin/customers${qs}`),
+    queryKey: ["admin-customers", filters],
+    queryFn:  () => apiFetch<CustomerPageDto>(`/api/admin/customers?${qs}`),
   });
 }
 

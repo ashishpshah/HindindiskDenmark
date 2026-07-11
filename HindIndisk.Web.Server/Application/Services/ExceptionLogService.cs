@@ -60,10 +60,11 @@ public class ExceptionLogService : IExceptionLogService
     public async Task<ExceptionLogPageDto> GetRecentAsync(
         int       page,
         int       pageSize,
-        string?   search  = null,
-        DateTime? from    = null,
-        DateTime? to      = null,
-        string?   module  = null)
+        string?   search   = null,
+        DateTime? from     = null,
+        DateTime? to       = null,
+        string?   module   = null,
+        string?   logLevel = null)
     {
         var cutoff = DenmarkTime.Now.AddDays(-5);
         await _db.ApiExceptionLogs
@@ -85,6 +86,11 @@ public class ExceptionLogService : IExceptionLogService
 
         if (!string.IsNullOrWhiteSpace(module))
             q = q.Where(e => e.RequestPath.StartsWith(module));
+
+        if (logLevel == "exception")
+            q = q.Where(e => e.ExceptionType != null);
+        else if (logLevel == "info")
+            q = q.Where(e => e.ExceptionType == null);
 
         var total = await q.CountAsync();
 

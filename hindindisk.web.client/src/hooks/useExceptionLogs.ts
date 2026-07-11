@@ -20,23 +20,27 @@ export type ExceptionLogPageDto = {
   total: number;
 };
 
+export type LogLevel = "all" | "info" | "exception";
+
 export type ExceptionLogFilters = {
-  page:     number;
-  pageSize: number;
-  search?:  string;
-  from?:    string;
-  to?:      string;
-  module?:  string;
+  page:      number;
+  pageSize:  number;
+  search?:   string;
+  from?:     string;
+  to?:       string;
+  module?:   string;
+  logLevel?: LogLevel;
 };
 
 export function useExceptionLogs(filters: ExceptionLogFilters) {
   const qs = new URLSearchParams();
   qs.set("page",     String(filters.page));
   qs.set("pageSize", String(filters.pageSize));
-  if (filters.search) qs.set("search", filters.search);
-  if (filters.from)   qs.set("from",   filters.from);
-  if (filters.to)     qs.set("to",     filters.to + "T23:59:59.999");
-  if (filters.module) qs.set("module", filters.module);
+  if (filters.search)                        qs.set("search",   filters.search);
+  if (filters.from)                          qs.set("from",     filters.from);
+  if (filters.to)                            qs.set("to",       filters.to + "T23:59:59.999");
+  if (filters.module)                        qs.set("module",   filters.module);
+  if (filters.logLevel && filters.logLevel !== "all") qs.set("logLevel", filters.logLevel);
 
   return useQuery({
     queryKey: ["exception-logs", filters],

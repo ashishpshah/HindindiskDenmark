@@ -43,17 +43,123 @@ public class AdminService : IAdminService
         return new AdminDashboardDto(todayOrders, todayRevenue, pendingOrders, todayReservations, totalOrders, totalRevenue);
     }
 
+    public async Task<AdminTrendDto> GetTrendsAsync()
+    {
+        var yesterdayStart = DenmarkTime.Today.AddDays(-1).ToDateTime(TimeOnly.MinValue);
+        var todayStart     = DenmarkTime.Today.ToDateTime(TimeOnly.MinValue);
+
+        var yesterdayOrders = await _db.Orders
+            .CountAsync(o => o.CreatedAt >= yesterdayStart && o.CreatedAt < todayStart);
+        var yesterdayRevenue = await _db.Orders
+            .Where(o => o.CreatedAt >= yesterdayStart && o.CreatedAt < todayStart && o.Status != "Cancelled")
+            .SumAsync(o => (decimal?)o.Total) ?? 0m;
+        var yesterdayReservations = await _db.Reservations
+            .CountAsync(r => r.Date >= yesterdayStart && r.Date < todayStart);
+
+        return new AdminTrendDto(yesterdayOrders, yesterdayRevenue, yesterdayReservations);
+    }
+
+    public async Task<IReadOnlyList<RevenuePointDto>> GetRevenueHistoryAsync(int days)
+    {
+        var from = DenmarkTime.Today.AddDays(-days + 1).ToDateTime(TimeOnly.MinValue);
+        var result = new List<RevenuePointDto>();
+
+        for (var i = 0; i < days; i++)
+        {
+            var dayStart = from.AddDays(i);
+            var dayEnd   = dayStart.AddDays(1);
+            var rev = await _db.Orders
+                .Where(o => o.CreatedAt >= dayStart && o.CreatedAt < dayEnd && o.Status != "Cancelled")
+                .SumAsync(o => (decimal?)o.Total) ?? 0m;
+            result.Add(new RevenuePointDto(dayStart.ToString("yyyy-MM-dd"), rev));
+        }
+
+        return result;
+    }
+
+    public async Task<IReadOnlyList<TopItemDto>> GetTopItemsAsync(int days)
+    {
+        var since = DenmarkTime.Today.AddDays(-days).ToDateTime(TimeOnly.MinValue);
+        var items = await _db.OrderItems
+            .Where(oi => oi.Order.CreatedAt >= since)
+            .GroupBy(oi => oi.MenuItem.Name)
+            .Select(g => new TopItemDto(
+                g.Key,
+                g.Sum(oi => oi.Quantity),
+                g.Sum(oi => oi.PriceAtPurchase * oi.Quantity)))
+            .OrderByDescending(x => x.Quantity)
+            .Take(10)
+            .ToListAsync();
+
+        return items;
+    }
+
+    public async Task<IReadOnlyList<BranchOverviewDto>> GetBranchOverviewAsync()
+    {
+        var todayStart = DenmarkTime.Today.ToDateTime(TimeOnly.MinValue);
+        var tomorrow   = todayStart.AddDays(1);
+
+        var branches = await _db.Branches.ToListAsync();
+        var result = new List<BranchOverviewDto>();
+
+        foreach (var branch in branches)
+        {
+            var orders = await _db.Orders
+                .CountAsync(o => o.BranchId == branch.Id && o.CreatedAt >= todayStart && o.CreatedAt < tomorrow);
+            var revenue = await _db.Orders
+                .Where(o => o.BranchId == branch.Id && o.CreatedAt >= todayStart && o.CreatedAt < tomorrow && o.Status != "Cancelled")
+                .SumAsync(o => (decimal?)o.Total) ?? 0m;
+            result.Add(new BranchOverviewDto(branch.Name, orders, revenue));
+        }
+
+        return result;
+    }
+
+    public async Task<IReadOnlyList<HourlyVolumeDto>> GetHourlyVolumeAsync(string? date)
+    {
+        var day = date is not null && DateOnly.TryParse(date, out var parsed)
+            ? parsed.ToDateTime(TimeOnly.MinValue)
+            : DenmarkTime.Today.ToDateTime(TimeOnly.MinValue);
+        var nextDay = day.AddDays(1);
+
+        var raw = await _db.Orders
+            .Where(o => o.CreatedAt >= day && o.CreatedAt < nextDay)
+            .Select(o => new { o.CreatedAt })
+            .ToListAsync();
+
+        var buckets = raw
+            .GroupBy(o => o.CreatedAt.Hour)
+            .Select(g => new HourlyVolumeDto(g.Key, g.Count()))
+            .OrderBy(h => h.Hour)
+            .ToList();
+
+        return buckets;
+    }
+
+    public async Task<IReadOnlyList<StatusCountDto>> GetOrderCountsByStatusAsync()
+    {
+        var statuses = await _db.OrderStatuses
+            .Where(s => s.IsActive)
+            .OrderBy(s => s.DisplayOrder)
+            .ToListAsync();
+
+        var result = new List<StatusCountDto>();
+        foreach (var s in statuses)
+        {
+            var count = await _db.Orders.CountAsync(o => o.Status == s.Name);
+            result.Add(new StatusCountDto(s.Name, count));
+        }
+
+        return result;
+    }
+
     // ── Orders ────────────────────────────────────────────────────────────────
 
-    public async Task<IReadOnlyList<AdminOrderDto>> GetOrdersAsync(string? status, long? branchId)
+    public async Task<OrderPageDto> GetOrdersAsync(
+        int page, int pageSize,
+        string? status = null, long? branchId = null, string? search = null)
     {
-        var q = _db.Orders
-            .Include(o => o.Branch)
-            .Include(o => o.User)
-            .Include(o => o.OrderItems).ThenInclude(i => i.MenuItem)
-            .Include(o => o.AppliedOffers).ThenInclude(a => a.Offer)
-            .Include(o => o.StatusHistories)
-            .AsQueryable();
+        IQueryable<Domain.Entities.Order> q = _db.Orders.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(status))
             q = q.Where(o => o.Status == status);
@@ -61,8 +167,41 @@ public class AdminService : IAdminService
         if (branchId.HasValue)
             q = q.Where(o => o.BranchId == branchId.Value);
 
-        var orders = await q.OrderByDescending(o => o.CreatedAt).ToListAsync();
-        return orders.Select(ToAdminOrderDto).ToList();
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var lower = search.ToLower();
+            if (long.TryParse(search.Trim(), out var oid))
+                q = q.Where(o => o.Id == oid ||
+                                  o.ContactName.ToLower().Contains(lower) ||
+                                  (o.ContactEmail != null && o.ContactEmail.ToLower().Contains(lower)) ||
+                                  (o.User != null && (
+                                      o.User.Firstname.ToLower().Contains(lower) ||
+                                      o.User.Lastname.ToLower().Contains(lower) ||
+                                      o.User.Email.ToLower().Contains(lower))));
+            else
+                q = q.Where(o =>
+                    o.ContactName.ToLower().Contains(lower) ||
+                    (o.ContactEmail != null && o.ContactEmail.ToLower().Contains(lower)) ||
+                    (o.User != null && (
+                        o.User.Firstname.ToLower().Contains(lower) ||
+                        o.User.Lastname.ToLower().Contains(lower) ||
+                        o.User.Email.ToLower().Contains(lower))));
+        }
+
+        var total = await q.CountAsync();
+
+        var orders = await q
+            .Include(o => o.Branch)
+            .Include(o => o.User)
+            .Include(o => o.OrderItems).ThenInclude(i => i.MenuItem)
+            .Include(o => o.AppliedOffers).ThenInclude(a => a.Offer)
+            .Include(o => o.StatusHistories)
+            .OrderByDescending(o => o.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return new OrderPageDto(orders.Select(ToAdminOrderDto).ToList(), total);
     }
 
     public async Task<AdminOrderDto> UpdateOrderStatusAsync(long orderId, string status, string? cancellationReason = null)
@@ -205,17 +344,38 @@ public class AdminService : IAdminService
         }
     }
 
-    public async Task<IReadOnlyList<AdminMenuDto>> GetMenusAsync()
+    public async Task<MenuPageDto> GetMenusAsync(
+        int? page = null, int? pageSize = null,
+        string? search = null, long? branchId = null)
     {
-        var menus = await _db.Menus
+        IQueryable<Domain.Entities.Menu> q = _db.Menus.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var lower = search.ToLower();
+            q = q.Where(m =>
+                m.Name.ToLower().Contains(lower) ||
+                m.NameDa.ToLower().Contains(lower) ||
+                m.Description.ToLower().Contains(lower));
+        }
+
+        if (branchId.HasValue)
+            q = q.Where(m => m.BranchMenus.Any(bm => bm.BranchId == branchId.Value));
+
+        var total = await q.CountAsync();
+
+        IQueryable<Domain.Entities.Menu> dataQ = q
             .Include(m => m.MenuItemsMappings).ThenInclude(mm => mm.MenuItem)
                 .ThenInclude(i => i.BranchMenuItemPrices)
             .Include(m => m.BranchMenus)
             .AsNoTracking()
-            .OrderBy(m => m.Name)
-            .ToListAsync();
+            .OrderBy(m => m.Name);
 
-        return menus.Select(ToAdminMenuDto).ToList();
+        if (page.HasValue && pageSize.HasValue)
+            dataQ = dataQ.Skip((page.Value - 1) * pageSize.Value).Take(pageSize.Value);
+
+        var menus = await dataQ.ToListAsync();
+        return new MenuPageDto(menus.Select(ToAdminMenuDto).ToList(), total);
     }
 
     public async Task<AdminMenuDto> CreateMenuAsync(CreateMenuRequest request)
@@ -336,17 +496,38 @@ public class AdminService : IAdminService
 
     // ── Menu items ────────────────────────────────────────────────────────────
 
-    public async Task<IReadOnlyList<AdminMenuItemDto>> GetMenuItemsAsync()
+    public async Task<MenuItemPageDto> GetMenuItemsAsync(
+        int? page = null, int? pageSize = null,
+        string? search = null, long? branchId = null)
     {
-        var items = await _db.MenuItems
+        IQueryable<Domain.Entities.MenuItem> q = _db.MenuItems.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var lower = search.ToLower();
+            q = q.Where(i =>
+                i.Name.ToLower().Contains(lower) ||
+                i.NameDa.ToLower().Contains(lower) ||
+                i.Description.ToLower().Contains(lower));
+        }
+
+        if (branchId.HasValue)
+            q = q.Where(i => i.BranchMenuItemPrices.Any(p => p.BranchId == branchId.Value));
+
+        var total = await q.CountAsync();
+
+        IQueryable<Domain.Entities.MenuItem> dataQ = q
             .Include(i => i.MenuItemLabels).ThenInclude(l => l.Label)
             .Include(i => i.MenuItemsMappings).ThenInclude(m => m.Menu)
             .Include(i => i.BranchMenuItemPrices).ThenInclude(p => p.Branch)
             .AsNoTracking()
-            .OrderBy(i => i.Name)
-            .ToListAsync();
+            .OrderBy(i => i.Name);
 
-        return items.Select(ToAdminMenuItemDto).ToList();
+        if (page.HasValue && pageSize.HasValue)
+            dataQ = dataQ.Skip((page.Value - 1) * pageSize.Value).Take(pageSize.Value);
+
+        var items = await dataQ.ToListAsync();
+        return new MenuItemPageDto(items.Select(ToAdminMenuItemDto).ToList(), total);
     }
 
     public async Task<AdminMenuItemDto> CreateMenuItemAsync(CreateMenuItemRequest request)
@@ -881,7 +1062,7 @@ public class AdminService : IAdminService
 
     // ── Customers ─────────────────────────────────────────────────────────────
 
-    public async Task<IReadOnlyList<AdminCustomerDto>> GetCustomersAsync(string? q)
+    public async Task<CustomerPageDto> GetCustomersAsync(int page, int pageSize, string? q = null)
     {
         var query = _db.Users
             .Include(u => u.Role)
@@ -897,7 +1078,10 @@ public class AdminService : IAdminService
                 (u.Email ?? "").ToLower().Contains(lower));
         }
 
-        var users = await query.AsNoTracking().OrderByDescending(u => u.CreatedAt).ToListAsync();
+        var total = await query.CountAsync();
+
+        var users = await query.AsNoTracking().OrderByDescending(u => u.CreatedAt)
+            .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
         var userIds = users.Select(u => u.Id).ToList();
 
         var orderStats = await _db.Orders
@@ -919,7 +1103,7 @@ public class AdminService : IAdminService
             .AsNoTracking()
             .ToDictionaryAsync(x => x.UserId);
 
-        return users.Select(u =>
+        var items = users.Select(u =>
         {
             var os = orderStats.GetValueOrDefault(u.Id);
             var rs = reservationCounts.GetValueOrDefault(u.Id);
@@ -934,6 +1118,7 @@ public class AdminService : IAdminService
                 os?.TotalSpend ?? 0m
             );
         }).ToList();
+        return new CustomerPageDto(items, total);
     }
 
     public async Task<AdminCustomerDetailDto> GetCustomerDetailAsync(long customerId)

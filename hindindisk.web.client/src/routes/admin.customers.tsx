@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
-  Loader2, Search, History, ChevronDown, ChevronRight,
+  Loader2, History, ChevronDown, ChevronRight,
   ShoppingBag, CalendarCheck2,
 } from "lucide-react";
 import {
@@ -106,6 +106,7 @@ function OrderCard({ order }: { order: AdminCustomerOrderDto }) {
     <div className="rounded-lg border bg-card text-sm">
       <button
         onClick={() => setExpanded(e => !e)}
+        data-tagid={`button-customers-order-expand-${order.id}`}
         className="w-full flex items-center justify-between px-4 py-3 hover:bg-accent/50 transition rounded-lg gap-2"
       >
         <div className="flex items-center gap-3 min-w-0 flex-wrap">
@@ -235,6 +236,7 @@ function CustomerHistoryDialog({
               <button
                 key={p.value}
                 onClick={() => setPreset(p.value)}
+                data-tagid={`button-customers-date-preset-${p.value}`}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                   preset === p.value
                     ? "gradient-primary text-primary-foreground"
@@ -252,6 +254,7 @@ function CustomerHistoryDialog({
                 value={customFrom}
                 onChange={e => setCustomFrom(e.target.value)}
                 className="h-8 w-36 text-xs"
+                data-tagid="input-customers-date-from"
               />
               <span className="text-muted-foreground text-xs">to</span>
               <Input
@@ -259,6 +262,7 @@ function CustomerHistoryDialog({
                 value={customTo}
                 onChange={e => setCustomTo(e.target.value)}
                 className="h-8 w-36 text-xs"
+                data-tagid="input-customers-date-to"
               />
             </div>
           )}
@@ -272,11 +276,11 @@ function CustomerHistoryDialog({
         ) : (
           <Tabs key={customer?.id} defaultValue="orders" className="flex flex-col flex-1 min-h-0 overflow-hidden pt-3">
             <TabsList className="shrink-0 self-start mb-3">
-              <TabsTrigger value="orders" className="gap-1.5">
+              <TabsTrigger value="orders" data-tagid="button-customers-tab-orders" className="gap-1.5">
                 <ShoppingBag className="h-3.5 w-3.5" />
                 Orders ({filteredOrders.length})
               </TabsTrigger>
-              <TabsTrigger value="reservations" className="gap-1.5">
+              <TabsTrigger value="reservations" data-tagid="button-customers-tab-reservations" className="gap-1.5">
                 <CalendarCheck2 className="h-3.5 w-3.5" />
                 Reservations ({filteredRes.length})
               </TabsTrigger>
@@ -317,10 +321,13 @@ function CustomerHistoryDialog({
 // ── Main page ───────────────────────────────────────────────────────────────
 
 function AdminCustomers() {
-  const [q,                setQ]                = useState("");
+  const [page,             setPage]             = useState(1);
+  const [pageSize,         setPageSize]         = useState(20);
+  const [search,           setSearch]           = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<AdminCustomerDto | null>(null);
 
-  const { data: customers = [], isLoading, refetch } = useAdminCustomers(q || undefined);
+  const { data, isLoading, refetch } = useAdminCustomers({ page, pageSize, q: search || undefined });
+  const customers = data?.items ?? [];
 
   const columns: ColumnDef<AdminCustomerDto, unknown>[] = [
     {
@@ -374,6 +381,7 @@ function AdminCustomers() {
           size="sm"
           variant="outline"
           className="h-7 px-2.5 text-xs gap-1.5"
+          data-tagid={`button-customers-history-${info.row.original.id}`}
           onClick={() => setSelectedCustomer(info.row.original)}
         >
           <History className="h-3.5 w-3.5" />
@@ -382,18 +390,6 @@ function AdminCustomers() {
       ),
     },
   ];
-
-  const toolbar = (
-    <div className="relative">
-      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-      <Input
-        placeholder="Search customers…"
-        value={q}
-        onChange={e => setQ(e.target.value)}
-        className="pl-8 h-8 w-52 text-sm"
-      />
-    </div>
-  );
 
   return (
     <div className="space-y-4">
@@ -404,8 +400,15 @@ function AdminCustomers() {
         data={customers}
         isLoading={isLoading}
         getRowId={row => String(row.id)}
-        toolbar={toolbar}
         onRefresh={refetch}
+        serverPagination={{
+          page,
+          pageSize,
+          total:            data?.total ?? 0,
+          onPageChange:     p => setPage(p),
+          onPageSizeChange: s => { setPageSize(s); setPage(1); },
+          onSearchChange:   q => { setSearch(q); setPage(1); },
+        }}
       />
       <CustomerHistoryDialog
         customer={selectedCustomer}

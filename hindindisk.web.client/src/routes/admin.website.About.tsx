@@ -55,6 +55,7 @@ function AboutAdmin() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
+            data-tagid={`button-website-about-tab-${t.key}`}
             className={`px-4 py-2.5 text-sm font-medium transition border-b-2 -mb-px ${
               tab === t.key
                 ? "border-primary text-primary"
@@ -113,7 +114,7 @@ function ImagesTab() {
         </div>
       </div>
 
-      <Button className="gradient-primary text-primary-foreground" onClick={handleSave} disabled={update.isPending}>
+      <Button className="gradient-primary text-primary-foreground" onClick={handleSave} disabled={update.isPending} data-tagid="button-website-about-images-save">
         {update.isPending ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Saving…</> : <><Save className="mr-1.5 h-4 w-4" /> Save Images</>}
       </Button>
     </div>
@@ -153,7 +154,7 @@ function StatsTab() {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button size="sm" className="gradient-primary text-primary-foreground h-9" onClick={openCreate}>
+        <Button size="sm" className="gradient-primary text-primary-foreground h-9" data-tagid="button-website-about-stats-add" onClick={openCreate}>
           <Plus className="mr-1.5 h-4 w-4" /> Add Stat
         </Button>
       </div>
@@ -164,20 +165,20 @@ function StatsTab() {
             <div className="text-sm text-muted-foreground mt-1">{s.label}</div>
             <div className="text-xs text-muted-foreground/70">{s.labelDa}</div>
             <div className="absolute right-2 top-2 flex gap-1 opacity-0 group-hover:opacity-100 transition">
-              <button onClick={() => openEdit(s)} className="grid h-6 w-6 place-items-center rounded-full bg-white shadow text-gray-600 hover:text-primary"><Pencil className="h-3 w-3" /></button>
-              <button onClick={() => deleteStat.mutate(s.id, { onSuccess: () => toast.success("Deleted"), onError: () => toast.error("Failed") })} className="grid h-6 w-6 place-items-center rounded-full bg-white shadow text-red-400 hover:text-red-600"><Trash2 className="h-3 w-3" /></button>
+              <button onClick={() => openEdit(s)} data-tagid={`button-website-about-stats-edit-${s.id}`} className="grid h-6 w-6 place-items-center rounded-full bg-white shadow text-gray-600 hover:text-primary"><Pencil className="h-3 w-3" /></button>
+              <button onClick={() => deleteStat.mutate(s.id, { onSuccess: () => toast.success("Deleted"), onError: () => toast.error("Failed") })} data-tagid={`button-website-about-stats-delete-${s.id}`} className="grid h-6 w-6 place-items-center rounded-full bg-white shadow text-red-400 hover:text-red-600"><Trash2 className="h-3 w-3" /></button>
             </div>
           </div>
         ))}
       </div>
       {showModal && (
         <Modal title={editId !== null ? "Edit Stat" : "Add Stat"} onClose={() => setShowModal(false)}>
-          <Field label="Value (e.g. 20+)"><Input value={form.value} onChange={e => setForm(p => ({ ...p, value: e.target.value }))} placeholder="20+" /></Field>
+          <Field label="Value (e.g. 20+)"><Input value={form.value} onChange={e => setForm(p => ({ ...p, value: e.target.value }))} placeholder="20+" data-tagid="input-website-about-stats-value" /></Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Label (EN)"><Input value={form.label} onChange={e => setForm(p => ({ ...p, label: e.target.value }))} placeholder="Years Experience" /></Field>
-            <Field label="Label (DA)"><Input value={form.labelDa} onChange={e => setForm(p => ({ ...p, labelDa: e.target.value }))} placeholder="Års erfaring" /></Field>
+            <Field label="Label (EN)"><Input value={form.label} onChange={e => setForm(p => ({ ...p, label: e.target.value }))} placeholder="Years Experience" data-tagid="input-website-about-stats-label" /></Field>
+            <Field label="Label (DA)"><Input value={form.labelDa} onChange={e => setForm(p => ({ ...p, labelDa: e.target.value }))} placeholder="Års erfaring" data-tagid="input-website-about-stats-labelda" /></Field>
           </div>
-          <Field label="Sort Order"><Input type="number" min={0} value={form.sortOrder} onChange={e => setForm(p => ({ ...p, sortOrder: Number(e.target.value) }))} className="w-24" /></Field>
+          <Field label="Sort Order"><Input type="number" min={0} value={form.sortOrder} onChange={e => setForm(p => ({ ...p, sortOrder: Number(e.target.value) }))} className="w-24" data-tagid="input-website-about-stats-sortorder" /></Field>
           <ModalFooter onClose={() => setShowModal(false)} onSave={handleSave} isSaving={isSaving} isEdit={editId !== null} />
         </Modal>
       )}
@@ -218,7 +219,7 @@ function MvvTab() {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button size="sm" className="gradient-primary text-primary-foreground h-9" onClick={openCreate}>
+        <Button size="sm" className="gradient-primary text-primary-foreground h-9" data-tagid="button-website-about-mvv-add" onClick={openCreate}>
           <Plus className="mr-1.5 h-4 w-4" /> Add Item
         </Button>
       </div>
@@ -231,8 +232,8 @@ function MvvTab() {
               <div className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{m.description}</div>
             </div>
             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
-              <button onClick={() => openEdit(m)} className="grid h-7 w-7 place-items-center rounded-full bg-white/90 shadow text-gray-600 hover:text-primary"><Pencil className="h-3.5 w-3.5" /></button>
-              <button onClick={() => deleteMvv.mutate(m.id, { onSuccess: () => toast.success("Deleted"), onError: () => toast.error("Failed") })} className="grid h-7 w-7 place-items-center rounded-full bg-white/90 shadow text-red-400 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
+              <button onClick={() => openEdit(m)} data-tagid={`button-website-about-mvv-edit-${m.id}`} className="grid h-7 w-7 place-items-center rounded-full bg-white/90 shadow text-gray-600 hover:text-primary"><Pencil className="h-3.5 w-3.5" /></button>
+              <button onClick={() => deleteMvv.mutate(m.id, { onSuccess: () => toast.success("Deleted"), onError: () => toast.error("Failed") })} data-tagid={`button-website-about-mvv-delete-${m.id}`} className="grid h-7 w-7 place-items-center rounded-full bg-white/90 shadow text-red-400 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
             </div>
           </div>
         ))}
@@ -240,18 +241,18 @@ function MvvTab() {
       {showModal && (
         <Modal title={editId !== null ? "Edit MVV Item" : "Add MVV Item"} onClose={() => setShowModal(false)}>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Title (EN)"><Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} /></Field>
-            <Field label="Title (DA)"><Input value={form.titleDa} onChange={e => setForm(p => ({ ...p, titleDa: e.target.value }))} /></Field>
+            <Field label="Title (EN)"><Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} data-tagid="input-website-about-mvv-title" /></Field>
+            <Field label="Title (DA)"><Input value={form.titleDa} onChange={e => setForm(p => ({ ...p, titleDa: e.target.value }))} data-tagid="input-website-about-mvv-titleda" /></Field>
           </div>
-          <Field label="Description (EN)"><Textarea rows={2} value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} /></Field>
-          <Field label="Description (DA)"><Textarea rows={2} value={form.descriptionDa} onChange={e => setForm(p => ({ ...p, descriptionDa: e.target.value }))} /></Field>
+          <Field label="Description (EN)"><Textarea rows={2} value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} data-tagid="textarea-website-about-mvv-description" /></Field>
+          <Field label="Description (DA)"><Textarea rows={2} value={form.descriptionDa} onChange={e => setForm(p => ({ ...p, descriptionDa: e.target.value }))} data-tagid="textarea-website-about-mvv-descriptionda" /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Icon">
-              <select value={form.icon} onChange={e => setForm(p => ({ ...p, icon: e.target.value }))} className="w-full rounded-md border bg-background px-3 py-2 text-sm">
+              <select value={form.icon} onChange={e => setForm(p => ({ ...p, icon: e.target.value }))} className="w-full rounded-md border bg-background px-3 py-2 text-sm" data-tagid="select-website-about-mvv-icon">
                 {MVV_ICONS.map(i => <option key={i} value={i}>{i}</option>)}
               </select>
             </Field>
-            <Field label="Sort Order"><Input type="number" min={0} value={form.sortOrder} onChange={e => setForm(p => ({ ...p, sortOrder: Number(e.target.value) }))} /></Field>
+            <Field label="Sort Order"><Input type="number" min={0} value={form.sortOrder} onChange={e => setForm(p => ({ ...p, sortOrder: Number(e.target.value) }))} data-tagid="input-website-about-mvv-sortorder" /></Field>
           </div>
           <ModalFooter onClose={() => setShowModal(false)} onSave={handleSave} isSaving={isSaving} isEdit={editId !== null} />
         </Modal>
@@ -293,7 +294,7 @@ function TimelineTab() {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button size="sm" className="gradient-primary text-primary-foreground h-9" onClick={openCreate}>
+        <Button size="sm" className="gradient-primary text-primary-foreground h-9" data-tagid="button-website-about-timeline-add" onClick={openCreate}>
           <Plus className="mr-1.5 h-4 w-4" /> Add Event
         </Button>
       </div>
@@ -306,8 +307,8 @@ function TimelineTab() {
               <div className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{t.description}</div>
             </div>
             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition shrink-0">
-              <button onClick={() => openEdit(t)} className="grid h-7 w-7 place-items-center rounded-full bg-white/90 shadow text-gray-600 hover:text-primary"><Pencil className="h-3.5 w-3.5" /></button>
-              <button onClick={() => deleteTl.mutate(t.id, { onSuccess: () => toast.success("Deleted"), onError: () => toast.error("Failed") })} className="grid h-7 w-7 place-items-center rounded-full bg-white/90 shadow text-red-400 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
+              <button onClick={() => openEdit(t)} data-tagid={`button-website-about-timeline-edit-${t.id}`} className="grid h-7 w-7 place-items-center rounded-full bg-white/90 shadow text-gray-600 hover:text-primary"><Pencil className="h-3.5 w-3.5" /></button>
+              <button onClick={() => deleteTl.mutate(t.id, { onSuccess: () => toast.success("Deleted"), onError: () => toast.error("Failed") })} data-tagid={`button-website-about-timeline-delete-${t.id}`} className="grid h-7 w-7 place-items-center rounded-full bg-white/90 shadow text-red-400 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
             </div>
           </div>
         ))}
@@ -315,15 +316,15 @@ function TimelineTab() {
       {showModal && (
         <Modal title={editId !== null ? "Edit Timeline Event" : "Add Timeline Event"} onClose={() => setShowModal(false)}>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Year"><Input value={form.year} onChange={e => setForm(p => ({ ...p, year: e.target.value }))} placeholder="2024" /></Field>
-            <Field label="Sort Order"><Input type="number" min={0} value={form.sortOrder} onChange={e => setForm(p => ({ ...p, sortOrder: Number(e.target.value) }))} /></Field>
+            <Field label="Year"><Input value={form.year} onChange={e => setForm(p => ({ ...p, year: e.target.value }))} placeholder="2024" data-tagid="input-website-about-timeline-year" /></Field>
+            <Field label="Sort Order"><Input type="number" min={0} value={form.sortOrder} onChange={e => setForm(p => ({ ...p, sortOrder: Number(e.target.value) }))} data-tagid="input-website-about-timeline-sortorder" /></Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Title (EN)"><Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} /></Field>
-            <Field label="Title (DA)"><Input value={form.titleDa} onChange={e => setForm(p => ({ ...p, titleDa: e.target.value }))} /></Field>
+            <Field label="Title (EN)"><Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} data-tagid="input-website-about-timeline-title" /></Field>
+            <Field label="Title (DA)"><Input value={form.titleDa} onChange={e => setForm(p => ({ ...p, titleDa: e.target.value }))} data-tagid="input-website-about-timeline-titleda" /></Field>
           </div>
-          <Field label="Description (EN)"><Textarea rows={2} value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} /></Field>
-          <Field label="Description (DA)"><Textarea rows={2} value={form.descriptionDa} onChange={e => setForm(p => ({ ...p, descriptionDa: e.target.value }))} /></Field>
+          <Field label="Description (EN)"><Textarea rows={2} value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} data-tagid="textarea-website-about-timeline-description" /></Field>
+          <Field label="Description (DA)"><Textarea rows={2} value={form.descriptionDa} onChange={e => setForm(p => ({ ...p, descriptionDa: e.target.value }))} data-tagid="textarea-website-about-timeline-descriptionda" /></Field>
           <ModalFooter onClose={() => setShowModal(false)} onSave={handleSave} isSaving={isSaving} isEdit={editId !== null} />
         </Modal>
       )}
@@ -364,7 +365,7 @@ function TeamTab() {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button size="sm" className="gradient-primary text-primary-foreground h-9" onClick={openCreate}>
+        <Button size="sm" className="gradient-primary text-primary-foreground h-9" data-tagid="button-website-about-team-add" onClick={openCreate}>
           <Plus className="mr-1.5 h-4 w-4" /> Add Member
         </Button>
       </div>
@@ -378,8 +379,8 @@ function TeamTab() {
               </div>
             )}
             <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition group-hover:opacity-100">
-              <button onClick={() => openEdit(m)} className="grid h-7 w-7 place-items-center rounded-full bg-white/90 text-gray-700 shadow hover:text-primary"><Pencil className="h-3.5 w-3.5" /></button>
-              <button onClick={() => deleteMember.mutate(m.id, { onSuccess: () => toast.success("Deleted"), onError: () => toast.error("Failed") })} className="grid h-7 w-7 place-items-center rounded-full bg-white/90 text-red-500 shadow hover:text-red-700"><Trash2 className="h-3.5 w-3.5" /></button>
+              <button onClick={() => openEdit(m)} data-tagid={`button-website-about-team-edit-${m.id}`} className="grid h-7 w-7 place-items-center rounded-full bg-white/90 text-gray-700 shadow hover:text-primary"><Pencil className="h-3.5 w-3.5" /></button>
+              <button onClick={() => deleteMember.mutate(m.id, { onSuccess: () => toast.success("Deleted"), onError: () => toast.error("Failed") })} data-tagid={`button-website-about-team-delete-${m.id}`} className="grid h-7 w-7 place-items-center rounded-full bg-white/90 text-red-500 shadow hover:text-red-700"><Trash2 className="h-3.5 w-3.5" /></button>
             </div>
             <div className="p-3 text-center">
               <div className="font-semibold text-sm">{m.name}</div>
@@ -394,19 +395,19 @@ function TeamTab() {
             <Label>Photo</Label>
             <ImagePicker value={form.image} onChange={url => setForm(p => ({ ...p, image: url }))} uploadUrl="/api/admin/upload/team" />
           </div>
-          <Field label="Name"><Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Chef John Doe" /></Field>
+          <Field label="Name"><Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Chef John Doe" data-tagid="input-website-about-team-name" /></Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Role (EN)"><Input value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))} placeholder="Head Chef" /></Field>
-            <Field label="Role (DA)"><Input value={form.roleDa} onChange={e => setForm(p => ({ ...p, roleDa: e.target.value }))} placeholder="Chefkok" /></Field>
+            <Field label="Role (EN)"><Input value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))} placeholder="Head Chef" data-tagid="input-website-about-team-role" /></Field>
+            <Field label="Role (DA)"><Input value={form.roleDa} onChange={e => setForm(p => ({ ...p, roleDa: e.target.value }))} placeholder="Chefkok" data-tagid="input-website-about-team-roleda" /></Field>
           </div>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2.5">
-              <Switch checked={form.isActive} onCheckedChange={v => setForm(p => ({ ...p, isActive: v }))} />
+              <Switch checked={form.isActive} onCheckedChange={v => setForm(p => ({ ...p, isActive: v }))} data-tagid="button-website-about-team-active" />
               <span className="text-sm font-medium">{form.isActive ? "Visible" : "Hidden"}</span>
             </div>
             <div className="flex items-center gap-2">
               <Label className="text-sm">Sort</Label>
-              <Input type="number" min={0} value={form.sortOrder} onChange={e => setForm(p => ({ ...p, sortOrder: Number(e.target.value) }))} className="h-8 w-20 text-sm" />
+              <Input type="number" min={0} value={form.sortOrder} onChange={e => setForm(p => ({ ...p, sortOrder: Number(e.target.value) }))} className="h-8 w-20 text-sm" data-tagid="input-website-about-team-sortorder" />
             </div>
           </div>
           <ModalFooter onClose={() => setShowModal(false)} onSave={handleSave} isSaving={isSaving} isEdit={editId !== null} />
@@ -438,11 +439,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-black/50" onClick={onClose} />
+      <div className="fixed inset-0 z-50 bg-black/50" onClick={onClose} data-tagid="button-website-about-modal-backdrop" />
       <div className="fixed left-1/2 top-1/2 z-50 w-[95%] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onClose}><X className="h-4 w-4 text-muted-foreground" /></button>
+          <button onClick={onClose} data-tagid="button-website-about-modal-close"><X className="h-4 w-4 text-muted-foreground" /></button>
         </div>
         {children}
       </div>
@@ -453,8 +454,8 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 function ModalFooter({ onClose, onSave, isSaving, isEdit }: { onClose: () => void; onSave: () => void; isSaving: boolean; isEdit: boolean }) {
   return (
     <div className="flex items-center justify-end gap-2 pt-2 border-t">
-      <Button variant="outline" onClick={onClose} disabled={isSaving}>Cancel</Button>
-      <Button className="gradient-primary text-primary-foreground" onClick={onSave} disabled={isSaving}>
+      <Button variant="outline" onClick={onClose} disabled={isSaving} data-tagid="button-website-about-modal-cancel">Cancel</Button>
+      <Button className="gradient-primary text-primary-foreground" onClick={onSave} disabled={isSaving} data-tagid="button-website-about-modal-save">
         {isSaving ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Saving…</> : (isEdit ? "Update" : "Add")}
       </Button>
     </div>

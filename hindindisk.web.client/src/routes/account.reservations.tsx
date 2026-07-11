@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { CalendarCheck, Loader2, ChevronLeft, ChevronRight, X, User, UserCog } from "lucide-react";
+import { CalendarCheck, Loader2, ChevronLeft, ChevronRight, X, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMyReservations } from "@/hooks/useMyReservations";
 import { useAuth, type User as AuthUser } from "@/context/AuthContext";
 import { useI18n } from "@/i18n/I18nProvider";
-import { formatDateStr, formatTimeStr } from "@/lib/dateFormat";
+import { formatDateStr, formatTimeStr, formatDateTime } from "@/lib/dateFormat";
 
 export const Route = createFileRoute("/account/reservations")({ component: ReservationsPage });
 
@@ -86,7 +86,7 @@ function ReservationsPage() {
             <span className="ml-2 text-base font-normal text-muted-foreground">({list.length})</span>
           )}
         </h2>
-        <Button asChild size="sm" className="gradient-primary text-primary-foreground">
+        <Button asChild size="sm" className="gradient-primary text-primary-foreground" data-tagid="button-account-reservations-new">
           <Link to="/reservation">{t("reservations.newReservation")}</Link>
         </Button>
       </div>
@@ -97,39 +97,42 @@ function ReservationsPage() {
           <div className="flex flex-wrap items-center gap-2">
             {/* Date from */}
             <div className="flex items-center gap-1.5">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">From</label>
+              <label className="text-xs text-muted-foreground whitespace-nowrap">{t("filters.from")}</label>
               <input
                 type="date"
                 value={dateFrom}
                 max={dateTo || undefined}
                 onChange={e => updateFilter(setDateFrom, e.target.value)}
                 className="h-8 rounded-lg border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                data-tagid="input-account-reservations-date-from"
               />
             </div>
 
             {/* Date to */}
             <div className="flex items-center gap-1.5">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">To</label>
+              <label className="text-xs text-muted-foreground whitespace-nowrap">{t("filters.to")}</label>
               <input
                 type="date"
                 value={dateTo}
                 min={dateFrom || undefined}
                 onChange={e => updateFilter(setDateTo, e.target.value)}
                 className="h-8 rounded-lg border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                data-tagid="input-account-reservations-date-to"
               />
             </div>
 
             {/* Status */}
             <Select value={statusFilter || "__all"} onValueChange={v => updateFilter(setStatusFilter, v === "__all" ? "" : v)}>
               <SelectTrigger className="h-8 w-36 text-xs">
-                <SelectValue placeholder="All Statuses" />
+                <SelectValue placeholder={t("filters.allStatuses")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__all" className="text-xs">All Statuses</SelectItem>
+                <SelectItem value="__all" className="text-xs">{t("filters.allStatuses")}</SelectItem>
                 {RESERVATION_STATUSES.map(s => (
                   <SelectItem key={s} value={s} className="text-xs">
                     {s === "Confirmed" ? t("status.confirmed")
                       : s === "Pending" ? t("status.pending")
+                      : s === "Cancelled" ? t("status.cancelled")
                       : s}
                   </SelectItem>
                 ))}
@@ -138,8 +141,8 @@ function ReservationsPage() {
 
             {/* Reset */}
             {hasFilters && (
-              <Button variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs text-muted-foreground" onClick={resetFilters}>
-                <X className="h-3 w-3" /> Reset
+              <Button variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs text-muted-foreground" onClick={resetFilters} data-tagid="button-account-reservations-reset-filters">
+                <X className="h-3 w-3" /> {t("filters.reset")}
               </Button>
             )}
           </div>
@@ -151,7 +154,7 @@ function ReservationsPage() {
         <div className="rounded-3xl border bg-card p-10 text-center shadow-soft">
           <CalendarCheck className="mx-auto h-10 w-10 text-muted-foreground" />
           <div className="mt-3 text-muted-foreground">{t("reservations.noReservations")}</div>
-          <Button asChild className="mt-4 gradient-primary text-primary-foreground">
+          <Button asChild className="mt-4 gradient-primary text-primary-foreground" data-tagid="button-account-reservations-book-table">
             <Link to="/reservation">{t("reservations.bookTable")}</Link>
           </Button>
         </div>
@@ -161,8 +164,8 @@ function ReservationsPage() {
       {list.length > 0 && filtered.length === 0 && (
         <div className="rounded-3xl border bg-card p-10 text-center shadow-soft">
           <CalendarCheck className="mx-auto h-10 w-10 text-muted-foreground" />
-          <div className="mt-3 text-muted-foreground">No reservations match the current filters.</div>
-          <Button variant="outline" size="sm" className="mt-4" onClick={resetFilters}>Clear filters</Button>
+          <div className="mt-3 text-muted-foreground">{t("filters.noMatchReservations")}</div>
+          <Button variant="outline" size="sm" className="mt-4" onClick={resetFilters} data-tagid="button-account-reservations-clear-filters">{t("filters.clearFilters")}</Button>
         </div>
       )}
 
@@ -174,17 +177,22 @@ function ReservationsPage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="font-mono text-sm font-semibold text-foreground">#{r.id}</div>
-                <div className="mt-0.5 text-sm font-semibold text-foreground">
-                  {formatDateStr(r.date)} {formatTimeStr(r.timeSlot)}
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
+                  <span className="font-semibold text-primary">
+                    {formatDateStr(r.date)} {formatTimeStr(r.timeSlot)}
+                  </span>
+                  <span className="text-muted-foreground">|</span>
+                  <span className="font-medium text-foreground">{r.branchName}</span>
+                  <span className="text-muted-foreground">|</span>
+                  <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
+                    {r.guestCount} {r.guestCount === 1 ? t("reservations.guest") : t("reservations.guests")}
+                  </span>
                 </div>
-                <div className="mt-0.5 text-sm text-muted-foreground">
-                  {r.branchName} · {r.guestCount}{" "}
-                  {r.guestCount === 1 ? t("reservations.guest") : t("reservations.guests")}
-                </div>
+                <div className="mt-0.5 text-xs text-muted-foreground">{t("reservations.createdAt")} {formatDateTime(r.createdAt)}</div>
                 {relation && (
                   <div className="mt-1.5 flex items-center gap-1.5 text-xs text-sky-600">
                     <User className="h-3.5 w-3.5 shrink-0" />
-                    <span>For <strong>{relation.name}</strong></span>
+                    <span>{t("filters.for")} <strong>{relation.name}</strong></span>
                   </div>
                 )}
                 {r.specialRequests && (
@@ -195,6 +203,7 @@ function ReservationsPage() {
                 <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLORS[r.status] ?? "bg-muted text-muted-foreground"}`}>
                   {r.status === "Confirmed" ? t("status.confirmed")
                     : r.status === "Pending" ? t("status.pending")
+                    : r.status === "Cancelled" ? t("status.cancelled")
                     : r.status}
                 </span>
               </div>
@@ -208,10 +217,10 @@ function ReservationsPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card px-4 py-3 shadow-soft">
           {/* Left: result range */}
           <p className="text-xs text-muted-foreground">
-            Showing <span className="font-medium text-foreground">{rangeFrom}–{rangeTo}</span> of{" "}
-            <span className="font-medium text-foreground">{filtered.length}</span> reservations
+            {t("filters.showing")} <span className="font-medium text-foreground">{rangeFrom}–{rangeTo}</span> {t("filters.of")}{" "}
+            <span className="font-medium text-foreground">{filtered.length}</span> {t("reservations.many")}
             {hasFilters && list.length !== filtered.length && (
-              <span className="ml-1">(filtered from {list.length})</span>
+              <span className="ml-1">({t("filters.filteredFrom")} {list.length})</span>
             )}
           </p>
 
@@ -222,17 +231,19 @@ function ReservationsPage() {
               className="h-7 w-7"
               disabled={safePage === 1}
               onClick={() => setPage(p => p - 1)}
+              data-tagid="button-account-reservations-prev-page"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </Button>
             <span className="min-w-[80px] text-center text-xs">
-              Page {safePage} of {totalPages}
+              {t("filters.page")} {safePage} {t("filters.of")} {totalPages}
             </span>
             <Button
               variant="outline" size="icon"
               className="h-7 w-7"
               disabled={safePage === totalPages}
               onClick={() => setPage(p => p + 1)}
+              data-tagid="button-account-reservations-next-page"
             >
               <ChevronRight className="h-3.5 w-3.5" />
             </Button>
@@ -240,7 +251,7 @@ function ReservationsPage() {
 
           {/* Right: rows per page */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">Rows per page</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">{t("filters.rowsPerPage")}</span>
             <Select
               value={String(pageSize)}
               onValueChange={v => { setPageSize(Number(v)); setPage(1); }}

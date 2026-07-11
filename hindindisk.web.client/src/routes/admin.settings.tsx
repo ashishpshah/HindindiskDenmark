@@ -75,7 +75,7 @@ function ToggleButton({ label, isClosed, loading = false, disabled, onToggle }: 
   label: string; isClosed: boolean; loading?: boolean; disabled?: boolean; onToggle: () => void;
 }) {
   return (
-    <button onClick={onToggle} disabled={loading || disabled}
+    <button data-tagid="button-settings-toggle-closure" onClick={onToggle} disabled={loading || disabled}
       className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed ${
         disabled
           ? "bg-gray-100 text-gray-400 border-gray-200"
@@ -110,7 +110,7 @@ function BranchPicker({ branches, value, onChange, allLabel, hideLabel }: {
         value={value !== undefined ? String(value) : BRANCH_ALL}
         onValueChange={v => onChange(v !== BRANCH_ALL ? Number(v) : undefined)}
       >
-        <SelectTrigger className="w-full sm:w-72">
+        <SelectTrigger data-tagid="select-settings-branch" className="w-full sm:w-72">
           <div className="flex items-center gap-2">
             <Store className="h-4 w-4 text-muted-foreground" />
             <SelectValue placeholder="Select a branch" />
@@ -159,10 +159,10 @@ function PricingBookingPanel({ branches }: { branches: AdminBranchDto[] }) {
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Delivery Fee (DKK)</Label>
               <div className="flex items-center gap-2">
-                <Input type="number" min={0} step={1} value={fee}
+                <Input type="number" min={0} step={1} value={fee} data-tagid="input-settings-delivery-fee"
                   onChange={e => setFee(e.target.value)}
                   className="h-9 w-32" disabled={!branch.deliveryFeeEnabled} />
-                <Button size="sm" variant="secondary"
+                <Button size="sm" variant="secondary" data-tagid="button-settings-delivery-fee-save"
                   onClick={() => save({ deliveryFee: parseFloat(fee) || 0 }, "Pricing updated")}
                   disabled={update.isPending || !branch.deliveryFeeEnabled}>
                   Save
@@ -170,7 +170,7 @@ function PricingBookingPanel({ branches }: { branches: AdminBranchDto[] }) {
               </div>
             </div>
             <div className="flex items-center gap-2.5">
-              <Switch checked={branch.deliveryFeeEnabled} disabled={update.isPending}
+              <Switch checked={branch.deliveryFeeEnabled} data-tagid="button-settings-delivery-fee-toggle" disabled={update.isPending}
                 onCheckedChange={v => save({ deliveryFeeEnabled: v }, "Pricing updated")} />
               <span className={`text-xs font-medium ${branch.deliveryFeeEnabled ? "text-green-700" : "text-gray-400"}`}>
                 Delivery fee {branch.deliveryFeeEnabled ? "enabled" : "disabled"}
@@ -184,10 +184,10 @@ function PricingBookingPanel({ branches }: { branches: AdminBranchDto[] }) {
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Max Advance Days</Label>
               <div className="flex items-center gap-2">
-                <Input type="number" min={0} max={90} value={days}
+                <Input type="number" min={0} max={90} value={days} data-tagid="input-settings-max-advance-days"
                   onChange={e => setDays(e.target.value)} className="h-9 w-24" />
                 <span className="text-xs text-gray-500">days ahead</span>
-                <Button size="sm" variant="secondary"
+                <Button size="sm" variant="secondary" data-tagid="button-settings-advance-booking-save"
                   onClick={() => save({ maxAdvanceDays: parseInt(days) || 0 }, "Advance booking updated")}
                   disabled={update.isPending}>
                   Save
@@ -246,7 +246,7 @@ function WeeklySchedulePanel({ branches }: { branches: AdminBranchDto[] }) {
                 className={`grid grid-cols-[140px_1fr] gap-4 p-4 items-start ${!row.isOpen ? "opacity-50" : ""}`}>
 
                 <div className="flex items-center gap-3 pt-1">
-                  <Switch checked={row.isOpen} onCheckedChange={v => updateRow(row.dayOfWeek, { isOpen: v })} />
+                  <Switch checked={row.isOpen} data-tagid={`button-settings-day-open-${row.dayOfWeek}`} onCheckedChange={v => updateRow(row.dayOfWeek, { isOpen: v })} />
                   <span className="text-sm font-medium">{DAY_NAMES[row.dayOfWeek]}</span>
                 </div>
 
@@ -254,27 +254,27 @@ function WeeklySchedulePanel({ branches }: { branches: AdminBranchDto[] }) {
                   <div className="grid grid-cols-5 gap-3">
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Open</Label>
-                      <Input type="time" value={row.openTime}
+                      <Input type="time" value={row.openTime} data-tagid={`input-settings-day-open-time-${row.dayOfWeek}`}
                         onChange={e => updateRow(row.dayOfWeek, { openTime: e.target.value })} />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Close</Label>
-                      <Input type="time" value={row.closeTime}
+                      <Input type="time" value={row.closeTime} data-tagid={`input-settings-day-close-time-${row.dayOfWeek}`}
                         onChange={e => updateRow(row.dayOfWeek, { closeTime: e.target.value })} />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Slot every (min)</Label>
-                      <Input type="number" min={15} max={120} step={15} value={row.slotIntervalMinutes}
+                      <Input type="number" min={15} max={120} step={15} value={row.slotIntervalMinutes} data-tagid={`input-settings-day-slot-interval-${row.dayOfWeek}`}
                         onChange={e => updateRow(row.dayOfWeek, { slotIntervalMinutes: Number(e.target.value) })} />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Max orders/slot</Label>
-                      <Input type="number" min={1} value={row.maxOrdersPerSlot}
+                      <Input type="number" min={1} value={row.maxOrdersPerSlot} data-tagid={`input-settings-day-max-orders-${row.dayOfWeek}`}
                         onChange={e => updateRow(row.dayOfWeek, { maxOrdersPerSlot: Number(e.target.value) })} />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Max reservations/slot</Label>
-                      <Input type="number" min={1} value={row.maxReservationsPerSlot}
+                      <Input type="number" min={1} value={row.maxReservationsPerSlot} data-tagid={`input-settings-day-max-reservations-${row.dayOfWeek}`}
                         onChange={e => updateRow(row.dayOfWeek, { maxReservationsPerSlot: Number(e.target.value) })} />
                     </div>
                   </div>
@@ -282,8 +282,8 @@ function WeeklySchedulePanel({ branches }: { branches: AdminBranchDto[] }) {
                   <div className="flex flex-col gap-2 w-full pt-1 col-span-2 pl-4 pb-2">
                     <span className="text-sm font-medium text-muted-foreground">Closed for the day</span>
                     <div className="grid grid-cols-2 gap-4">
-                      <Input placeholder="Weekly off message (EN) - optional" value={row.offMessage || ""} onChange={e => updateRow(row.dayOfWeek, { offMessage: e.target.value })} className="h-8 text-sm" />
-                      <Input placeholder="Weekly off message (DA) - optional" value={row.offMessageDa || ""} onChange={e => updateRow(row.dayOfWeek, { offMessageDa: e.target.value })} className="h-8 text-sm" />
+                      <Input placeholder="Weekly off message (EN) - optional" value={row.offMessage || ""} data-tagid={`input-settings-day-off-message-en-${row.dayOfWeek}`} onChange={e => updateRow(row.dayOfWeek, { offMessage: e.target.value })} className="h-8 text-sm" />
+                      <Input placeholder="Weekly off message (DA) - optional" value={row.offMessageDa || ""} data-tagid={`input-settings-day-off-message-da-${row.dayOfWeek}`} onChange={e => updateRow(row.dayOfWeek, { offMessageDa: e.target.value })} className="h-8 text-sm" />
                     </div>
                   </div>
                 )}
@@ -293,7 +293,7 @@ function WeeklySchedulePanel({ branches }: { branches: AdminBranchDto[] }) {
           </div>
 
           <div className="flex justify-end">
-            <Button className="gradient-primary text-primary-foreground" onClick={handleSave} disabled={upsertSchedule.isPending}>
+            <Button className="gradient-primary text-primary-foreground" data-tagid="button-settings-save-schedule" onClick={handleSave} disabled={upsertSchedule.isPending}>
               {upsertSchedule.isPending
                 ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</>
                 : <><Check className="mr-1.5 h-4 w-4" />Save Schedule</>}
@@ -353,7 +353,7 @@ function PanelBranchHeader({ branches, value, onChange }: {
     <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-50/60 px-4 py-3">
       <Store className="h-4 w-4 shrink-0 text-muted-foreground" />
       <Select value={String(value)} onValueChange={v => onChange(Number(v))}>
-        <SelectTrigger className="h-8 w-full sm:w-64 font-medium">
+        <SelectTrigger data-tagid="select-settings-branch-header" className="h-8 w-full sm:w-64 font-medium">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -697,19 +697,19 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
                       {!isBlocked && localClosed[s] && (
                         <>
                           <span className="text-xs text-muted-foreground">From</span>
-                          <Input type="time" value={t.from} className="h-8 w-28 text-sm"
+                          <Input type="time" value={t.from} className="h-8 w-28 text-sm" data-tagid={`input-settings-instant-from-${s}`}
                             onChange={e => setInstantTimes(prev => ({ ...prev, [s]: { ...prev[s], from: e.target.value } }))} />
                           <span className="text-xs text-muted-foreground">→ To</span>
-                          <Input type="time" value={t.to} className="h-8 w-28 text-sm"
+                          <Input type="time" value={t.to} className="h-8 w-28 text-sm" data-tagid={`input-settings-instant-to-${s}`}
                             onChange={e => setInstantTimes(prev => ({ ...prev, [s]: { ...prev[s], to: e.target.value } }))} />
                         </>
                       )}
                     </div>
                     <div className="flex gap-2 mt-2">
-                      <Input value={instantNotes[s] || ""} maxLength={200} placeholder="Closing note (EN) - optional"
+                      <Input value={instantNotes[s] || ""} maxLength={200} placeholder="Closing note (EN) - optional" data-tagid={`input-settings-instant-note-en-${s}`}
                         className="h-8 text-sm" disabled={isBlocked}
                         onChange={e => setInstantNotes(prev => ({ ...prev, [s]: e.target.value }))} />
-                      <Input value={instantNotesDa[s] || ""} maxLength={200} placeholder="Closing note (DA) - optional"
+                      <Input value={instantNotesDa[s] || ""} maxLength={200} placeholder="Closing note (DA) - optional" data-tagid={`input-settings-instant-note-da-${s}`}
                         className="h-8 text-sm" disabled={isBlocked}
                         onChange={e => setInstantNotesDa(prev => ({ ...prev, [s]: e.target.value }))} />
                     </div>
@@ -718,13 +718,13 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
               })}
             </div>
             <div className="flex items-center justify-end gap-2">
-              <button
+              <button data-tagid="button-settings-discard"
                 onClick={() => setLocalClosed({ ...serverClosed })}
                 disabled={!isDirty || isSaving}
                 className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
                 Discard
               </button>
-              <button
+              <button data-tagid="button-settings-instant-save"
                 onClick={handleSave}
                 disabled={!isDirty || isSaving}
                 className="px-4 py-1.5 text-sm font-medium rounded-lg bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed">
@@ -750,7 +750,7 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
               <div key={s} className={`p-3 space-y-2 transition-opacity ${!row.closed ? "opacity-60" : ""}`}>
                 {/* Service checkbox + label */}
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox checked={row.closed}
+                  <Checkbox checked={row.closed} data-tagid={`input-settings-future-select-${s}`}
                     onCheckedChange={v => updateFuture(s, { closed: v === true })} />
                   <span className="text-sm font-semibold text-gray-700">{SERVICE_LABEL[s]}</span>
                 </label>
@@ -760,10 +760,10 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">From</Label>
                     <div className="flex gap-2">
-                      <Input type="date" min={tomorrow} value={row.startDate} disabled={!row.closed}
+                      <Input type="date" min={tomorrow} value={row.startDate} disabled={!row.closed} data-tagid={`input-settings-future-start-date-${s}`}
                         className="h-8 w-36 text-sm"
                         onChange={e => { const d = e.target.value; updateFuture(s, { startDate: d, endDate: d > row.endDate ? d : row.endDate }); }} />
-                      <Input type="time" value={row.startTime} disabled={!row.closed}
+                      <Input type="time" value={row.startTime} disabled={!row.closed} data-tagid={`input-settings-future-start-time-${s}`}
                         className="h-8 w-28 shrink-0 text-sm"
                         onChange={e => updateFuture(s, { startTime: e.target.value })} />
                     </div>
@@ -771,10 +771,10 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">To</Label>
                     <div className="flex gap-2">
-                      <Input type="date" min={row.startDate} value={row.endDate} disabled={!row.closed}
+                      <Input type="date" min={row.startDate} value={row.endDate} disabled={!row.closed} data-tagid={`input-settings-future-end-date-${s}`}
                         className="h-8 w-36 text-sm"
                         onChange={e => updateFuture(s, { endDate: e.target.value })} />
-                      <Input type="time" value={row.endTime} disabled={!row.closed}
+                      <Input type="time" value={row.endTime} disabled={!row.closed} data-tagid={`input-settings-future-end-time-${s}`}
                         className="h-8 w-28 shrink-0 text-sm"
                         onChange={e => updateFuture(s, { endTime: e.target.value })} />
                     </div>
@@ -782,15 +782,15 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
                 </div>
 
                 <div className="flex gap-2 mt-1">
-                  <Input value={row.note} maxLength={200} placeholder="Closing note (EN) - optional"
+                  <Input value={row.note} maxLength={200} placeholder="Closing note (EN) - optional" data-tagid={`input-settings-future-note-en-${s}`}
                     className="h-8 text-sm" disabled={!row.closed}
                     onChange={e => updateFuture(s, { note: e.target.value })} />
-                  <Input value={row.noteDa} maxLength={200} placeholder="Closing note (DA) - optional"
+                  <Input value={row.noteDa} maxLength={200} placeholder="Closing note (DA) - optional" data-tagid={`input-settings-future-note-da-${s}`}
                     className="h-8 text-sm" disabled={!row.closed}
                     onChange={e => updateFuture(s, { noteDa: e.target.value })} />
                   <div className="flex items-center gap-2 shrink-0">
                     <Label className="text-xs text-muted-foreground whitespace-nowrap">Warn days before:</Label>
-                    <Input type="number" min={0} max={30} value={row.displayBeforeDays || ""} placeholder="Days"
+                    <Input type="number" min={0} max={30} value={row.displayBeforeDays || ""} placeholder="Days" data-tagid={`input-settings-future-warn-days-${s}`}
                       className="h-8 text-sm w-20" disabled={!row.closed}
                       onChange={e => updateFuture(s, { displayBeforeDays: Number(e.target.value) })} />
                   </div>
@@ -801,7 +801,7 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
         </div>
 
         <div className="flex justify-end">
-          <Button className="gradient-primary text-primary-foreground"
+          <Button className="gradient-primary text-primary-foreground" data-tagid="button-settings-add-closure"
             onClick={handleAdd} disabled={createClosure.isPending || isCheckingConflicts}>
             {createClosure.isPending
               ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -818,11 +818,11 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
         {/* Filter bar */}
         <div className="overflow-x-auto no-scrollbar">
           <div className="flex gap-2 items-center min-w-max">
-            <input type="text" placeholder="Search..." value={listSearch}
+            <input type="text" placeholder="Search..." value={listSearch} data-tagid="input-settings-search"
               onChange={e => setListSearch(e.target.value)}
               className="border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm w-36 focus:outline-none focus:ring-2 focus:ring-amber-400" />
             <BranchPicker branches={branches} value={listBranchId} onChange={setListBranchId} allLabel="All Branches" hideLabel />
-            <select value={listServiceType}
+            <select value={listServiceType} data-tagid="select-settings-service-type"
               onChange={e => setListServiceType(e.target.value)}
               className="border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
               <option value="">All Service</option>
@@ -831,19 +831,19 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
               <option value="Pickup">Order - Pickup</option>
               <option value="Restaurant">Whole restaurant</option>
             </select>
-            <input type="date" value={listFrom}
+            <input type="date" value={listFrom} data-tagid="input-settings-date-from"
               onChange={e => setListFrom(e.target.value)}
               className="border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
             <span className="text-gray-400 text-sm shrink-0">to</span>
-            <input type="date" value={listTo}
+            <input type="date" value={listTo} data-tagid="input-settings-date-to"
               onChange={e => setListTo(e.target.value)}
               className="border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
             <label className="flex items-center gap-1.5 text-sm cursor-pointer shrink-0">
-              <Checkbox checked={showPast} onCheckedChange={v => setShowPast(v === true)} />
+              <Checkbox checked={showPast} data-tagid="input-settings-show-past" onCheckedChange={v => setShowPast(v === true)} />
               Show past
             </label>
             {listFiltersActive && (
-              <button onClick={() => { setShowPast(false); setListFrom(""); setListTo(""); setListSearch(""); setListServiceType(""); }}
+              <button data-tagid="button-settings-clear-filters" onClick={() => { setShowPast(false); setListFrom(""); setListTo(""); setListSearch(""); setListServiceType(""); }}
                 className="text-sm text-gray-500 hover:text-gray-800 underline shrink-0">
                 Clear
               </button>
@@ -912,7 +912,7 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
                     </td>
                     <td className="px-5 py-3 text-gray-500 text-xs max-w-[160px] truncate">{c.note ?? "—"}</td>
                     <td className="px-5 py-3">
-                      <Button variant="ghost" size="icon"
+                      <Button variant="ghost" size="icon" data-tagid={`button-settings-closure-delete-${c.id}`}
                         onClick={() => handleDelete(c)}
                         disabled={deleteClosureById.isPending}
                         className="text-muted-foreground hover:text-destructive h-8 w-8">
@@ -981,7 +981,7 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
             </div>
 
             <div className="flex flex-col gap-2 pt-1">
-              <Button
+              <Button data-tagid="button-settings-conflict-cancel-bookings"
                 className="w-full bg-red-600 hover:bg-red-700 text-white"
                 disabled={isCancellingBookings}
                 onClick={async () => {
@@ -1010,11 +1010,11 @@ function AvailabilityClosuresPanel({ branches }: { branches: AdminBranchDto[] })
                   ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Cancelling…</>
                   : "Cancel Bookings & Save Closure"}
               </Button>
-              <Button variant="secondary" className="w-full" disabled={isCancellingBookings}
+              <Button variant="secondary" className="w-full" disabled={isCancellingBookings} data-tagid="button-settings-conflict-save-without-cancelling"
                 onClick={async () => { await pendingClosure.proceed(); setPendingClosure(null); }}>
                 Save Closure Without Cancelling
               </Button>
-              <button disabled={isCancellingBookings} onClick={() => setPendingClosure(null)}
+              <button data-tagid="button-settings-conflict-go-back" disabled={isCancellingBookings} onClick={() => setPendingClosure(null)}
                 className="text-sm text-gray-500 hover:text-gray-800 underline py-1 disabled:opacity-50">
                 Go Back
               </button>
@@ -1037,12 +1037,12 @@ function PaginationBar({ page, pageCount, total, pageSize, onChange }: {
     <div className="flex items-center justify-between px-1">
       <span className="text-sm text-gray-500">Showing {from}–{to} of {total}</span>
       <div className="flex items-center gap-1">
-        <button onClick={() => onChange(page - 1)} disabled={page === 1}
+        <button data-tagid="button-settings-pagination-prev" onClick={() => onChange(page - 1)} disabled={page === 1}
           className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
           ← Prev
         </button>
         <span className="px-3 text-sm text-gray-600">{page} / {pageCount}</span>
-        <button onClick={() => onChange(page + 1)} disabled={page === pageCount}
+        <button data-tagid="button-settings-pagination-next" onClick={() => onChange(page + 1)} disabled={page === pageCount}
           className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
           Next →
         </button>
@@ -1101,7 +1101,7 @@ function HistoryPanel({ branches, rows, filters, onFiltersChange }: {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-3 items-center">
-        <input type="text" placeholder="Search branch..." value={search}
+        <input type="text" placeholder="Search branch..." value={search} data-tagid="input-settings-history-search"
           onChange={e => setSearch(e.target.value)}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-48 focus:outline-none focus:ring-2 focus:ring-amber-400" />
         <BranchPicker
@@ -1111,7 +1111,7 @@ function HistoryPanel({ branches, rows, filters, onFiltersChange }: {
           allLabel="All branches"
           hideLabel
         />
-        <select value={filters.serviceType ?? ""}
+        <select value={filters.serviceType ?? ""} data-tagid="select-settings-history-service-type"
           onChange={e => onFiltersChange({ ...filters, serviceType: (e.target.value as any) || undefined })}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
           <option value="">All Service</option>
@@ -1119,15 +1119,15 @@ function HistoryPanel({ branches, rows, filters, onFiltersChange }: {
           <option value="Delivery">Order - Delivery</option>
           <option value="Pickup">Order - Pickup</option>
         </select>
-        <input type="date" value={filters.from ?? ""}
+        <input type="date" value={filters.from ?? ""} data-tagid="input-settings-history-date-from"
           onChange={e => onFiltersChange({ ...filters, from: e.target.value || undefined })}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
         <span className="text-gray-400 text-sm">to</span>
-        <input type="date" value={filters.to ?? ""}
+        <input type="date" value={filters.to ?? ""} data-tagid="input-settings-history-date-to"
           onChange={e => onFiltersChange({ ...filters, to: e.target.value || undefined })}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
         {(filters.branchId || filters.serviceType || filters.from || filters.to) && (
-          <button onClick={() => onFiltersChange({})} className="text-sm text-gray-500 hover:text-gray-800 underline">
+          <button data-tagid="button-settings-history-clear" onClick={() => onFiltersChange({})} className="text-sm text-gray-500 hover:text-gray-800 underline">
             Clear
           </button>
         )}
@@ -1217,7 +1217,7 @@ function ServiceStatusPage() {
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex flex-wrap gap-0">
           {TABS.map(tab => (
-            <button
+            <button data-tagid={`button-settings-tab-${tab.id}`}
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${

@@ -7,7 +7,7 @@ import { useMyOrders } from "@/hooks/useMyOrders";
 import { useOrderStatuses } from "@/hooks/useOrderStatuses";
 import { useAuth, type User as AuthUser } from "@/context/AuthContext";
 import { useI18n } from "@/i18n/I18nProvider";
-import { formatDateTime } from "@/lib/dateFormat";
+import { formatDateTime, formatDateStr, formatTimeStr } from "@/lib/dateFormat";
 
 export const Route = createFileRoute("/account/orders")({ component: OrdersPage });
 
@@ -35,7 +35,7 @@ function orderRelation(contactName: string, contactEmail: string | undefined, pl
 }
 
 function OrdersPage() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { user } = useAuth();
   const { data: orders = [], isLoading, isError } = useMyOrders(true);
   const { data: allStatuses = [] } = useOrderStatuses();
@@ -66,16 +66,9 @@ function OrdersPage() {
   const filtered = orders.filter(o => {
     if (statusFilter && o.status !== statusFilter) return false;
     if (typeFilter   && o.orderType !== typeFilter) return false;
-    if (dateFrom) {
-      const d = new Date(o.createdAt);
-      if (d < new Date(dateFrom)) return false;
-    }
-    if (dateTo) {
-      const d   = new Date(o.createdAt);
-      const end = new Date(dateTo);
-      end.setDate(end.getDate() + 1);
-      if (d >= end) return false;
-    }
+    const orderDate = o.scheduledDate ?? o.createdAt.split("T")[0];
+    if (dateFrom && orderDate < dateFrom) return false;
+    if (dateTo   && orderDate > dateTo)   return false;
     return true;
   });
 
@@ -116,38 +109,40 @@ function OrdersPage() {
           <div className="flex flex-wrap items-center gap-2">
             {/* Date from */}
             <div className="flex items-center gap-1.5">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">From</label>
+              <label className="text-xs text-muted-foreground whitespace-nowrap">{t("filters.from")}</label>
               <input
                 type="date"
                 value={dateFrom}
                 max={dateTo || undefined}
                 onChange={e => updateFilter(setDateFrom, e.target.value)}
                 className="h-8 rounded-lg border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                data-tagid="input-account-orders-date-from"
               />
             </div>
 
             {/* Date to */}
             <div className="flex items-center gap-1.5">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">To</label>
+              <label className="text-xs text-muted-foreground whitespace-nowrap">{t("filters.to")}</label>
               <input
                 type="date"
                 value={dateTo}
                 min={dateFrom || undefined}
                 onChange={e => updateFilter(setDateTo, e.target.value)}
                 className="h-8 rounded-lg border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                data-tagid="input-account-orders-date-to"
               />
             </div>
 
             {/* Status */}
             <Select value={statusFilter || "__all"} onValueChange={v => updateFilter(setStatusFilter, v === "__all" ? "" : v)}>
               <SelectTrigger className="h-8 w-36 text-xs">
-                <SelectValue placeholder="All Statuses" />
+                <SelectValue placeholder={t("filters.allStatuses")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__all" className="text-xs">All Statuses</SelectItem>
+                <SelectItem value="__all" className="text-xs">{t("filters.allStatuses")}</SelectItem>
                 {activeStatuses.map(s => (
                   <SelectItem key={s.name} value={s.name} className="text-xs">
-                    {s.nameDa ?? s.name}
+                    {lang === "da" ? (s.nameDa ?? s.name) : s.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -156,19 +151,19 @@ function OrdersPage() {
             {/* Type */}
             <Select value={typeFilter || "__all"} onValueChange={v => updateFilter(setTypeFilter, v === "__all" ? "" : v)}>
               <SelectTrigger className="h-8 w-32 text-xs">
-                <SelectValue placeholder="All Types" />
+                <SelectValue placeholder={t("filters.allTypes")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__all"    className="text-xs">All Types</SelectItem>
-                <SelectItem value="Pickup"   className="text-xs">Pickup</SelectItem>
-                <SelectItem value="Delivery" className="text-xs">Delivery</SelectItem>
+                <SelectItem value="__all"    className="text-xs">{t("filters.allTypes")}</SelectItem>
+                <SelectItem value="Pickup"   className="text-xs">{t("checkout.pickup")}</SelectItem>
+                <SelectItem value="Delivery" className="text-xs">{t("checkout.delivery")}</SelectItem>
               </SelectContent>
             </Select>
 
             {/* Reset */}
             {hasFilters && (
-              <Button variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs text-muted-foreground" onClick={resetFilters}>
-                <X className="h-3 w-3" /> Reset
+              <Button variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs text-muted-foreground" onClick={resetFilters} data-tagid="button-account-orders-reset-filters">
+                <X className="h-3 w-3" /> {t("filters.reset")}
               </Button>
             )}
           </div>
@@ -180,7 +175,7 @@ function OrdersPage() {
         <div className="rounded-3xl border bg-card p-10 text-center shadow-soft">
           <ShoppingBag className="mx-auto h-10 w-10 text-muted-foreground" />
           <div className="mt-3 text-muted-foreground">{t("orders.noOrders")}</div>
-          <Button asChild className="mt-4 gradient-primary text-primary-foreground">
+          <Button asChild className="mt-4 gradient-primary text-primary-foreground" data-tagid="button-account-orders-browse-menu">
             <Link to="/menu">{t("orders.browseMenu")}</Link>
           </Button>
         </div>
@@ -190,8 +185,8 @@ function OrdersPage() {
       {orders.length > 0 && filtered.length === 0 && (
         <div className="rounded-3xl border bg-card p-10 text-center shadow-soft">
           <ShoppingBag className="mx-auto h-10 w-10 text-muted-foreground" />
-          <div className="mt-3 text-muted-foreground">No orders match the current filters.</div>
-          <Button variant="outline" size="sm" className="mt-4" onClick={resetFilters}>Clear filters</Button>
+          <div className="mt-3 text-muted-foreground">{t("filters.noMatchOrders")}</div>
+          <Button variant="outline" size="sm" className="mt-4" onClick={resetFilters} data-tagid="button-account-orders-clear-filters">{t("filters.clearFilters")}</Button>
         </div>
       )}
 
@@ -204,18 +199,34 @@ function OrdersPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="font-mono text-sm font-semibold text-foreground">#{o.id}</div>
-              <div className="text-sm font-semibold text-foreground">{formatDateTime(o.createdAt)}</div>
-              <div className="text-sm text-muted-foreground">{o.branchName} · {o.orderType}</div>
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
+                <span className="font-semibold text-primary">
+                  {o.scheduledDate && o.scheduledTime
+                    ? `${formatDateStr(o.scheduledDate)} ${formatTimeStr(o.scheduledTime)}`
+                    : t("orders.asap")}
+                </span>
+                <span className="text-muted-foreground">|</span>
+                <span className="font-medium text-foreground">{o.branchName}</span>
+                <span className="text-muted-foreground">|</span>
+                <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                  o.orderType === "Pickup"
+                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                    : "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
+                }`}>
+                  {o.orderType === "Pickup" ? t("checkout.pickup") : t("checkout.delivery")}
+                </span>
+              </div>
+              <div className="mt-0.5 text-xs text-muted-foreground">{t("orders.createdAt")} {formatDateTime(o.createdAt)}</div>
               {relation?.type === "by" && (
                 <div className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-600">
                   <UserCog className="h-3.5 w-3.5 shrink-0" />
-                  <span>Created by <strong>{relation.name}</strong></span>
+                  <span>{t("account.createdBy")} <strong>{relation.name}</strong></span>
                 </div>
               )}
               {relation?.type === "for" && (
                 <div className="mt-1.5 flex items-center gap-1.5 text-xs text-sky-600">
                   <User className="h-3.5 w-3.5 shrink-0" />
-                  <span>For <strong>{relation.name}</strong></span>
+                  <span>{t("filters.for")} <strong>{relation.name}</strong></span>
                 </div>
               )}
             </div>
@@ -225,13 +236,31 @@ function OrdersPage() {
                 className="mt-1 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold"
                 style={{ backgroundColor: hexToRgba(color, 0.12), color }}
               >
-                {activeStatuses.find(s => s.name === o.status)?.nameDa ?? o.status}
+                {lang === "da"
+                ? (activeStatuses.find(s => s.name === o.status)?.nameDa ?? o.status)
+                : (activeStatuses.find(s => s.name === o.status)?.name ?? o.status)}
               </span>
             </div>
           </div>
 
-          <div className="mt-3 text-sm text-muted-foreground">
-            {o.items.map((i) => `${i.quantity}× ${i.name}`).join(" · ")}
+          <div className="mt-3 grid grid-cols-2">
+            {o.items.map((i, idx) => {
+              const name     = lang === "da" && i.nameDa ? i.nameDa : i.name;
+              const subTotal = i.quantity * i.priceAtPurchase;
+              const isLeft   = idx % 2 === 0;
+              return (
+                <div key={i.menuItemId} className={`flex items-start gap-1.5 py-1.5 text-xs ${isLeft ? "border-r border-border pr-3" : "pl-3"}`}>
+                  <span className="font-mono text-muted-foreground shrink-0">{i.code ? i.code : "—"}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-foreground truncate">{name}</div>
+                    <div className="text-muted-foreground tabular-nums">
+                      {i.quantity} × {i.priceAtPurchase.toFixed(0)} DKK
+                      <span className="ml-1 font-semibold text-foreground">= {subTotal.toFixed(0)} DKK</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           {o.deliveryAddress && (
@@ -248,13 +277,13 @@ function OrdersPage() {
 
           {o.status === "Cancelled" && o.cancellationReason && (
             <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
-              <p className="text-xs font-semibold text-red-700">Cancellation reason</p>
+              <p className="text-xs font-semibold text-red-700">{t("orders.cancellationReason")}</p>
               <p className="text-xs text-red-800 mt-0.5">{o.cancellationReason}</p>
             </div>
           )}
 
           <div className="mt-3">
-            <Button asChild size="sm" variant="outline">
+            <Button asChild size="sm" variant="outline" data-tagid={`button-account-orders-track-${o.id}`}>
               <Link to="/order-tracking" search={{ id: String(o.id) }}>{t("orders.track")}</Link>
             </Button>
           </div>
@@ -266,10 +295,10 @@ function OrdersPage() {
       {filtered.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card px-4 py-3 shadow-soft">
           <p className="text-xs text-muted-foreground">
-            Showing <span className="font-medium text-foreground">{rangeFrom}–{rangeTo}</span> of{" "}
-            <span className="font-medium text-foreground">{filtered.length}</span> orders
+            {t("filters.showing")} <span className="font-medium text-foreground">{rangeFrom}–{rangeTo}</span> {t("filters.of")}{" "}
+            <span className="font-medium text-foreground">{filtered.length}</span> {t("orders.many")}
             {hasFilters && orders.length !== filtered.length && (
-              <span className="ml-1">(filtered from {orders.length})</span>
+              <span className="ml-1">({t("filters.filteredFrom")} {orders.length})</span>
             )}
           </p>
 
@@ -279,24 +308,26 @@ function OrdersPage() {
               className="h-7 w-7"
               disabled={safePage === 1}
               onClick={() => setPage(p => p - 1)}
+              data-tagid="button-account-orders-prev-page"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </Button>
             <span className="min-w-[80px] text-center text-xs">
-              Page {safePage} of {totalPages}
+              {t("filters.page")} {safePage} {t("filters.of")} {totalPages}
             </span>
             <Button
               variant="outline" size="icon"
               className="h-7 w-7"
               disabled={safePage === totalPages}
               onClick={() => setPage(p => p + 1)}
+              data-tagid="button-account-orders-next-page"
             >
               <ChevronRight className="h-3.5 w-3.5" />
             </Button>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground whitespace-nowrap">Rows per page</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">{t("filters.rowsPerPage")}</span>
             <Select
               value={String(pageSize)}
               onValueChange={v => { setPageSize(Number(v)); setPage(1); }}

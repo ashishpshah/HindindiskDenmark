@@ -44,14 +44,9 @@ type Ctx = {
 const AuthContext = createContext<Ctx | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => lsGet<User | null>("hind-user", null));
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"login" | "register" | "forgot">("login");
-
-  useEffect(() => {
-    const saved = lsGet<User | null>("hind-user", null);
-    if (saved) setUser(saved);
-  }, []);
 
   const persist = useCallback((u: User | null) => {
     setUser(u);

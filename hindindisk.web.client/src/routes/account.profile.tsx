@@ -57,19 +57,19 @@ function ProfilePage() {
       <h2 className="font-display text-2xl font-semibold">{t("profile.title")}</h2>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={t("profile.firstName")}>
-          <Input value={form.firstname} onChange={(e) => setForm({ ...form, firstname: e.target.value })} required />
+          <Input value={form.firstname} onChange={(e) => setForm({ ...form, firstname: e.target.value })} required data-tagid="input-account-profile-firstname" />
         </Field>
         <Field label={t("profile.lastName")}>
-          <Input value={form.lastname} onChange={(e) => setForm({ ...form, lastname: e.target.value })} />
+          <Input value={form.lastname} onChange={(e) => setForm({ ...form, lastname: e.target.value })} data-tagid="input-account-profile-lastname" />
         </Field>
         <Field label={t("profile.email")}>
-          <Input type="email" value={form.email} disabled className="bg-muted/50 cursor-not-allowed" />
+          <Input type="email" value={form.email} disabled className="bg-muted/50 cursor-not-allowed" data-tagid="input-account-profile-email" />
         </Field>
         <Field label={t("profile.phone")}>
-          <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+45 …" />
+          <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+45 …" data-tagid="input-account-profile-phone" />
         </Field>
       </div>
-      <Button className="gradient-primary text-primary-foreground" disabled={updateMutation.isPending}>
+      <Button className="gradient-primary text-primary-foreground" disabled={updateMutation.isPending} data-tagid="button-account-profile-save">
         {updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {t("profile.saveChanges")}
       </Button>

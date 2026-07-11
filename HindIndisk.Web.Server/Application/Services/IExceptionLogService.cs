@@ -16,8 +16,9 @@ public interface IExceptionLogService
     Task<ExceptionLogPageDto> GetRecentAsync(
         int       page,
         int       pageSize,
-        string?   search  = null,
-        DateTime? from    = null,
-        DateTime? to      = null,
-        string?   module  = null);
+        string?   search   = null,
+        DateTime? from     = null,
+        DateTime? to       = null,
+        string?   module   = null,
+        string?   logLevel = null);
 }

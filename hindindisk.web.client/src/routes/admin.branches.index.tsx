@@ -64,6 +64,7 @@ function AdminBranchesIndex() {
         getRowId={row => String(row.id)}
         toolbar={
           <Button size="sm" className="gradient-primary text-primary-foreground h-8"
+            data-tagid="button-branches-add"
             onClick={() => navigate({ to: "/admin/branches/new" })}>
             <Plus className="mr-1.5 h-3.5 w-3.5" /> Add Branch
           </Button>

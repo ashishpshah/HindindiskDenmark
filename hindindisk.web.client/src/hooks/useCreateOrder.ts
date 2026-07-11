@@ -18,7 +18,9 @@ export type CreateOrderRequest = {
 
 export type OrderItemDto = {
   menuItemId: number;
+  code?: number;
   name: string;
+  nameDa?: string;
   imageUrl: string;
   quantity: number;
   priceAtPurchase: number;

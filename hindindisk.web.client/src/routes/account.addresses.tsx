@@ -88,7 +88,7 @@ function AddressesPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-2xl font-semibold">{t("pages.addresses.title")}</h2>
-        <Button size="sm" className="gradient-primary text-primary-foreground" onClick={openAdd}>
+        <Button size="sm" className="gradient-primary text-primary-foreground" onClick={openAdd} data-tagid="button-account-addresses-add">
           <Plus className="mr-1.5 h-4 w-4" /> {t("pages.addresses.addBtn")}
         </Button>
       </div>
@@ -122,7 +122,7 @@ function AddressesPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Button size="sm" variant="ghost" onClick={() => openEdit(addr)}>
+                  <Button size="sm" variant="ghost" onClick={() => openEdit(addr)} data-tagid={`button-account-addresses-edit-${addr.id}`}>
                     <Pencil className="h-4 w-4" />
                   </Button>
                   <Button
@@ -130,6 +130,7 @@ function AddressesPage() {
                     className="text-destructive hover:text-destructive"
                     disabled={deleteAddress.isPending}
                     onClick={() => handleDelete(addr.id)}
+                    data-tagid={`button-account-addresses-delete-${addr.id}`}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -166,6 +167,7 @@ function AddressesPage() {
                 onChange={(e) => setForm({ ...form, addressLine1: e.target.value })}
                 placeholder={t("pages.addresses.line1Placeholder")}
                 required
+                data-tagid="input-account-addresses-line1"
               />
             </div>
             <div className="space-y-1.5">
@@ -174,6 +176,7 @@ function AddressesPage() {
                 value={form.addressLine2 ?? ""}
                 onChange={(e) => setForm({ ...form, addressLine2: e.target.value })}
                 placeholder={t("pages.addresses.line2Placeholder")}
+                data-tagid="input-account-addresses-line2"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -184,6 +187,7 @@ function AddressesPage() {
                   onChange={(e) => setForm({ ...form, city: e.target.value })}
                   placeholder={t("pages.addresses.cityPlaceholder")}
                   required
+                  data-tagid="input-account-addresses-city"
                 />
               </div>
               <div className="space-y-1.5">
@@ -193,6 +197,7 @@ function AddressesPage() {
                   onChange={(e) => setForm({ ...form, postalCode: e.target.value })}
                   placeholder={t("pages.addresses.postalPlaceholder")}
                   required
+                  data-tagid="input-account-addresses-postal"
                 />
               </div>
             </div>
@@ -201,16 +206,18 @@ function AddressesPage() {
               <Input
                 value={form.country}
                 onChange={(e) => setForm({ ...form, country: e.target.value })}
+                data-tagid="input-account-addresses-country"
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialog(null)}>{t("actions.cancel")}</Button>
+            <Button variant="outline" onClick={() => setDialog(null)} data-tagid="button-account-addresses-cancel">{t("actions.cancel")}</Button>
             <Button
               className="gradient-primary text-primary-foreground"
               disabled={addAddress.isPending || updateAddress.isPending}
               onClick={handleSave}
+              data-tagid="button-account-addresses-save"
             >
               {(addAddress.isPending || updateAddress.isPending) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

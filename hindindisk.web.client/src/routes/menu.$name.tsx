@@ -59,7 +59,7 @@ function DishDetailsPage() {
         <div className="mx-auto max-w-md px-6 py-32 text-center space-y-4">
           <h2 className="font-display text-2xl font-bold">{t("pages.menu.dishNotFound")}</h2>
           <p className="text-muted-foreground">{t("pages.menu.dishNotFoundDesc")}</p>
-          <Button asChild className="gradient-primary text-primary-foreground">
+          <Button data-tagid="a-dish-back-to-menu-not-found" asChild className="gradient-primary text-primary-foreground">
             <Link to="/menu">{t("pages.menu.backToMenu")}</Link>
           </Button>
         </div>
@@ -77,7 +77,7 @@ function DishDetailsPage() {
   return (
     <Layout>
       <div className="mx-auto max-w-7xl px-6 pt-32 pb-12">
-        <Link to="/menu" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition mb-8">
+        <Link data-tagid="a-dish-back-to-menu" to="/menu" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-primary transition mb-8">
           <ChevronLeft className="mr-1 h-4 w-4" /> {t("pages.menu.backToMenu")}
         </Link>
 
@@ -113,12 +113,14 @@ function DishDetailsPage() {
               <div className="flex flex-wrap items-center gap-4">
                 <div className="inline-flex items-center gap-3 rounded-full border p-1 bg-card shadow-soft">
                   <button
+                    data-tagid="button-dish-qty-decrease"
                     onClick={() => setQty((q) => Math.max(1, q - 1))}
                     className="grid h-10 w-10 place-items-center rounded-full hover:bg-accent text-foreground transition cursor-pointer"
                     aria-label="Decrease quantity"
                   ><Minus className="h-5 w-5" /></button>
                   <span className="min-w-6 text-center text-base font-semibold select-none">{qty}</span>
                   <button
+                    data-tagid="button-dish-qty-increase"
                     onClick={() => setQty((q) => q + 1)}
                     className="grid h-10 w-10 place-items-center rounded-full hover:bg-accent text-foreground transition cursor-pointer"
                     aria-label="Increase quantity"
@@ -126,6 +128,7 @@ function DishDetailsPage() {
                 </div>
 
                 <Button
+                  data-tagid="button-dish-add-to-cart"
                   onClick={handleAddToCart}
                   size="lg"
                   className="rounded-full gradient-primary text-primary-foreground shadow-elegant hover:scale-105 transition-transform duration-200 cursor-pointer flex items-center justify-center min-w-[145px]"
@@ -148,7 +151,7 @@ function DishDetailsPage() {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {related.map((m) => (
                 <div key={m.id} className="group overflow-hidden rounded-3xl border bg-card shadow-soft transition hover:shadow-elegant flex flex-col">
-                  <Link to="/menu/$name" params={{ name: m.name }} className="relative h-48 overflow-hidden block">
+                  <Link data-tagid={`a-dish-related-link-${m.name.toLowerCase().replace(/\s+/g, "-")}`} to="/menu/$name" params={{ name: m.name }} className="relative h-48 overflow-hidden block">
                     <MenuItemPhoto src={m.imageUrl} alt={m.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-110" />
                     <div className="absolute left-3 top-3 flex gap-1.5">
                       {Array.from({ length: m.spicyLevel }).map((_, i) => (
@@ -159,7 +162,7 @@ function DishDetailsPage() {
                   <div className="p-5 flex-1 flex flex-col justify-between">
                     <div>
                       <div className="flex items-start justify-between gap-3">
-                        <Link to="/menu/$name" params={{ name: m.name }} className="hover:text-primary transition">
+                        <Link data-tagid={`a-dish-related-name-${m.name.toLowerCase().replace(/\s+/g, "-")}`} to="/menu/$name" params={{ name: m.name }} className="hover:text-primary transition">
                           <div className="font-display text-xl font-semibold">{loc(m.name, m.nameDa)}</div>
                         </Link>
                         <div className="font-display text-lg text-primary">{m.price} DKK</div>
@@ -167,7 +170,7 @@ function DishDetailsPage() {
                       <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{loc(m.description, m.descriptionDa)}</p>
                     </div>
                     <div className="mt-4 pt-3 border-t">
-                      <Button asChild variant="outline" size="sm" className="w-full rounded-full cursor-pointer hover:bg-primary hover:text-white transition-colors">
+                      <Button data-tagid={`a-dish-related-details-${m.name.toLowerCase().replace(/\s+/g, "-")}`} asChild variant="outline" size="sm" className="w-full rounded-full cursor-pointer hover:bg-primary hover:text-white transition-colors">
                         <Link to="/menu/$name" params={{ name: m.name }}>{t("pages.menu.viewDetails")}</Link>
                       </Button>
                     </div>
@@ -181,6 +184,7 @@ function DishDetailsPage() {
 
       {totalQty > 0 && (
         <button
+          data-tagid="button-cart-floating-summary"
           onClick={() => setCartOpen(true)}
           className="fixed bottom-6 left-6 z-30 inline-flex items-center gap-2 rounded-full gradient-primary px-5 py-3.5 text-primary-foreground shadow-elegant transition hover:scale-105 cursor-pointer"
         >

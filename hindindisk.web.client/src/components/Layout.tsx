@@ -50,6 +50,7 @@ export function Layout({ children }: { children: ReactNode }) {
           {showScrollTop && (
             <motion.button
               key="back-to-top"
+              data-tagid="button-layout-scroll-top"
               initial={{ opacity: 0, y: 15, scale: 0.8 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 15, scale: 0.8 }}
@@ -63,7 +64,7 @@ export function Layout({ children }: { children: ReactNode }) {
           )}
         </AnimatePresence>
 
-<a href={phoneHref} className="grid h-12 w-12 place-items-center rounded-full gradient-primary text-primary-foreground shadow-elegant transition hover:scale-110" aria-label="Call Us">
+<a href={phoneHref} data-tagid="link-layout-call" className="grid h-12 w-12 place-items-center rounded-full gradient-primary text-primary-foreground shadow-elegant transition hover:scale-110" aria-label="Call Us">
           <Phone className="h-5 w-5" />
         </a>
       </div>

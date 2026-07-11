@@ -125,6 +125,29 @@ public class AuthController : ControllerBase
         }
     }
 
+    /// <summary>Verify the current user's password (for sensitive operations).</summary>
+    [HttpPost("verify-password")]
+    [Authorize]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
+    public async Task<IActionResult> VerifyPassword([FromBody] VerifyPasswordRequest request)
+    {
+        var raw = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!long.TryParse(raw, out var userId))
+            return Unauthorized();
+
+        try
+        {
+            await _auth.VerifyPasswordAsync(userId, request.Password);
+            return Ok();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     /// <summary>Reset password using the token issued by verify-otp.</summary>
     [HttpPost("reset-password")]
 

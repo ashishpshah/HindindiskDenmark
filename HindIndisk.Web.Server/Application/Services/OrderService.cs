@@ -1,6 +1,8 @@
 using HindIndisk.Api.Application.DTOs.Order;
 using HindIndisk.Api.Domain.Entities;
+using HindIndisk.Api.Hubs;
 using HindIndisk.Api.Infrastructure;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace HindIndisk.Api.Application.Services;
@@ -11,14 +13,16 @@ public class OrderService : IOrderService
     private readonly IEmailService _email;
     private readonly ICustomerService _customers;
     private readonly BranchClosureService _closures;
+    private readonly IHubContext<AdminHub> _adminHub;
 
     public OrderService(ApplicationDbContext db, IEmailService email, ICustomerService customers,
-        BranchClosureService closures)
+        BranchClosureService closures, IHubContext<AdminHub> adminHub)
     {
         _db        = db;
         _email     = email;
         _customers = customers;
         _closures  = closures;
+        _adminHub  = adminHub;
     }
 
     public async Task<OrderDto> CreateOrderAsync(CreateOrderRequest request, long? loggedInUserId = null, long? placedByUserId = null)
@@ -193,7 +197,7 @@ public class OrderService : IOrderService
         var menuItemMeta = await _db.MenuItems
             .Where(m => itemIds.Contains(m.Id))
             .AsNoTracking()
-            .Select(m => new { m.Id, m.Name, m.ImageUrl })
+            .Select(m => new { m.Id, m.Code, m.Name, m.NameDa, m.ImageUrl })
             .ToDictionaryAsync(m => m.Id);
 
         // MenuId per item (take first mapping)
@@ -243,7 +247,9 @@ public class OrderService : IOrderService
                 var meta = menuItemMeta.GetValueOrDefault(oi.MenuItemId);
                 return new OrderItemDto(
                     oi.MenuItemId,
+                    meta?.Code,
                     meta?.Name ?? "Unknown",
+                    meta?.NameDa,
                     meta?.ImageUrl ?? "",
                     oi.Quantity,
                     oi.PriceAtPurchase);
@@ -264,6 +270,10 @@ public class OrderService : IOrderService
 
         // Customer confirmation
         _ = _email.SendOrderConfirmationAsync(order.ContactEmail!, order.ContactName, dto);
+
+        // Real-time admin notification
+        _ = _adminHub.Clients.Group(AdminHub.GroupName)
+                .SendAsync("NewOrder", new { order.Id, order.Status, order.ContactName, order.Total });
 
         // Admin notification (always — goes to AdminToMail + BCC list)
         _ = _email.SendAdminOrderNotificationAsync(dto);
@@ -308,7 +318,9 @@ public class OrderService : IOrderService
         var items = o.OrderItems
             .Select(oi => new OrderItemDto(
                 oi.MenuItemId,
+                oi.MenuItem.Code,
                 oi.MenuItem.Name,
+                oi.MenuItem.NameDa,
                 oi.MenuItem.ImageUrl,
                 oi.Quantity,
                 oi.PriceAtPurchase))

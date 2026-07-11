@@ -186,7 +186,7 @@ export function AuthModal() {
                 {modalMode === "register" && t("auth.registerTitle")}
                 {modalMode === "forgot"   && t("auth.forgotTitle")}
               </div>
-              <button onClick={closeModal} className="rounded-full p-2 hover:bg-accent"><X className="h-4 w-4" /></button>
+              <button data-tagid="button-auth-modal-close" onClick={closeModal} className="rounded-full p-2 hover:bg-accent"><X className="h-4 w-4" /></button>
             </div>
 
             <div className="p-6">
@@ -195,24 +195,24 @@ export function AuthModal() {
               {modalMode === "login" && (
                 <form onSubmit={onLogin} className="space-y-4">
                   <Field icon={<Mail className="h-4 w-4" />} label={t("auth.email")}>
-                    <Input required type="email" value={form.email} onChange={set("email")} placeholder="you@email.dk" />
+                    <Input data-tagid="input-auth-login-email" required type="email" value={form.email} onChange={set("email")} placeholder="you@email.dk" />
                   </Field>
                   <Field icon={<Lock className="h-4 w-4" />} label={t("auth.password")}>
-                    <PasswordInput required value={form.password} onChange={set("password")} />
+                    <PasswordInput data-tagid="input-auth-login-password" required value={form.password} onChange={set("password")} />
                   </Field>
                   <div className="flex items-center justify-between text-sm">
-                    <label className="flex items-center gap-2"><Checkbox /> {t("auth.remember")}</label>
-                    <button type="button" onClick={() => setModalMode("forgot")} className="text-primary hover:underline">{t("auth.forgot")}</button>
+                    <label className="flex items-center gap-2"><Checkbox data-tagid="button-auth-login-remember" /> {t("auth.remember")}</label>
+                    <button data-tagid="button-auth-login-forgot" type="button" onClick={() => setModalMode("forgot")} className="text-primary hover:underline">{t("auth.forgot")}</button>
                   </div>
                   <AlertBanner />
-                  <Button disabled={loading} className="w-full gradient-primary text-primary-foreground">{t("actions.login")}</Button>
+                  <Button data-tagid="button-auth-login-submit" disabled={loading} className="w-full gradient-primary text-primary-foreground">{t("actions.login")}</Button>
                   <div className="relative my-2 text-center text-xs text-muted-foreground">
                     <span className="bg-card px-2 relative z-10">or</span>
                     <span className="absolute inset-x-0 top-1/2 h-px bg-border" />
                   </div>
                   <p className="pt-2 text-center text-sm text-muted-foreground">
                     {t("auth.noAccount")}{" "}
-                    <button type="button" onClick={() => setModalMode("register")} className="font-semibold text-primary hover:underline">{t("actions.register")}</button>
+                    <button data-tagid="button-auth-login-to-register" type="button" onClick={() => setModalMode("register")} className="font-semibold text-primary hover:underline">{t("actions.register")}</button>
                   </p>
                 </form>
               )}
@@ -222,14 +222,14 @@ export function AuthModal() {
                 <form onSubmit={onRegister} className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     <Field icon={<UserIcon className="h-4 w-4" />} label="First Name">
-                      <Input required placeholder="John" value={form.firstname} onChange={set("firstname")} />
+                      <Input data-tagid="input-auth-register-firstname" required placeholder="John" value={form.firstname} onChange={set("firstname")} />
                     </Field>
                     <Field label="Last Name">
-                      <Input required placeholder="Doe" value={form.lastname} onChange={set("lastname")} />
+                      <Input data-tagid="input-auth-register-lastname" required placeholder="Doe" value={form.lastname} onChange={set("lastname")} />
                     </Field>
                   </div>
                   <Field icon={<Mail className="h-4 w-4" />} label={t("auth.email")}>
-                    <Input required type="email" value={form.email} onChange={set("email")} placeholder="you@email.dk" />
+                    <Input data-tagid="input-auth-register-email" required type="email" value={form.email} onChange={set("email")} placeholder="you@email.dk" />
                   </Field>
                   <Field icon={<Phone className="h-4 w-4" />} label={
                     <span className="flex items-center gap-1">
@@ -237,20 +237,20 @@ export function AuthModal() {
                       <span className="text-xs text-muted-foreground font-normal">(optional)</span>
                     </span>
                   }>
-                    <Input type="tel" value={form.phone} onChange={set("phone")} placeholder="+45 12 34 56 78" />
+                    <Input data-tagid="input-auth-register-phone" type="tel" value={form.phone} onChange={set("phone")} placeholder="+45 12 34 56 78" />
                   </Field>
                   <Field icon={<Lock className="h-4 w-4" />} label={t("auth.password")}>
-                    <PasswordInput required value={form.password} onChange={set("password")} placeholder="Min. 8 characters" />
+                    <PasswordInput data-tagid="input-auth-register-password" required value={form.password} onChange={set("password")} placeholder="Min. 8 characters" />
                   </Field>
                   <Field icon={<Lock className="h-4 w-4" />} label={t("auth.confirmPassword")}>
-                    <PasswordInput required value={form.confirm} onChange={set("confirm")} placeholder="Repeat password" />
+                    <PasswordInput data-tagid="input-auth-register-confirm-password" required value={form.confirm} onChange={set("confirm")} placeholder="Repeat password" />
                   </Field>
-                  <label className="flex items-start gap-2 text-sm"><Checkbox required className="mt-0.5" /> <span>{t("auth.acceptTerms")}</span></label>
+                  <label className="flex items-start gap-2 text-sm"><Checkbox data-tagid="button-auth-register-terms" required className="mt-0.5" /> <span>{t("auth.acceptTerms")}</span></label>
                   <AlertBanner />
-                  <Button disabled={loading} className="w-full gradient-primary text-primary-foreground">{t("actions.register")}</Button>
+                  <Button data-tagid="button-auth-register-submit" disabled={loading} className="w-full gradient-primary text-primary-foreground">{t("actions.register")}</Button>
                   <p className="pt-2 text-center text-sm text-muted-foreground">
                     {t("auth.haveAccount")}{" "}
-                    <button type="button" onClick={() => setModalMode("login")} className="font-semibold text-primary hover:underline">{t("actions.login")}</button>
+                    <button data-tagid="button-auth-register-to-login" type="button" onClick={() => setModalMode("login")} className="font-semibold text-primary hover:underline">{t("actions.login")}</button>
                   </p>
                 </form>
               )}
@@ -272,12 +272,12 @@ export function AuthModal() {
                         Enter the email address linked to your account. We'll send you a 6-digit OTP.
                       </p>
                       <Field icon={<Mail className="h-4 w-4" />} label={t("auth.email")}>
-                        <Input required type="email" value={form.email} onChange={set("email")} placeholder="you@email.dk" />
-                      </Field>
-                      <AlertBanner />
-                      <Button disabled={loading} className="w-full gradient-primary text-primary-foreground">
-                        {loading ? "Sending…" : "Send OTP"}
-                      </Button>
+                        <Input data-tagid="input-auth-forgot-email" required type="email" value={form.email} onChange={set("email")} placeholder="you@email.dk" />
+                        </Field>
+                        <AlertBanner />
+                        <Button data-tagid="button-auth-forgot-send-otp" disabled={loading} className="w-full gradient-primary text-primary-foreground">
+                          {loading ? "Sending…" : "Send OTP"}
+                        </Button>
                     </form>
                   )}
 
@@ -292,6 +292,7 @@ export function AuthModal() {
                       </div>
                       <Field label={t("auth.otpCode")}>
                         <Input
+                          data-tagid="input-auth-forgot-otp"
                           required
                           inputMode="numeric"
                           pattern="\d{6}"
@@ -303,10 +304,11 @@ export function AuthModal() {
                         />
                       </Field>
                       <AlertBanner />
-                      <Button disabled={loading} className="w-full gradient-primary text-primary-foreground">
+                      <Button data-tagid="button-auth-forgot-verify-otp" disabled={loading} className="w-full gradient-primary text-primary-foreground">
                         {loading ? "Verifying…" : "Verify OTP"}
                       </Button>
                       <button
+                        data-tagid="button-auth-forgot-resend"
                         type="button"
                         className="block w-full text-center text-xs text-muted-foreground hover:text-primary transition"
                         onClick={() => { setForgotStep(1); }}
@@ -321,19 +323,20 @@ export function AuthModal() {
                     <form onSubmit={onResetPassword} className="space-y-4">
                       <p className="text-sm text-muted-foreground">OTP verified. Enter your new password.</p>
                       <Field icon={<Lock className="h-4 w-4" />} label={t("auth.newPassword")}>
-                        <PasswordInput required value={form.newpwd} onChange={set("newpwd")} placeholder="At least 8 characters" />
+                        <PasswordInput data-tagid="input-auth-forgot-new-password" required value={form.newpwd} onChange={set("newpwd")} placeholder="At least 8 characters" />
                       </Field>
                       <Field icon={<Lock className="h-4 w-4" />} label={t("auth.confirmPassword")}>
-                        <PasswordInput required value={form.newpwdConfirm} onChange={set("newpwdConfirm")} placeholder="Repeat new password" />
+                        <PasswordInput data-tagid="input-auth-forgot-confirm-password" required value={form.newpwdConfirm} onChange={set("newpwdConfirm")} placeholder="Repeat new password" />
                       </Field>
                       <AlertBanner />
-                      <Button disabled={loading} className="w-full gradient-primary text-primary-foreground">
+                      <Button data-tagid="button-auth-forgot-save" disabled={loading} className="w-full gradient-primary text-primary-foreground">
                         {loading ? "Saving…" : t("actions.save")}
                       </Button>
                     </form>
                   )}
 
                   <button
+                    data-tagid="button-auth-forgot-back-to-login"
                     onClick={() => setModalMode("login")}
                     className="block w-full text-center text-sm text-primary hover:underline"
                   >
@@ -363,8 +366,9 @@ function PasswordInput(props: Omit<React.ComponentProps<typeof Input>, "type">) 
   const [show, setShow] = useState(false);
   return (
     <div className="relative">
-      <Input {...props} type={show ? "text" : "password"} className="pr-10" />
+      <Input data-tagid="input-auth-password-input" {...props} type={show ? "text" : "password"} className="pr-10" />
       <button
+        data-tagid="button-auth-password-toggle"
         type="button"
         tabIndex={-1}
         onClick={() => setShow(s => !s)}

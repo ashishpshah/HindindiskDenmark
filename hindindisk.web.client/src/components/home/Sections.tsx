@@ -99,7 +99,7 @@ export function About() {
               </div>
             ))}
           </div>
-          <Button asChild className="mt-10 gradient-primary text-primary-foreground">
+          <Button asChild className="mt-10 gradient-primary text-primary-foreground" data-tagid="sections-about-discover">
             <Link to={buttonLink as any}>{buttonText} <ArrowRight className="ml-1 h-4 w-4" /></Link>
           </Button>
         </div>
@@ -161,6 +161,7 @@ export function FeaturedMenu() {
               onClick={() => setI(prev => (prev <= 0 ? items.length - 1 : prev - 1))}
               className="grid h-10 w-10 place-items-center rounded-full border bg-card text-foreground transition hover:border-primary hover:text-primary shadow-soft"
               aria-label={t("home.menu.prevLabel")}
+              data-tagid="sections-menu-prev"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -168,10 +169,11 @@ export function FeaturedMenu() {
               onClick={() => setI(prev => (prev >= items.length - 1 ? 0 : prev + 1))}
               className="grid h-10 w-10 place-items-center rounded-full border bg-card text-foreground transition hover:border-primary hover:text-primary shadow-soft"
               aria-label={t("home.menu.nextLabel")}
+              data-tagid="sections-menu-next"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
-            <Button asChild variant="outline" className="rounded-full hidden sm:inline-flex">
+            <Button asChild variant="outline" className="rounded-full hidden sm:inline-flex" data-tagid="sections-menu-view-all">
               <Link to="/menu">{t("home.menu.viewAll")} <ArrowRight className="ml-1 h-4 w-4" /></Link>
             </Button>
           </div>
@@ -190,12 +192,12 @@ export function FeaturedMenu() {
                 whileHover={{ y: -8 }}
                 className="group relative w-full shrink-0 sm:w-[calc(50%-10px)] lg:w-[calc(33.333%-14px)] overflow-hidden rounded-3xl bg-card shadow-soft hover:shadow-elegant"
               >
-                <Link to="/menu/$name" params={{ name: m.name }} className="block relative h-56 overflow-hidden">
+                <Link to="/menu/$name" params={{ name: m.name }} className="block relative h-56 overflow-hidden" data-tagid={`sections-menu-item-image-${idx}`}>
                   <img src={resolveUrl(m.imageUrl)} alt={loc(m.name, m.nameDa)} className="h-full w-full object-cover transition duration-700 group-hover:scale-110" />
                   <div className="absolute left-4 top-4 rounded-full bg-white/95 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-black">{loc(m.category, m.categoryDa)}</div>
                 </Link>
                 <div className="p-5">
-                  <Link to="/menu/$name" params={{ name: m.name }} className="font-display text-xl font-semibold hover:text-primary transition">
+                  <Link to="/menu/$name" params={{ name: m.name }} className="font-display text-xl font-semibold hover:text-primary transition" data-tagid={`sections-menu-item-name-${idx}`}>
                     {loc(m.name, m.nameDa)}
                   </Link>
                   <div className="mt-3 flex items-center justify-between">
@@ -207,6 +209,7 @@ export function FeaturedMenu() {
                       }}
                       className="grid h-10 w-10 place-items-center rounded-full gradient-primary text-primary-foreground transition hover:scale-110"
                       aria-label={`${t("pages.menu.addToCart")} ${loc(m.name, m.nameDa)}`}
+                      data-tagid={`sections-menu-add-cart-${idx}`}
                     >
                       <Plus className="h-4 w-4" />
                     </button>
@@ -272,8 +275,8 @@ export function CTA() {
         </motion.h2>
         <p className="relative mx-auto mt-5 max-w-xl text-white/85">{t("home.cta.subtitle")}</p>
         <div className="relative mt-10 flex flex-wrap justify-center gap-3">
-          <Button asChild size="lg" variant="secondary" className="rounded-full bg-white text-foreground hover:bg-white/90"><Link to="/menu">{t("home.cta.orderOnline")}</Link></Button>
-          <Button asChild size="lg" className="rounded-full bg-black text-white hover:bg-black/90"><Link to="/reservation">{t("home.cta.bookTable")}</Link></Button>
+          <Button asChild size="lg" variant="secondary" className="rounded-full bg-white text-foreground hover:bg-white/90" data-tagid="sections-cta-order"><Link to="/menu">{t("home.cta.orderOnline")}</Link></Button>
+          <Button asChild size="lg" className="rounded-full bg-black text-white hover:bg-black/90" data-tagid="sections-cta-book"><Link to="/reservation">{t("home.cta.bookTable")}</Link></Button>
         </div>
       </div>
     </section>

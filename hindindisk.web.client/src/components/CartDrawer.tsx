@@ -24,14 +24,14 @@ export function CartDrawer() {
               <div className="flex items-center gap-2 font-display text-2xl font-semibold">
                 <ShoppingBag className="h-5 w-5 text-primary" /> {t("cart.title")}
               </div>
-              <button onClick={() => setOpen(false)} aria-label="Close cart" className="rounded-full p-2 hover:bg-accent"><X className="h-5 w-5" /></button>
+              <button data-tagid="button-cart-close" onClick={() => setOpen(false)} aria-label="Close cart" className="rounded-full p-2 hover:bg-accent"><X className="h-5 w-5" /></button>
             </div>
             <div className="flex-1 space-y-3 overflow-y-auto p-5">
               {lines.length === 0 && (
                 <div className="py-24 text-center space-y-6 flex flex-col items-center justify-center">
                   <ShoppingBag className="h-16 w-16 text-muted-foreground/30 stroke-[1.5]" />
                   <div className="text-muted-foreground font-medium">{t("cart.empty")}</div>
-                  <Button asChild onClick={() => setOpen(false)} className="rounded-full gradient-primary text-primary-foreground shadow-soft cursor-pointer px-6">
+                  <Button data-tagid="a-cart-browse-menu" asChild onClick={() => setOpen(false)} className="rounded-full gradient-primary text-primary-foreground shadow-soft cursor-pointer px-6">
                     <Link to="/menu">{t("cart.browseMenu")}</Link>
                   </Button>
                 </div>
@@ -43,14 +43,14 @@ export function CartDrawer() {
                     <div className="font-semibold">{l.name}</div>
                     <div className="text-sm text-muted-foreground">{l.price} DKK</div>
                     <div className="mt-2 inline-flex items-center gap-2 rounded-full border px-1 py-0.5 text-sm">
-                      <button onClick={() => sub(l.name)} aria-label={`Decrease quantity of ${l.name}`} className="grid h-6 w-6 place-items-center rounded-full hover:bg-accent"><Minus className="h-3 w-3" /></button>
+                      <button data-tagid={`button-cart-item-decrease-${l.name.toLowerCase().replace(/\s+/g, "-")}`} onClick={() => sub(l.name)} aria-label={`Decrease quantity of ${l.name}`} className="grid h-6 w-6 place-items-center rounded-full hover:bg-accent"><Minus className="h-3 w-3" /></button>
                       <span className="min-w-4 text-center">{l.qty}</span>
-                      <button onClick={() => add({ id: l.id, name: l.name, price: l.price, imageUrl: l.image })} aria-label={`Increase quantity of ${l.name}`} className="grid h-6 w-6 place-items-center rounded-full gradient-primary text-primary-foreground"><Plus className="h-3 w-3" /></button>
+                      <button data-tagid={`button-cart-item-increase-${l.name.toLowerCase().replace(/\s+/g, "-")}`} onClick={() => add({ id: l.id, name: l.name, price: l.price, imageUrl: l.image })} aria-label={`Increase quantity of ${l.name}`} className="grid h-6 w-6 place-items-center rounded-full gradient-primary text-primary-foreground"><Plus className="h-3 w-3" /></button>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="font-semibold">{l.price * l.qty} DKK</div>
-                    <button onClick={() => remove(l.name)} aria-label={`Remove ${l.name} from cart`} className="mt-2 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+                    <button data-tagid={`button-cart-item-remove-${l.name.toLowerCase().replace(/\s+/g, "-")}`} onClick={() => remove(l.name)} aria-label={`Remove ${l.name} from cart`} className="mt-2 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 </div>
               ))}
@@ -58,7 +58,7 @@ export function CartDrawer() {
             {lines.length > 0 && (
               <div className="space-y-3 border-t bg-muted/30 p-5">
                 <OrderSummary subtotal={subtotal} discount={discount} delivery={delivery} total={total} />
-                <Button asChild size="lg" className="w-full gradient-primary text-primary-foreground" onClick={() => setOpen(false)}>
+                <Button data-tagid="a-cart-checkout" asChild size="lg" className="w-full gradient-primary text-primary-foreground" onClick={() => setOpen(false)}>
                   <Link to="/checkout">{t("actions.checkout")}</Link>
                 </Button>
               </div>

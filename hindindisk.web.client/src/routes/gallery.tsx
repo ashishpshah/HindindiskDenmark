@@ -52,6 +52,7 @@ function GalleryPage() {
           {images.map((img, i) => (
             <motion.button
               key={i}
+              data-tagid={`button-gallery-image-${i}`}
               onClick={() => setOpen(img.url)}
               initial={{ opacity: 0, scale: 0.96 }}
               whileInView={{ opacity: 1, scale: 1 }}
@@ -72,6 +73,7 @@ function GalleryPage() {
         {open && (
           <motion.div
             className="fixed inset-0 z-50 grid place-items-center bg-black/90 p-6"
+            data-tagid="div-gallery-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -79,6 +81,7 @@ function GalleryPage() {
           >
             <button
               className="absolute right-6 top-6 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white"
+              data-tagid="button-gallery-close"
               onClick={() => setOpen(null)}
             >
               <X />

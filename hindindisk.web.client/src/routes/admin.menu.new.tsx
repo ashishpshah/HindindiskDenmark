@@ -25,8 +25,10 @@ type PriceMap = Record<number, string>;
 
 function MenuItemNewPage() {
   const navigate              = useNavigate();
-  const { data: allItems = [] } = useAdminMenuItems();
-  const { data: menus    = [] } = useAdminMenus();
+  const { data: itemsPage } = useAdminMenuItems();
+  const { data: menusPage } = useAdminMenus();
+  const allItems = itemsPage?.items ?? [];
+  const menus    = menusPage?.items ?? [];
   const { data: branches = [] } = useBranches();
   const createItem            = useCreateMenuItem();
 
@@ -95,12 +97,12 @@ function MenuItemNewPage() {
           <div className="space-y-1.5">
             <Label>Name *</Label>
             <Input autoFocus placeholder="e.g. Butter Chicken" value={name}
-              onChange={e => setName(e.target.value)} />
+              onChange={e => setName(e.target.value)} data-tagid="input-menu-name" />
           </div>
           <div className="space-y-1.5">
             <Label>Name <span className="text-xs text-muted-foreground">(Danish)</span></Label>
             <Input placeholder="e.g. Smørskylling" value={nameDa}
-              onChange={e => setNameDa(e.target.value)} />
+              onChange={e => setNameDa(e.target.value)} data-tagid="input-menu-nameda" />
           </div>
         </div>
 
@@ -109,12 +111,12 @@ function MenuItemNewPage() {
           <div className="space-y-1.5">
             <Label>Description</Label>
             <Input placeholder="Short description" value={desc}
-              onChange={e => setDesc(e.target.value)} />
+              onChange={e => setDesc(e.target.value)} data-tagid="input-menu-description" />
           </div>
           <div className="space-y-1.5">
             <Label>Description <span className="text-xs text-muted-foreground">(Danish)</span></Label>
             <Input placeholder="Kort beskrivelse" value={descDa}
-              onChange={e => setDescDa(e.target.value)} />
+              onChange={e => setDescDa(e.target.value)} data-tagid="input-menu-descriptionda" />
           </div>
         </div>
 
@@ -122,12 +124,12 @@ function MenuItemNewPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Code</Label>
-            <Input type="number" min={0} value={code} onChange={e => setCode(Number(e.target.value))} />
+            <Input type="number" min={0} value={code} onChange={e => setCode(Number(e.target.value))} data-tagid="input-menu-code" />
           </div>
           <div className="space-y-1.5">
             <Label>Spicy Level</Label>
             <Select value={String(spicyLevel)} onValueChange={v => setSpicyLevel(Number(v))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger data-tagid="select-menu-spicylevel"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {SPICY_OPTIONS.map(o => <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>)}
               </SelectContent>
@@ -150,6 +152,7 @@ function MenuItemNewPage() {
                 const active = menuIds.includes(m.id);
                 return (
                   <button key={m.id} type="button" onClick={() => toggleMenu(m.id)}
+                    data-tagid={`button-menu-togglemenu-${m.id}`}
                     className={`rounded-full border px-3 py-1 text-xs font-medium transition
                       ${active ? "gradient-primary text-primary-foreground border-transparent" : "bg-muted text-muted-foreground hover:bg-accent"}`}>
                     {m.name}
@@ -185,6 +188,7 @@ function MenuItemNewPage() {
                     <span className="text-sm text-muted-foreground flex-1">{b.name.replace("Hind Indisk ", "")}</span>
                     <Input type="number" min={0} step={0.01} className="w-28" placeholder="0"
                       value={prices[id] ?? ""}
+                      data-tagid={`input-menu-price-${id}`}
                       onChange={e => setPrices(p => ({ ...p, [id]: e.target.value }))} />
                     <span className="text-sm text-muted-foreground">DKK</span>
                   </div>
@@ -196,11 +200,12 @@ function MenuItemNewPage() {
 
         <div className="flex gap-2 pt-4 border-t">
           <Button className="gradient-primary text-primary-foreground"
-            disabled={!name.trim() || createItem.isPending} onClick={handleSave}>
+            disabled={!name.trim() || createItem.isPending} onClick={handleSave}
+            data-tagid="button-menu-create">
             {createItem.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-1.5 h-4 w-4" />}
             Create Item
           </Button>
-          <Button variant="outline" onClick={() => navigate({ to: "/admin/menu" })}>Cancel</Button>
+          <Button variant="outline" onClick={() => navigate({ to: "/admin/menu" })} data-tagid="button-menu-cancel">Cancel</Button>
         </div>
       </div>
     </FormPage>

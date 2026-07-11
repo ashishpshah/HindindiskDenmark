@@ -32,17 +32,28 @@ import {
 // ─── Re-export so pages only need one import ──────────────────────────────────
 export type { ColumnDef, Row };
 
+// ─── Server pagination ────────────────────────────────────────────────────────
+export interface ServerPagination {
+  page:             number;
+  pageSize:         number;
+  total:            number;
+  onPageChange:     (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  onSearchChange?:  (q: string) => void;
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface DataTableProps<TData> {
   title:     string;
   columns:   ColumnDef<TData, unknown>[];
   data:      TData[];
   isLoading?: boolean;
-  toolbar?:  React.ReactNode;       // extra filters rendered in toolbar
+  toolbar?:  React.ReactNode;
   expandedRow?: (row: Row<TData>) => React.ReactNode;
-  getRowId?: (row: TData) => string; // stable row identity for expand tracking
+  getRowId?: (row: TData) => string;
   onRefresh?: () => void;
   printTitle?: string;
+  serverPagination?: ServerPagination;
 }
 
 const PAGE_SIZES = [10, 20, 50, 100];
@@ -56,6 +67,7 @@ function escCsv(v: unknown): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 export function DataTable<TData>({
   title, columns, data, isLoading, toolbar, expandedRow, getRowId, onRefresh, printTitle,
+  serverPagination,
 }: DataTableProps<TData>) {
   const [sorting,        setSorting]        = useState<SortingState>([]);
   const [columnFilters,  setColumnFilters]  = useState<ColumnFiltersState>([]);
@@ -75,11 +87,12 @@ export function DataTable<TData>({
     enableColumnFilter: false,
     size: 48,
     cell: ({ row, table }) => {
-      const pageIndex = table.getState().pagination.pageIndex;
-      const pageSize  = table.getState().pagination.pageSize;
+      const offset = serverPagination
+        ? (serverPagination.page - 1) * serverPagination.pageSize
+        : table.getState().pagination.pageIndex * table.getState().pagination.pageSize;
       return (
         <span className="text-xs text-muted-foreground tabular-nums">
-          {pageIndex * pageSize + row.index + 1}
+          {offset + row.index + 1}
         </span>
       );
     },
@@ -101,6 +114,10 @@ export function DataTable<TData>({
     getSortedRowModel:     getSortedRowModel(),
     getFilteredRowModel:   getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    manualPagination:  !!serverPagination,
+    pageCount:         serverPagination
+      ? Math.max(1, Math.ceil(serverPagination.total / serverPagination.pageSize))
+      : undefined,
     enableMultiSort: true,
     enableSortingRemoval: true,
   });
@@ -167,7 +184,16 @@ export function DataTable<TData>({
           <Input
             placeholder="Search all columns…"
             value={globalFilter}
-            onChange={(e) => { setGlobalFilter(e.target.value); setPagination(p => ({ ...p, pageIndex: 0 })); }}
+            onChange={(e) => {
+              const v = e.target.value;
+              setGlobalFilter(v);
+              if (serverPagination?.onSearchChange) {
+                serverPagination.onSearchChange(v);
+                serverPagination.onPageChange(1);
+              } else {
+                setPagination(p => ({ ...p, pageIndex: 0 }));
+              }
+            }}
             className="pl-8 h-8 w-52 text-sm"
           />
         </div>
@@ -342,6 +368,48 @@ export function DataTable<TData>({
 
       {/* ── Pagination ──────────────────────────────────────────────────────── */}
       {!isLoading && (
+        serverPagination ? (() => {
+          const sp        = serverPagination;
+          const totalPages = Math.max(1, Math.ceil(sp.total / sp.pageSize));
+          return (
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <span>Rows per page</span>
+                <Select
+                  value={String(sp.pageSize)}
+                  onValueChange={v => { sp.onPageSizeChange(Number(v)); sp.onPageChange(1); }}
+                >
+                  <SelectTrigger className="h-7 w-16 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZES.map(n => (
+                      <SelectItem key={n} value={String(n)} className="text-xs">{n}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span>{sp.total.toLocaleString()} total</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="mr-2">Page {sp.page} of {totalPages}</span>
+                <Button size="sm" variant="outline" className="h-7 w-7 p-0"
+                  onClick={() => sp.onPageChange(1)} disabled={sp.page <= 1}>
+                  <ChevronsLeft className="h-3.5 w-3.5" />
+                </Button>
+                <Button size="sm" variant="outline" className="h-7 w-7 p-0"
+                  onClick={() => sp.onPageChange(sp.page - 1)} disabled={sp.page <= 1}>
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </Button>
+                <Button size="sm" variant="outline" className="h-7 w-7 p-0"
+                  onClick={() => sp.onPageChange(sp.page + 1)} disabled={sp.page >= totalPages}>
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+                <Button size="sm" variant="outline" className="h-7 w-7 p-0"
+                  onClick={() => sp.onPageChange(totalPages)} disabled={sp.page >= totalPages}>
+                  <ChevronsRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          );
+        })() : (
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             <span>Rows per page</span>
@@ -391,6 +459,7 @@ export function DataTable<TData>({
             </Button>
           </div>
         </div>
+        )
       )}
     </div>
   );

@@ -52,6 +52,7 @@ export function GalleryStrip() {
           <Link
             to="/gallery"
             className="inline-flex items-center gap-2 rounded-full border border-primary/30 px-6 py-2.5 text-sm font-medium text-primary transition hover:bg-primary hover:text-primary-foreground"
+            data-tagid="gallery-faq-view-more"
           >
             {t("home.gallery.viewMore")} <ArrowRight className="h-4 w-4" />
           </Link>
@@ -106,7 +107,7 @@ export function FAQ() {
             <Accordion type="single" collapsible className="mt-10 space-y-3">
               {faqs.map((f, i) => (
                 <AccordionItem key={i} value={`f-${i}`} className="overflow-hidden rounded-2xl border bg-card px-5 shadow-soft">
-                  <AccordionTrigger className="py-5 text-left font-display text-lg hover:no-underline">
+                  <AccordionTrigger className="py-5 text-left font-display text-lg hover:no-underline" data-tagid={`gallery-faq-trigger-${i}`}>
                     {lang === "da" ? f.qDa : f.q}
                   </AccordionTrigger>
                   <AccordionContent className="text-muted-foreground">

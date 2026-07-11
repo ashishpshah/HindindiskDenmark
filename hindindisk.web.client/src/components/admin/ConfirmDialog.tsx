@@ -34,8 +34,9 @@ export function ConfirmDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel data-tagid="confirm-dialog-cancel">Cancel</AlertDialogCancel>
           <AlertDialogAction
+            data-tagid="confirm-dialog-confirm"
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             onClick={onConfirm}
           >

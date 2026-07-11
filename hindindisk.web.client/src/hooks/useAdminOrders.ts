@@ -33,20 +33,35 @@ export type AdminOrderDto = {
   deliveryAddress?: string;
   paymentMethod: string;
   items: AdminOrderItemDto[];
-  scheduledDate?: string;   // "YYYY-MM-DD", null = ASAP
-  scheduledTime?: string;   // "HH:mm",      null = ASAP
+  scheduledDate?: string;
+  scheduledTime?: string;
   statusHistory: OrderStatusHistoryDto[];
   cancellationReason?: string;
 };
 
-export function useAdminOrders(params?: { status?: string; branchId?: number }) {
+export type OrderPageDto = {
+  items: AdminOrderDto[];
+  total: number;
+};
+
+export type OrderFilters = {
+  page: number;
+  pageSize: number;
+  status?: string;
+  branchId?: number;
+  search?: string;
+};
+
+export function useAdminOrders(filters: OrderFilters) {
   const qs = new URLSearchParams();
-  if (params?.status)   qs.set("status",   params.status);
-  if (params?.branchId) qs.set("branchId", String(params.branchId));
-  const query = qs.toString();
+  qs.set("page",     String(filters.page));
+  qs.set("pageSize", String(filters.pageSize));
+  if (filters.status)   qs.set("status",   filters.status);
+  if (filters.branchId) qs.set("branchId", String(filters.branchId));
+  if (filters.search)   qs.set("search",   filters.search);
 
   return useQuery({
-    queryKey: ["admin-orders", params?.status, params?.branchId],
-    queryFn:  () => apiFetch<AdminOrderDto[]>(`/api/admin/orders${query ? `?${query}` : ""}`),
+    queryKey: ["admin-orders", filters],
+    queryFn:  () => apiFetch<OrderPageDto>(`/api/admin/orders?${qs}`),
   });
 }

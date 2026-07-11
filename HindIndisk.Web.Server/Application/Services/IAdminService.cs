@@ -6,17 +6,23 @@ public interface IAdminService
 {
     // ── Dashboard ─────────────────────────────────────────────────────────────
     Task<AdminDashboardDto>            GetDashboardAsync();
+    Task<AdminTrendDto>                GetTrendsAsync();
+    Task<IReadOnlyList<RevenuePointDto>> GetRevenueHistoryAsync(int days);
+    Task<IReadOnlyList<TopItemDto>>    GetTopItemsAsync(int days);
+    Task<IReadOnlyList<BranchOverviewDto>> GetBranchOverviewAsync();
+    Task<IReadOnlyList<HourlyVolumeDto>>  GetHourlyVolumeAsync(string? date);
 
     // ── Orders ────────────────────────────────────────────────────────────────
-    Task<IReadOnlyList<AdminOrderDto>> GetOrdersAsync(string? status, long? branchId);
+    Task<OrderPageDto> GetOrdersAsync(int page, int pageSize, string? status = null, long? branchId = null, string? search = null);
     Task<AdminOrderDto>                UpdateOrderStatusAsync(long orderId, string status, string? cancellationReason = null);
+    Task<IReadOnlyList<StatusCountDto>> GetOrderCountsByStatusAsync();
 
     // ── Reservations ──────────────────────────────────────────────────────────
     Task<IReadOnlyList<AdminReservationDto>> GetReservationsAsync(string? status, long? branchId, string? date);
     Task<AdminReservationDto>          UpdateReservationStatusAsync(long reservationId, string status);
 
     // ── Menus (categories) ───────────────────────────────────────────────────
-    Task<IReadOnlyList<AdminMenuDto>> GetMenusAsync();
+    Task<MenuPageDto> GetMenusAsync(int? page = null, int? pageSize = null, string? search = null, long? branchId = null);
     Task<AdminMenuDto>               CreateMenuAsync(CreateMenuRequest request);
     Task<AdminMenuDto>               UpdateMenuAsync(long menuId, UpdateMenuRequest request);
     Task<AdminMenuDto>               ToggleMenuAsync(long menuId);
@@ -26,7 +32,7 @@ public interface IAdminService
     Task<AdminMenuDto>               ReorderMenuItemsAsync(long menuId, ReorderMenuItemsRequest request);
 
     // ── Menu items ────────────────────────────────────────────────────────────
-    Task<IReadOnlyList<AdminMenuItemDto>> GetMenuItemsAsync();
+    Task<MenuItemPageDto> GetMenuItemsAsync(int? page = null, int? pageSize = null, string? search = null, long? branchId = null);
     Task<AdminMenuItemDto>               CreateMenuItemAsync(CreateMenuItemRequest request);
     Task<AdminMenuItemDto>               UpdateMenuItemAsync(long itemId, UpdateMenuItemRequest request);
     Task<AdminMenuItemDto>               UpdateMenuItemPricesAsync(long itemId, UpdateMenuItemPricesRequest request);
@@ -56,6 +62,6 @@ public interface IAdminService
     Task                                         DeleteOrderStatusTransitionAsync(long id);
 
     // ── Customers ─────────────────────────────────────────────────────────────
-    Task<IReadOnlyList<AdminCustomerDto>> GetCustomersAsync(string? q);
-    Task<AdminCustomerDetailDto>          GetCustomerDetailAsync(long customerId);
+    Task<CustomerPageDto>    GetCustomersAsync(int page, int pageSize, string? q = null);
+    Task<AdminCustomerDetailDto> GetCustomerDetailAsync(long customerId);
 }

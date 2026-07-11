@@ -43,6 +43,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<AboutMvvItem>       AboutMvvItems       => Set<AboutMvvItem>();
     public DbSet<AboutTimelineItem>  AboutTimelineItems  => Set<AboutTimelineItem>();
     public DbSet<TeamMember>         TeamMembers         => Set<TeamMember>();
+    public DbSet<EmailConfig>        EmailConfigs        => Set<EmailConfig>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -111,6 +112,10 @@ public class ApplicationDbContext : DbContext
             .Property(s => s.Id)
             .ValueGeneratedNever();
         modelBuilder.Entity<HomeStorySectionSettings>()
+            .Property(s => s.Id)
+            .ValueGeneratedNever();
+        modelBuilder.Entity<EmailConfig>()
+            .ToTable("EmailSettings")
             .Property(s => s.Id)
             .ValueGeneratedNever();
         modelBuilder.Entity<Order>().Property(x => x.Subtotal).HasPrecision(10, 2);

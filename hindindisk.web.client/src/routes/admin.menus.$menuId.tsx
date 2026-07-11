@@ -38,8 +38,10 @@ function MenuEditPage() {
   const navigate   = useNavigate();
   const { menuId } = Route.useParams();
 
-  const { data: menus = [], isLoading } = useAdminMenus();
-  const { data: allItems = [] }         = useAdminMenuItems();
+  const { data: menusPage, isLoading } = useAdminMenus();
+  const { data: itemsPage }            = useAdminMenuItems();
+  const menus    = menusPage?.items ?? [];
+  const allItems = itemsPage?.items ?? [];
   const { data: branches = [] }         = useBranches();
 
   const updateMenu  = useUpdateMenu();
@@ -152,19 +154,19 @@ function MenuEditPage() {
           <div className="space-y-1.5">
             <Label>Name *</Label>
             <Input autoFocus value={name} onChange={e => setName(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleSave()} />
+              onKeyDown={e => e.key === "Enter" && handleSave()} data-tagid="input-menus-name" />
           </div>
           <div className="space-y-1.5">
             <Label>Name <span className="text-xs text-muted-foreground">(Danish)</span></Label>
-            <Input placeholder="Dansk navn" value={nameDa} onChange={e => setNameDa(e.target.value)} />
+            <Input placeholder="Dansk navn" value={nameDa} onChange={e => setNameDa(e.target.value)} data-tagid="input-menus-nameda" />
           </div>
           <div className="space-y-1.5">
             <Label>Description </Label>
-            <Input value={desc} onChange={e => setDesc(e.target.value)} />
+            <Input value={desc} onChange={e => setDesc(e.target.value)} data-tagid="input-menus-description" />
           </div>
           <div className="space-y-1.5">
             <Label>Description <span className="text-xs text-muted-foreground">(Danish)</span></Label>
-            <Input placeholder="Dansk beskrivelse" value={descDa} onChange={e => setDescDa(e.target.value)} />
+            <Input placeholder="Dansk beskrivelse" value={descDa} onChange={e => setDescDa(e.target.value)} data-tagid="input-menus-descriptionda" />
           </div>
         </div>
 
@@ -190,12 +192,14 @@ function MenuEditPage() {
             <div className="flex gap-2">
               <Button
                 size="sm" variant="outline" className="h-8"
+                data-tagid="button-menus-createitem"
                 onClick={() => navigate({ to: "/admin/menu/new" })}
               >
                 <Plus className="mr-1.5 h-3.5 w-3.5" /> Create Item
               </Button>
               <Button
                 size="sm" variant="outline" className="h-8"
+                data-tagid="button-menus-togglepicker"
                 onClick={() => { setShowPicker(v => !v); setPickerSearch(""); }}
               >
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -213,6 +217,7 @@ function MenuEditPage() {
                   autoFocus placeholder="Search items to add…"
                   value={pickerSearch} onChange={e => setPickerSearch(e.target.value)}
                   className="pl-8 h-8 text-sm"
+                  data-tagid="input-menus-pickersearch"
                 />
               </div>
               {available.length === 0 ? (
@@ -226,6 +231,7 @@ function MenuEditPage() {
                       key={item.id}
                       onClick={() => handleAddItem(item.id)}
                       disabled={addItem.isPending}
+                      data-tagid={`button-menus-additem-${item.id}`}
                       className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-accent transition rounded"
                     >
                       {item.imageUrl && (
@@ -295,6 +301,7 @@ function MenuEditPage() {
                           <button
                             onClick={() => moveItem(idx, "up")}
                             disabled={idx === 0 || reorder.isPending}
+                            data-tagid={`button-menus-moveup-${item.id}`}
                             className="rounded p-1 text-muted-foreground hover:bg-accent disabled:opacity-30 transition"
                             title="Move up"
                           >
@@ -303,6 +310,7 @@ function MenuEditPage() {
                           <button
                             onClick={() => moveItem(idx, "down")}
                             disabled={idx === sortedItems.length - 1 || reorder.isPending}
+                            data-tagid={`button-menus-movedown-${item.id}`}
                             className="rounded p-1 text-muted-foreground hover:bg-accent disabled:opacity-30 transition"
                             title="Move down"
                           >
@@ -316,6 +324,7 @@ function MenuEditPage() {
                         <div className="flex items-center justify-end">
                           <button
                             onClick={() => setPendingUnlink(item)}
+                            data-tagid={`button-menus-unlink-${item.id}`}
                             className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition"
                             title="Unlink from this menu only"
                           >
@@ -337,13 +346,14 @@ function MenuEditPage() {
             className="gradient-primary text-primary-foreground"
             disabled={!name.trim() || updateMenu.isPending}
             onClick={handleSave}
+            data-tagid="button-menus-save"
           >
             {updateMenu.isPending
               ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               : <Check className="mr-1.5 h-4 w-4" />}
             Save Changes
           </Button>
-          <Button variant="outline" onClick={() => navigate({ to: "/admin/menus" })}>
+          <Button variant="outline" onClick={() => navigate({ to: "/admin/menus" })} data-tagid="button-menus-cancel">
             Cancel
           </Button>
         </div>

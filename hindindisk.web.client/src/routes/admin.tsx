@@ -3,7 +3,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, ShoppingBag, CalendarCheck, ExternalLink, LogOut,
   UtensilsCrossed, Users, Eye, EyeOff, Loader2, BookOpen, Store, Menu, X,
-  PowerOff, AlertTriangle, Globe, Home, ImageIcon, ChevronDown, Info,
+  PowerOff, AlertTriangle, Globe, Home, ImageIcon, ChevronDown, Info, Mail,
 } from "lucide-react";
 import { useAdminAuth, isAdminUser } from "@/context/AdminAuthContext";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ const NAV: NavEntry[] = [
   { to: "/admin/branches",     label: "Branches",     icon: Store },
   { to: "/admin/customers",    label: "Customers",    icon: Users },
   { to: "/admin/settings",     label: "Settings",     icon: PowerOff },
+  { to: "/admin/email-settings", label: "Email",       icon: Mail },
   {
     kind: "group", label: "Website Pages", icon: Globe, prefix: "/admin/website",
     children: [
@@ -76,15 +77,15 @@ function AdminLoginForm() {
           <div className="space-y-1.5">
             <Label htmlFor="admin-email">Email</Label>
             <Input id="admin-email" type="email" required autoFocus placeholder="admin@hindindisk.dk"
-              value={email} onChange={(e) => setEmail(e.target.value)} />
+              value={email} onChange={(e) => setEmail(e.target.value)} data-tagid="input-admin-login-email" />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="admin-password">Password</Label>
             <div className="relative">
               <Input id="admin-password" type={showPwd ? "text" : "password"} required placeholder="••••••••"
-                value={password} onChange={(e) => setPassword(e.target.value)} className="pr-10" />
-              <button type="button" onClick={() => setShowPwd((v) => !v)}
+                value={password} onChange={(e) => setPassword(e.target.value)} className="pr-10" data-tagid="input-admin-login-password" />
+              <button type="button" data-tagid="button-admin-login-toggle-password" onClick={() => setShowPwd((v) => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition">
                 {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -95,13 +96,13 @@ function AdminLoginForm() {
             <p className="rounded-xl bg-destructive/10 px-4 py-2.5 text-sm text-destructive text-center">{error}</p>
           )}
 
-          <Button type="submit" disabled={loading} className="w-full gradient-primary text-primary-foreground">
+          <Button type="submit" disabled={loading} className="w-full gradient-primary text-primary-foreground" data-tagid="button-admin-login-submit">
             {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in…</> : "Sign In"}
           </Button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground">
-          <Link to="/" className="hover:text-primary transition">← Back to site</Link>
+          <Link to="/" className="hover:text-primary transition" data-tagid="link-admin-login-back">← Back to site</Link>
         </p>
       </div>
     </div>
@@ -118,7 +119,7 @@ function NavGroupItem({ entry, isGroupActive, onNavClick }: {
 
   return (
     <div>
-      <button
+      <button data-tagid={`button-admin-nav-${entry.label.toLowerCase().replace(/\s+/g, "-")}`}
         onClick={() => setOpen(v => !v)}
         className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition hover:bg-accent hover:text-primary
           ${isGroupActive ? "text-primary" : "text-foreground/70"}`}
@@ -134,6 +135,7 @@ function NavGroupItem({ entry, isGroupActive, onNavClick }: {
               key={to}
               to={to}
               onClick={onNavClick}
+              data-tagid={`link-admin-nav-${label.toLowerCase()}`}
               className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-foreground/70 transition hover:bg-accent hover:text-primary"
               activeProps={{ className: "bg-primary/10 text-primary" }}
             >
@@ -176,11 +178,13 @@ function SidebarNav({ onNavClick }: { onNavClick?: () => void }) {
             );
           }
           const { to, label, icon: Icon, exact } = entry as NavItem;
+          const navId = to === "/admin" ? "dashboard" : to.replace("/admin/", "").replace(/\//g, "-");
           return (
             <Link
               key={to}
               to={to}
               onClick={onNavClick}
+              data-tagid={`link-admin-nav-${navId}`}
               className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/70 transition hover:bg-accent hover:text-primary"
               activeProps={{ className: "bg-primary/10 text-primary" }}
               activeOptions={{ exact: exact ?? false }}
@@ -200,6 +204,7 @@ function SidebarNav({ onNavClick }: { onNavClick?: () => void }) {
             <Link
               to="/admin/exception-logs"
               onClick={onNavClick}
+              data-tagid="link-admin-nav-exception-logs"
               className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/70 transition hover:bg-accent hover:text-primary"
               activeProps={{ className: "bg-primary/10 text-primary" }}
             >
@@ -211,11 +216,11 @@ function SidebarNav({ onNavClick }: { onNavClick?: () => void }) {
       </nav>
 
       <div className="border-t p-3 space-y-1">
-        <Link to="/" onClick={onNavClick}
+        <Link to="/" onClick={onNavClick} data-tagid="link-admin-nav-view-site"
           className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/70 hover:bg-accent hover:text-primary transition">
           <ExternalLink className="h-4 w-4" /> View Site
         </Link>
-        <button onClick={logout}
+        <button data-tagid="button-admin-nav-signout" onClick={logout}
           className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/70 hover:bg-accent hover:text-destructive transition">
           <LogOut className="h-4 w-4" /> Sign Out
         </button>
@@ -241,8 +246,8 @@ function AdminLayout() {
           </div>
           <h1 className="font-display text-2xl font-bold">Access Denied</h1>
           <p className="text-muted-foreground text-sm">Your account does not have admin privileges.</p>
-          <Button onClick={adminLogout} variant="outline">Sign out</Button>
-          <Button asChild className="gradient-primary text-primary-foreground ml-2">
+          <Button onClick={adminLogout} variant="outline" data-tagid="button-admin-access-denied-signout">Sign out</Button>
+          <Button asChild className="gradient-primary text-primary-foreground ml-2" data-tagid="link-admin-access-denied-back">
             <Link to="/">Back to Site</Link>
           </Button>
         </div>
@@ -270,7 +275,7 @@ function AdminLayout() {
         className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-card shadow-xl transition-transform duration-300 md:hidden
           ${drawerOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <button
+        <button data-tagid="button-admin-drawer-close"
           onClick={() => setDrawerOpen(false)}
           className="absolute right-3 top-3 rounded-lg p-1.5 text-muted-foreground hover:text-foreground"
         >
@@ -283,7 +288,7 @@ function AdminLayout() {
       <main className="flex-1 overflow-auto">
         {/* Mobile top bar with hamburger */}
         <div className="sticky top-0 z-30 flex items-center gap-3 border-b bg-card/80 backdrop-blur px-4 py-3 md:hidden">
-          <button
+          <button data-tagid="button-admin-drawer-open"
             onClick={() => setDrawerOpen(true)}
             className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground"
           >

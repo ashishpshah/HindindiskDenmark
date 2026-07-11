@@ -2,30 +2,33 @@ using System.Net;
 using System.Text;
 using HindIndisk.Api.Application.DTOs.Order;
 using HindIndisk.Api.Application.DTOs.Reservation;
-using HindIndisk.Api.Infrastructure;
+using HindIndisk.Api.Domain.Entities;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Options;
 using MimeKit;
 
 namespace HindIndisk.Api.Application.Services;
 
 public class EmailService : IEmailService
 {
-    private readonly EmailSettings        _settings;
+    private readonly IEmailSettingsService _emailSettings;
     private readonly ILogger<EmailService> _logger;
     private readonly IWebHostEnvironment   _env;
+    private EmailConfig? _cachedCfg;
 
     public EmailService(
-        IOptions<EmailSettings> settings,
-        ILogger<EmailService>   logger,
-        IWebHostEnvironment     env)
+        IEmailSettingsService emailSettings,
+        ILogger<EmailService> logger,
+        IWebHostEnvironment   env)
     {
-        _settings = settings.Value;
-        _logger   = logger;
-        _env      = env;
+        _emailSettings = emailSettings;
+        _logger        = logger;
+        _env           = env;
     }
+
+    private async Task<EmailConfig> GetCfgAsync()
+        => _cachedCfg ??= await _emailSettings.GetEntityAsync();
 
     // ── Customer: order confirmation ─────────────────────────────────────────
 
@@ -114,9 +117,10 @@ public class EmailService : IEmailService
 
     // ── Admin: order cancelled notification ──────────────────────────────────
 
-    public Task SendOrderCancelledAdminAsync(long orderId, string customerName, string customerEmail, string? reason)
+    public async Task SendOrderCancelledAdminAsync(long orderId, string customerName, string customerEmail, string? reason)
     {
-        if (string.IsNullOrWhiteSpace(_settings.AdminToMail)) return Task.CompletedTask;
+        var cfg = await GetCfgAsync();
+        if (string.IsNullOrWhiteSpace(cfg.AdminToMail)) return;
 
         var subject = $"Order #{orderId} Cancelled — Hind Indisk";
         var reasonRow = string.IsNullOrWhiteSpace(reason)
@@ -145,14 +149,15 @@ public class EmailService : IEmailService
             "</table>" +
             "</div></div>";
 
-        return SendAsync(_settings.AdminToMail, "Admin", subject, WrapInHtml(body), isAdmin: true);
+        await SendAsync(cfg.AdminToMail, "Admin", subject, WrapInHtml(body), isAdmin: true);
     }
 
     // ── Admin: order notification ────────────────────────────────────────────
 
     public async Task SendAdminOrderNotificationAsync(OrderDto order)
     {
-        if (string.IsNullOrWhiteSpace(_settings.AdminToMail)) return;
+        var cfg = await GetCfgAsync();
+        if (string.IsNullOrWhiteSpace(cfg.AdminToMail)) return;
 
         var templateFile = order.OrderType == "Delivery"
             ? "DeliveryOrder_Admin.htm"
@@ -160,7 +165,7 @@ public class EmailService : IEmailService
 
         var body = await LoadAndFillOrderTemplateAsync(templateFile, order, isAdmin: true);
         var subject = $"New Order #{order.Id} — {order.BranchName} | Hind Indisk";
-        await SendAsync(_settings.AdminToMail, "Admin", subject, body, isAdmin: true);
+        await SendAsync(cfg.AdminToMail, "Admin", subject, body, isAdmin: true);
     }
 
     // ── Customer: OTP for password reset ────────────────────────────────────
@@ -185,7 +190,8 @@ public class EmailService : IEmailService
             "</div>" +
             "</body></html>";
 
-        if (!_settings.Enabled)
+        var cfg = await GetCfgAsync();
+        if (!cfg.Enabled)
         {
             _logger.LogInformation("Email disabled — OTP for {Email} is {Otp}", toEmail, otp);
             return;
@@ -195,14 +201,14 @@ public class EmailService : IEmailService
         try
         {
             var message = new MimeMessage();
-            message.From.Add(new MailboxAddress(_settings.FromName, _settings.FromAddress));
+            message.From.Add(new MailboxAddress(cfg.FromName, cfg.FromAddress));
             message.To.Add(new MailboxAddress(toName, toEmail));
             message.Subject = subject;
             message.Body    = new TextPart("html") { Text = body };
 
             using var client = new SmtpClient();
-            await client.ConnectAsync(_settings.SmtpHost, _settings.SmtpPort, SecureSocketOptions.StartTls);
-            await client.AuthenticateAsync(_settings.SmtpUser, _settings.SmtpPass);
+            await client.ConnectAsync(cfg.SmtpHost, cfg.SmtpPort, SecureSocketOptions.StartTls);
+            await client.AuthenticateAsync(cfg.SmtpUser, cfg.SmtpPass);
             await client.SendAsync(message);
             await client.DisconnectAsync(true);
         }
@@ -279,18 +285,20 @@ public class EmailService : IEmailService
 
     public async Task SendAdminReservationNotificationAsync(ReservationDto reservation)
     {
-        if (string.IsNullOrWhiteSpace(_settings.AdminToMail)) return;
+        var cfg = await GetCfgAsync();
+        if (string.IsNullOrWhiteSpace(cfg.AdminToMail)) return;
 
         var body = await LoadAndFillReservationTemplateAsync("Reservation_Admin.htm", reservation);
         var subject = $"New Reservation #{reservation.Id} — {reservation.BranchName} | Hind Indisk";
-        await SendAsync(_settings.AdminToMail, "Admin", subject, body, isAdmin: true);
+        await SendAsync(cfg.AdminToMail, "Admin", subject, body, isAdmin: true);
     }
 
     // ── Admin: contact form enquiry ──────────────────────────────────────────
 
     public async Task SendContactEnquiryAsync(string fromName, string fromEmail, string subject, string message)
     {
-        if (string.IsNullOrWhiteSpace(_settings.AdminToMail)) return;
+        var cfg = await GetCfgAsync();
+        if (string.IsNullOrWhiteSpace(cfg.AdminToMail)) return;
 
         var template = await LoadTemplateAsync("Contact.htm");
         var body = template
@@ -300,7 +308,7 @@ public class EmailService : IEmailService
             .Replace("[Message]",      WebUtility.HtmlEncode(message));
 
         var emailSubject = $"Contact Enquiry from {fromName} — Hind Indisk";
-        await SendAsync(_settings.AdminToMail, "Admin", emailSubject, WrapInHtml(body), isAdmin: true);
+        await SendAsync(cfg.AdminToMail, "Admin", emailSubject, WrapInHtml(body), isAdmin: true);
     }
 
     // ── Customer: contact form acknowledgement ───────────────────────────────
@@ -447,7 +455,8 @@ public class EmailService : IEmailService
     private async Task SendAsync(
         string toEmail, string toName, string subject, string htmlBody, bool isAdmin = false)
     {
-        if (!_settings.Enabled)
+        var cfg = await GetCfgAsync();
+        if (!cfg.Enabled)
         {
             _logger.LogInformation(
                 "Email disabled — would have sent '{Subject}' to {Email}", subject, toEmail);
@@ -457,22 +466,22 @@ public class EmailService : IEmailService
         try
         {
             var message = new MimeMessage();
-            message.From.Add(new MailboxAddress(_settings.FromName, _settings.FromAddress));
+            message.From.Add(new MailboxAddress(cfg.FromName, cfg.FromAddress));
             message.To.Add(new MailboxAddress(toName, toEmail));
             message.Subject = subject;
             message.Body    = new TextPart("html") { Text = htmlBody };
 
             if (isAdmin)
             {
-                foreach (var cc in SplitAddresses(_settings.CC))
+                foreach (var cc in SplitAddresses(cfg.CC))
                     message.Cc.Add(MailboxAddress.Parse(cc));
-                foreach (var bcc in SplitAddresses(_settings.BCC))
+                foreach (var bcc in SplitAddresses(cfg.BCC))
                     message.Bcc.Add(MailboxAddress.Parse(bcc));
             }
 
             using var client = new SmtpClient();
-            await client.ConnectAsync(_settings.SmtpHost, _settings.SmtpPort, SecureSocketOptions.StartTls);
-            await client.AuthenticateAsync(_settings.SmtpUser, _settings.SmtpPass);
+            await client.ConnectAsync(cfg.SmtpHost, cfg.SmtpPort, SecureSocketOptions.StartTls);
+            await client.AuthenticateAsync(cfg.SmtpUser, cfg.SmtpPass);
             await client.SendAsync(message);
             await client.DisconnectAsync(true);
         }
