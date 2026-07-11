@@ -40,3 +40,7 @@ publish/
 wwwroot/assets/
 appsettings.Production.json
 
+*.md
+e2e/
+test-results/
+HindIndisk.Web.Server/wwwroot/
