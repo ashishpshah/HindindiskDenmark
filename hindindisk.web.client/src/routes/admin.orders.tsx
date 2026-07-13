@@ -1,6 +1,7 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
 import { Phone, MapPin, Package, Clock, Loader2, ChevronRight, ChevronLeft, Search, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { todayInDenmark } from "@/lib/denmarkTime";
 import { toast } from "sonner";
 import { useAdminOrders, type AdminOrderDto, type OrderStatusHistoryDto } from "@/hooks/useAdminOrders";
 import { useUpdateOrderStatus } from "@/hooks/useUpdateOrderStatus";
@@ -25,10 +26,11 @@ function fmtDate(iso: string) {
   return { date: formatDate(iso), time: formatTime(iso) };
 }
 
+const PAGE_SIZES = [20, 50, 100];
+
+type DatePreset = "today" | "tomorrow" | "next-week" | "next-month" | "custom";
+
 export const Route = createFileRoute("/admin/orders")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    tab: (search.tab as string) ?? "All",
-  }),
   component: AdminOrders,
 });
 
@@ -40,23 +42,14 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-function isLightColor(hex: string): boolean {
-  const c = hex.replace("#", "");
-  const r = parseInt(c.substring(0, 2), 16);
-  const g = parseInt(c.substring(2, 4), 16);
-  const b = parseInt(c.substring(4, 6), 16);
-  return (r * 299 + g * 587 + b * 114) / 1000 > 180;
-}
-
 function statusStyle(statusName: string, statuses: OrderStatusDto[]) {
   const s = statuses.find(st => st.name === statusName);
   const color = s?.color ?? "#6b7280";
-  const light = isLightColor(color);
-  return { color, light, s };
+  return { color, s };
 }
 
 function StatusPill({ status, allStatuses }: { status: string; allStatuses: OrderStatusDto[] }) {
-  const { color, light, s } = statusStyle(status, allStatuses);
+  const { color, s } = statusStyle(status, allStatuses);
   const { lang } = useI18n();
   return (
     <span
@@ -323,29 +316,73 @@ function OrderModal({
   );
 }
 
-const PAGE_SIZES = [20, 50, 100];
+function fmtIso(dt: Date): string {
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
+}
+
+function getPresetRange(preset: DatePreset, customFrom: string, customTo: string): { from: string; to: string } | null {
+  const today = todayInDenmark();
+  const d = new Date(today); // ISO date-only → parsed as UTC midnight; use UTC methods throughout
+  switch (preset) {
+    case "today": return { from: today, to: today };
+    case "tomorrow": { const t = new Date(d); t.setUTCDate(d.getUTCDate() + 1); const s = fmtIso(t); return { from: s, to: s }; }
+    case "next-week": {
+      const f = new Date(d); f.setUTCDate(d.getUTCDate() + 1);
+      const t = new Date(d); t.setUTCDate(d.getUTCDate() + 7);
+      return { from: fmtIso(f), to: fmtIso(t) };
+    }
+    case "next-month": {
+      const f = new Date(d); f.setUTCDate(d.getUTCDate() + 1);
+      const t = new Date(d); t.setUTCDate(d.getUTCDate() + 30);
+      return { from: fmtIso(f), to: fmtIso(t) };
+    }
+    case "custom":
+      if (!customFrom && !customTo) return null;
+      return { from: customFrom || "0000-01-01", to: customTo || "9999-12-31" };
+  }
+}
+
+const PRESET_LABELS: { key: DatePreset; label: string }[] = [
+  { key: "today",      label: "Today" },
+  { key: "tomorrow",   label: "Tomorrow" },
+  { key: "next-week",  label: "Next Week" },
+  { key: "next-month", label: "Next Month" },
+  { key: "custom",     label: "Custom" },
+];
 
 function AdminOrders() {
-  const { tab } = Route.useSearch();
-  const navigate = useNavigate({ from: Route.fullPath });
   const { lang } = useI18n();
 
-  const [filterBranchId, setFilterBranchId] = useState<number | undefined>();
-  const [search,         setSearch]         = useState("");
-  const [page,           setPage]           = useState(1);
-  const [pageSize,       setPageSize]       = useState(20);
+  const [tab, setTab] = useState<string>("All");
+  const [branchId, setBranchId] = useState<number | undefined>(undefined);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [preset, setPreset] = useState<DatePreset>("today");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
+  const [orderType, setOrderType] = useState("All");
+
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [recentlyUpdated, setRecentlyUpdated] = useState<Record<number, string>>({});
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [cancelConfirm, setCancelConfirm] = useState<{ orderId: number } | null>(null);
   const [cancelReason, setCancelReason] = useState("");
 
-  const { data, isLoading, refetch } = useAdminOrders({
+  const dateRange = useMemo(
+    () => getPresetRange(preset, customFrom, customTo),
+    [preset, customFrom, customTo],
+  );
+
+  const { data, isLoading, isError, error, refetch } = useAdminOrders({
     page,
     pageSize,
-    branchId: filterBranchId,
+    branchId,
     status:   tab !== "All" ? tab : undefined,
     search:   search || undefined,
+    dateFrom: dateRange?.from,
+    dateTo:   dateRange?.to,
+    orderType: orderType !== "All" ? orderType : undefined,
   });
   const { data: branches = [] } = useBranches();
   const { data: statuses = [] } = useAdminOrderStatuses();
@@ -360,16 +397,54 @@ function AdminOrders() {
   const statusNames = useMemo(() => activeStatuses.map(s => s.name), [activeStatuses]);
   const TABS = useMemo(() => ["All", ...statusNames], [statusNames]);
 
-  const countForTab = (t: string): number =>
-    t === "All" ? totalOrders : orders.filter(o => o.status === t).length;
   const orders        = data?.items ?? [];
   const totalOrders   = data?.total ?? 0;
   const totalPages    = Math.max(1, Math.ceil(totalOrders / pageSize));
   const filteredOrders = orders;
   const selectedOrder  = selectedOrderId != null ? orders.find(o => o.id === selectedOrderId) ?? null : null;
 
-  const setTab = (t: string) => {
-    navigate({ search: (prev: Record<string, unknown>) => ({ ...prev, tab: t }) });
+  const handleTabChange = (t: string) => {
+    setTab(t);
+    setPage(1);
+  };
+
+  const handleBranchChange = (id: number | undefined) => {
+    setBranchId(id);
+    setPage(1);
+  };
+
+  const setPageNum = (p: number) => {
+    setPage(p);
+  };
+
+  const setPageSizeNum = (size: number) => {
+    setPageSize(size);
+    setPage(1);
+  };
+
+  const handlePresetChange = (p: DatePreset) => {
+    if (p !== "custom") {
+      setPreset(p);
+      setCustomFrom("");
+      setCustomTo("");
+    } else {
+      setPreset(p);
+    }
+    setPage(1);
+  };
+
+  const setCustomFromVal = (val: string) => {
+    setCustomFrom(val);
+    setPage(1);
+  };
+
+  const setCustomToVal = (val: string) => {
+    setCustomTo(val);
+    setPage(1);
+  };
+
+  const handleOrderTypeChange = (type: string) => {
+    setOrderType(type);
     setPage(1);
   };
 
@@ -409,13 +484,13 @@ function AdminOrders() {
             <Input data-tagid="input-orders-search"
               placeholder="Search orders…"
               value={search}
-              onChange={e => { setSearch(e.target.value); setPage(1); }}
+              onChange={e => setSearch(e.target.value)}
               className="pl-8 h-8 w-44 text-sm"
             />
           </div>
           <Select
-            value={filterBranchId?.toString() ?? "__all"}
-            onValueChange={v => { setFilterBranchId(v === "__all" ? undefined : Number(v)); setPage(1); }}
+            value={branchId?.toString() ?? "__all"}
+            onValueChange={v => handleBranchChange(v === "__all" ? undefined : Number(v))}
           >
             <SelectTrigger className="h-8 w-48 text-xs"><SelectValue placeholder="All branches" /></SelectTrigger>
             <SelectContent>
@@ -425,10 +500,59 @@ function AdminOrders() {
               ))}
             </SelectContent>
           </Select>
+          <Select
+            value={orderType}
+            onValueChange={v => handleOrderTypeChange(v)}
+          >
+            <SelectTrigger className="h-8 w-36 text-xs"><SelectValue placeholder="All types" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All" className="text-xs">All Types</SelectItem>
+              <SelectItem value="Delivery" className="text-xs">Delivery</SelectItem>
+              <SelectItem value="Pickup" className="text-xs">Pickup</SelectItem>
+            </SelectContent>
+          </Select>
           <Button variant="outline" size="sm" onClick={() => refetch()} className="h-8 text-xs" data-tagid="button-orders-refresh">
             Refresh
           </Button>
         </div>
+      </div>
+
+      {/* Date preset filter */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1">
+          {PRESET_LABELS.map(p => (
+            <button
+              key={p.key}
+              onClick={() => handlePresetChange(p.key as DatePreset)}
+              className={`h-8 rounded-lg border px-3 text-xs font-medium transition ${
+                preset === p.key
+                  ? "gradient-primary border-transparent text-primary-foreground"
+                  : "bg-background text-muted-foreground hover:bg-muted"
+              }`}
+              data-tagid={`button-orders-preset-${p.key}`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        {preset === "custom" && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <label className="text-xs text-muted-foreground">From</label>
+            <input
+              type="date" value={customFrom} max={customTo || undefined}
+              onChange={e => setCustomFromVal(e.target.value)}
+              className="h-8 rounded-lg border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              data-tagid="input-orders-date-from"
+            />
+            <label className="text-xs text-muted-foreground">To</label>
+            <input
+              type="date" value={customTo} min={customFrom || undefined}
+              onChange={e => setCustomToVal(e.target.value)}
+              className="h-8 rounded-lg border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              data-tagid="input-orders-date-to"
+            />
+          </div>
+        )}
       </div>
 
       {/* Tab strip */}
@@ -439,7 +563,7 @@ function AdminOrders() {
             return (
               <button data-tagid={`button-orders-tab-${t}`}
                 key={t}
-                onClick={() => setTab(t)}
+                onClick={() => handleTabChange(t)}
                 className={[
                   "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap",
                   isActive
@@ -465,6 +589,10 @@ function AdminOrders() {
           <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" /> Loading orders…
           </div>
+        ) : isError ? (
+          <div className="py-16 text-center text-sm text-destructive">
+            Failed to load orders: {error?.message ?? "Unknown error"}
+          </div>
         ) : filteredOrders.length === 0 ? (
           <div className="py-16 text-center text-sm text-muted-foreground">
             No orders{tab !== "All" ? ` with status "${lang === "da" ? (activeStatuses.find(s => s.name === tab)?.nameDa ?? tab) : tab}"` : ""}.
@@ -477,6 +605,7 @@ function AdminOrders() {
               <div className="flex-1 min-w-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Customer</div>
               <div className="hidden lg:block w-[148px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Date & Time</div>
               <div className="hidden sm:block w-[80px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Priority</div>
+              <div className="hidden md:block w-[80px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Type</div>
               <div className="w-[126px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Status</div>
               <div className="hidden md:block w-[76px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Total</div>
               <div className="w-4 shrink-0" />
@@ -549,6 +678,13 @@ function AdminOrders() {
                     )}
                   </div>
 
+                  {/* Type */}
+                  <div className="hidden md:flex w-[80px] shrink-0">
+                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground">
+                      {order.orderType}
+                    </span>
+                  </div>
+
                   {/* Status */}
                   <div className="w-[126px] shrink-0">
                     <StatusPill status={order.status} allStatuses={activeStatuses} />
@@ -575,7 +711,7 @@ function AdminOrders() {
             <span>Rows per page</span>
             <Select
               value={String(pageSize)}
-              onValueChange={v => { setPageSize(Number(v)); setPage(1); }}
+              onValueChange={v => setPageSizeNum(Number(v))}
             >
               <SelectTrigger className="h-7 w-16 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -589,19 +725,19 @@ function AdminOrders() {
           <div className="flex items-center gap-1">
             <span className="mr-2">Page {page} of {totalPages}</span>
             <Button size="sm" variant="outline" className="h-7 w-7 p-0" data-tagid="button-orders-first-page"
-              onClick={() => setPage(1)} disabled={page <= 1}>
+              onClick={() => setPageNum(1)} disabled={page <= 1}>
               <ChevronsLeft className="h-3.5 w-3.5" />
             </Button>
             <Button size="sm" variant="outline" className="h-7 w-7 p-0" data-tagid="button-orders-prev-page"
-              onClick={() => setPage(p => p - 1)} disabled={page <= 1}>
+              onClick={() => setPageNum(page - 1)} disabled={page <= 1}>
               <ChevronLeft className="h-3.5 w-3.5" />
             </Button>
             <Button size="sm" variant="outline" className="h-7 w-7 p-0" data-tagid="button-orders-next-page"
-              onClick={() => setPage(p => p + 1)} disabled={page >= totalPages}>
+              onClick={() => setPageNum(page + 1)} disabled={page >= totalPages}>
               <ChevronRight className="h-3.5 w-3.5" />
             </Button>
             <Button size="sm" variant="outline" className="h-7 w-7 p-0" data-tagid="button-orders-last-page"
-              onClick={() => setPage(totalPages)} disabled={page >= totalPages}>
+              onClick={() => setPageNum(totalPages)} disabled={page >= totalPages}>
               <ChevronsRight className="h-3.5 w-3.5" />
             </Button>
           </div>
