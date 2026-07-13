@@ -272,7 +272,7 @@ function TrackPage() {
                   <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
                     {legacyOrder.lines?.map((l) => (
                       <div key={l.name} className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">{l.qty} × {(lang === "da" ? l.nameDa : null) || l.name}</span>
+                        <span className="text-muted-foreground">{l.qty} × {l.name}</span>
                         <span className="font-medium">{l.price * l.qty} DKK</span>
                       </div>
                     ))}
