@@ -1,6 +1,6 @@
 namespace HindIndisk.Api.Application.DTOs.Admin;
 
-public record AdminOrderItemDto(string Name, int Quantity, decimal PriceAtPurchase);
+public record AdminOrderItemDto(string Name, string NameDa, int Quantity, decimal PriceAtPurchase);
 
 public record OrderStatusHistoryDto(string Status, DateTime ChangedAt);
 

@@ -202,7 +202,7 @@ public class AdminService : IAdminService
                     (o.User != null && (
                         (o.User.Firstname != null && o.User.Firstname.ToLower().Contains(lower)) ||
                         (o.User.Lastname != null && o.User.Lastname.ToLower().Contains(lower)) ||
-                        (o.User.Email != null && o.User.Email.ToLower().Contains(lower))));
+                        (o.User.Email != null && o.User.Email.ToLower().Contains(lower)))));
         }
 
         var total = await q.CountAsync();
@@ -923,7 +923,7 @@ public class AdminService : IAdminService
             : o.ContactName;
         var customerEmail = o.User?.Email ?? o.ContactEmail ?? "";
         var items = o.OrderItems
-            .Select(i => new AdminOrderItemDto(i.MenuItem.Name, i.Quantity, i.PriceAtPurchase))
+            .Select(i => new AdminOrderItemDto(i.MenuItem.Name, i.MenuItem.NameDa, i.Quantity, i.PriceAtPurchase))
             .ToList();
         var history = o.StatusHistories
             .OrderBy(h => h.ChangedAt)
@@ -1200,7 +1200,7 @@ public class AdminService : IAdminService
             o.Id, o.Branch.Name, o.OrderType, o.Total, o.Status, o.CreatedAt,
             o.OrderItems.Sum(i => i.Quantity),
             o.OrderItems.Select(oi => new AdminCustomerOrderItemDto(
-                oi.MenuItem.Name, oi.Quantity, oi.PriceAtPurchase
+                oi.MenuItem.Name, oi.MenuItem.NameDa, oi.Quantity, oi.PriceAtPurchase
             )).ToList()
         )).ToList();
 

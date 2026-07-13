@@ -11,7 +11,7 @@ public record AdminCustomerDto(
     decimal  TotalSpend
 );
 
-public record AdminCustomerOrderItemDto(string Name, int Quantity, decimal PriceAtPurchase);
+public record AdminCustomerOrderItemDto(string Name, string? NameDa, int Quantity, decimal PriceAtPurchase);
 
 public record AdminCustomerOrderDto(
     long     Id,
