@@ -38,7 +38,7 @@ public class ReservationService : IReservationService
         {
             // Cases 3 & 4: guest — find or create by contact details
             var (customer, isNew, pwd) = await _customers.FindOrCreateAsync(
-                request.Firstname, request.Lastname, request.Phone, request.Email);
+                request.Firstname ?? string.Empty, request.Lastname ?? string.Empty, request.Phone, request.Email);
             userId = customer.Id;
 
             if (isNew && pwd is not null)

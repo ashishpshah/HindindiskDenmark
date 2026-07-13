@@ -192,17 +192,17 @@ public class AdminService : IAdminService
                                   o.ContactName.ToLower().Contains(lower) ||
                                   (o.ContactEmail != null && o.ContactEmail.ToLower().Contains(lower)) ||
                                   (o.User != null && (
-                                      o.User.Firstname.ToLower().Contains(lower) ||
-                                      o.User.Lastname.ToLower().Contains(lower) ||
-                                      o.User.Email.ToLower().Contains(lower))));
+                                      (o.User.Firstname != null && o.User.Firstname.ToLower().Contains(lower)) ||
+                                      (o.User.Lastname != null && o.User.Lastname.ToLower().Contains(lower)) ||
+                                      (o.User.Email != null && o.User.Email.ToLower().Contains(lower)))));
             else
                 q = q.Where(o =>
                     o.ContactName.ToLower().Contains(lower) ||
                     (o.ContactEmail != null && o.ContactEmail.ToLower().Contains(lower)) ||
                     (o.User != null && (
-                        o.User.Firstname.ToLower().Contains(lower) ||
-                        o.User.Lastname.ToLower().Contains(lower) ||
-                        o.User.Email.ToLower().Contains(lower))));
+                        (o.User.Firstname != null && o.User.Firstname.ToLower().Contains(lower)) ||
+                        (o.User.Lastname != null && o.User.Lastname.ToLower().Contains(lower)) ||
+                        (o.User.Email != null && o.User.Email.ToLower().Contains(lower))));
         }
 
         var total = await q.CountAsync();
