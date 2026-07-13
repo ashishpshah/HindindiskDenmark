@@ -12,5 +12,6 @@ public record AdminReservationDto(
     string?  SpecialRequests,
     string   Status,
     DateTime CreatedAt,
-    bool     IsLinkedToAccount
+    bool     IsLinkedToAccount,
+    string?  CancellationReason = null
 );

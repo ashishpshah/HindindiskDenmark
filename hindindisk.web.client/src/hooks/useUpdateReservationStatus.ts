@@ -5,10 +5,10 @@ import type { AdminReservationDto } from "./useAdminReservations";
 export function useUpdateReservationStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: number; status: string }) =>
+    mutationFn: ({ id, status, cancellationReason }: { id: number; status: string; cancellationReason?: string }) =>
       apiFetch<AdminReservationDto>(`/api/admin/reservations/${id}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, cancellationReason }),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-reservations"] });

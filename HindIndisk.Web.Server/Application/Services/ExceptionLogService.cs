@@ -35,6 +35,9 @@ public class ExceptionLogService : IExceptionLogService
                     : exception.Message;
             }
 
+            var todayStart  = DenmarkTime.Now.Date;
+            bool isFirstToday = !await _db.ApiExceptionLogs.AnyAsync(e => e.OccurredAt >= todayStart);
+
             _db.ApiExceptionLogs.Add(new ApiExceptionLog
             {
                 OccurredAt       = DenmarkTime.Now,
@@ -50,6 +53,14 @@ public class ExceptionLogService : IExceptionLogService
             });
 
             await _db.SaveChangesAsync();
+
+            if (isFirstToday)
+            {
+                var cutoff = DenmarkTime.Now.AddDays(-10);
+                await _db.ApiExceptionLogs
+                    .Where(e => e.OccurredAt < cutoff)
+                    .ExecuteDeleteAsync();
+            }
         }
         catch (Exception dbEx)
         {
@@ -66,11 +77,6 @@ public class ExceptionLogService : IExceptionLogService
         string?   module   = null,
         string?   logLevel = null)
     {
-        var cutoff = DenmarkTime.Now.AddDays(-5);
-        await _db.ApiExceptionLogs
-            .Where(e => e.OccurredAt < cutoff)
-            .ExecuteDeleteAsync();
-
         var q = _db.ApiExceptionLogs.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(search))

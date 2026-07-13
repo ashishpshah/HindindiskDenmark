@@ -21,7 +21,6 @@ type NavEntry  = NavItem | NavGroup;
 const NAV: NavEntry[] = [
   { to: "/admin",              label: "Dashboard",    icon: LayoutDashboard,  exact: true },
   { to: "/admin/orders",       label: "Orders",       icon: ShoppingBag },
-  { to: "/admin/order-statuses", label: "Order Statuses", icon: ShoppingBag },
   { to: "/admin/reservations", label: "Reservations", icon: CalendarCheck },
   { to: "/admin/menus",        label: "Menus",        icon: BookOpen },
   { to: "/admin/menu",         label: "Items",        icon: UtensilsCrossed },

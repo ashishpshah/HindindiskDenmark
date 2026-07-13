@@ -11,5 +11,6 @@ public record ReservationDto(
     string ContactEmail,
     string? SpecialRequests,
     string Status,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string? CancellationReason = null
 );

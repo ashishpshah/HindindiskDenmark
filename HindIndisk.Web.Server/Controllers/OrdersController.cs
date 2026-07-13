@@ -9,7 +9,7 @@ namespace HindIndisk.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class OrdersController : ControllerBase
+public class OrdersController : ApiBaseController
 {
     private readonly IOrderService _orders;
 
@@ -47,6 +47,7 @@ public class OrdersController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            await LogExAsync(ex, 400);
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -66,9 +67,10 @@ public class OrdersController : ControllerBase
             var order = await _orders.GetOrderByIdAsync(id, GetUserId());
             return Ok(order);
         }
-        catch (InvalidOperationException)
+        catch (KeyNotFoundException ex)
         {
-            return NotFound(new { message = "Order not found." });
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
         }
     }
 }

@@ -15,16 +15,19 @@ public class EmailService : IEmailService
     private readonly IEmailSettingsService _emailSettings;
     private readonly ILogger<EmailService> _logger;
     private readonly IWebHostEnvironment   _env;
+    private readonly IExceptionLogService  _exLog;
     private EmailConfig? _cachedCfg;
 
     public EmailService(
         IEmailSettingsService emailSettings,
         ILogger<EmailService> logger,
-        IWebHostEnvironment   env)
+        IWebHostEnvironment   env,
+        IExceptionLogService  exLog)
     {
         _emailSettings = emailSettings;
         _logger        = logger;
         _env           = env;
+        _exLog         = exLog;
     }
 
     private async Task<EmailConfig> GetCfgAsync()
@@ -455,16 +458,16 @@ public class EmailService : IEmailService
     private async Task SendAsync(
         string toEmail, string toName, string subject, string htmlBody, bool isAdmin = false)
     {
-        var cfg = await GetCfgAsync();
-        if (!cfg.Enabled)
-        {
-            _logger.LogInformation(
-                "Email disabled — would have sent '{Subject}' to {Email}", subject, toEmail);
-            return;
-        }
-
         try
         {
+            var cfg = await GetCfgAsync();
+            if (!cfg.Enabled)
+            {
+                _logger.LogInformation(
+                    "Email disabled — would have sent '{Subject}' to {Email}", subject, toEmail);
+                return;
+            }
+
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(cfg.FromName, cfg.FromAddress));
             message.To.Add(new MailboxAddress(toName, toEmail));
@@ -489,6 +492,7 @@ public class EmailService : IEmailService
         {
             // Log but don't throw — email failure must never break the main operation
             _logger.LogError(ex, "Failed to send email '{Subject}' to {Email}", subject, toEmail);
+            await _exLog.LogAsync("EMAIL", $"/email/{subject}", null, 500, ex, null, null);
         }
     }
 

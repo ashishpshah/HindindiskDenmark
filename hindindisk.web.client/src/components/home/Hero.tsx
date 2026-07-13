@@ -45,8 +45,8 @@ export function Hero() {
   if (slides.length === 0) return null;
 
   const slide = slides[i];
-  const slideTitle    = lang === "da" ? slide.titleDa    : slide.title;
-  const slideSubtitle = lang === "da" ? slide.subtitleDa : slide.subtitle;
+  const slideTitle    = (lang === "da" ? slide.titleDa    : slide.title)    || slide.title;
+  const slideSubtitle = (lang === "da" ? slide.subtitleDa : slide.subtitle) || slide.subtitle;
   const slideTagline  = (lang === "da" ? slide.taglineDa : slide.tagline) || t("home.hero.tagline");
 
   const renderCtaButton = (cta: CtaDto, idx: number) => {

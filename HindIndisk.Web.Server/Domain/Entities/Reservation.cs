@@ -19,6 +19,7 @@ public class Reservation
     public string ContactEmail { get; set; } = string.Empty;
 
     public string? SpecialRequests { get; set; }
+    public string? CancellationReason { get; set; }
 
     /// <summary>Confirmed or Cancelled</summary>
     public string Status { get; set; } = "Confirmed";

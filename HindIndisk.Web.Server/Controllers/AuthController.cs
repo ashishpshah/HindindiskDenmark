@@ -8,7 +8,7 @@ namespace HindIndisk.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController : ControllerBase
+public class AuthController : ApiBaseController
 {
     private readonly IAuthService _auth;
 
@@ -27,6 +27,7 @@ public class AuthController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            await LogExAsync(ex, 400);
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -44,6 +45,7 @@ public class AuthController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            await LogExAsync(ex, 401);
             return Unauthorized(new { message = ex.Message });
         }
     }
@@ -65,6 +67,7 @@ public class AuthController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            await LogExAsync(ex, 404);
             return NotFound(new { message = ex.Message });
         }
     }
@@ -87,6 +90,7 @@ public class AuthController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            await LogExAsync(ex, 400);
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -121,6 +125,7 @@ public class AuthController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            await LogExAsync(ex, 400);
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -144,6 +149,7 @@ public class AuthController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            await LogExAsync(ex, 400);
             return BadRequest(new { message = ex.Message });
         }
     }
@@ -161,6 +167,7 @@ public class AuthController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            await LogExAsync(ex, 400);
             return BadRequest(new { message = ex.Message });
         }
     }

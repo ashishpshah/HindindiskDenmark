@@ -15,7 +15,7 @@ namespace HindIndisk.Api.Controllers;
 [ApiController]
 [Route("api/admin")]
 [Authorize(Roles = "SystemAdmin,Admin")]
-public class AdminController : ControllerBase
+public class AdminController : ApiBaseController
 {
     private static readonly HashSet<string> AllowedExtensions =
         [".jpg", ".jpeg", ".png", ".webp", ".gif"];
@@ -143,15 +143,17 @@ public class AdminController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<HourlyVolumeDto>>> HourlyVolume([FromQuery] string? date = null)
         => Ok(await _admin.GetHourlyVolumeAsync(date));
 
-    // GET /api/admin/orders?page=1&pageSize=20&status=Placed&branchId=1&search=
+    // GET /api/admin/orders?page=1&pageSize=20&status=Placed&branchId=1&search=&dateFrom=2026-07-13&dateTo=2026-07-13
     [HttpGet("orders")]
     public async Task<ActionResult<OrderPageDto>> Orders(
         [FromQuery] int     page     = 1,
         [FromQuery] int     pageSize = 20,
         [FromQuery] string? status   = null,
         [FromQuery] long?   branchId = null,
-        [FromQuery] string? search   = null)
-        => Ok(await _admin.GetOrdersAsync(page, pageSize, status, branchId, search));
+        [FromQuery] string? search   = null,
+        [FromQuery] string? dateFrom = null,
+        [FromQuery] string? dateTo   = null)
+        => Ok(await _admin.GetOrdersAsync(page, pageSize, status, branchId, search, dateFrom, dateTo));
 
     // GET /api/admin/orders/counts-by-status
     [HttpGet("orders/counts-by-status")]
@@ -171,7 +173,11 @@ public class AdminController : ControllerBase
     public async Task<ActionResult<OrderStatusDto>> CreateOrderStatus([FromBody] CreateOrderStatusRequest request)
     {
         try   { return Ok(await _admin.CreateOrderStatusAsync(request)); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (InvalidOperationException ex)
+        {
+            await LogExAsync(ex, 400);
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     // PUT /api/admin/order-statuses/{id}
@@ -180,8 +186,16 @@ public class AdminController : ControllerBase
         long id, [FromBody] UpdateOrderStatusMetaRequest request)
     {
         try   { return Ok(await _admin.UpdateOrderStatusMetaAsync(id, request)); }
-        catch (KeyNotFoundException ex)      { return NotFound(new { message = ex.Message }); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            await LogExAsync(ex, 400);
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     // DELETE /api/admin/order-statuses/{id}
@@ -189,8 +203,16 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> DeleteOrderStatus(long id)
     {
         try   { await _admin.DeleteOrderStatusAsync(id); return NoContent(); }
-        catch (KeyNotFoundException ex)      { return NotFound(new { message = ex.Message }); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            await LogExAsync(ex, 400);
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     // ── Order Status Transition CRUD ───────────────────────────────────────
@@ -206,7 +228,11 @@ public class AdminController : ControllerBase
         [FromBody] CreateOrderStatusTransitionRequest request)
     {
         try   { return Ok(await _admin.CreateOrderStatusTransitionAsync(request)); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (InvalidOperationException ex)
+        {
+            await LogExAsync(ex, 400);
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     // DELETE /api/admin/order-status-transitions/{id}
@@ -214,7 +240,11 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> DeleteOrderStatusTransition(long id)
     {
         try   { await _admin.DeleteOrderStatusTransitionAsync(id); return NoContent(); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // PATCH /api/admin/orders/{id}/status
@@ -223,26 +253,44 @@ public class AdminController : ControllerBase
         long id, [FromBody] OrderChangeStatusRequest request)
     {
         try   { return Ok(await _admin.UpdateOrderStatusAsync(id, request.Status, request.CancellationReason)); }
-        catch (KeyNotFoundException ex)      { return NotFound(new { message = ex.Message }); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            await LogExAsync(ex, 400);
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
-    // GET /api/admin/reservations?status=Confirmed&branchId=1&date=2026-06-20
+    // GET /api/admin/reservations?status=Confirmed&branchId=1&dateFrom=2026-07-13&dateTo=2026-07-19
     [HttpGet("reservations")]
     public async Task<ActionResult<IReadOnlyList<AdminReservationDto>>> Reservations(
         [FromQuery] string? status,
         [FromQuery] long?   branchId,
-        [FromQuery] string? date)
-        => Ok(await _admin.GetReservationsAsync(status, branchId, date));
+        [FromQuery] string? date,
+        [FromQuery] string? dateFrom = null,
+        [FromQuery] string? dateTo   = null)
+        => Ok(await _admin.GetReservationsAsync(status, branchId, date, dateFrom, dateTo));
 
     // PATCH /api/admin/reservations/{id}/status
     [HttpPatch("reservations/{id:long}/status")]
     public async Task<ActionResult<AdminReservationDto>> UpdateReservationStatus(
         long id, [FromBody] UpdateReservationStatusRequest request)
     {
-        try   { return Ok(await _admin.UpdateReservationStatusAsync(id, request.Status)); }
-        catch (KeyNotFoundException ex)      { return NotFound(new { message = ex.Message }); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        try   { return Ok(await _admin.UpdateReservationStatusAsync(id, request.Status, request.CancellationReason)); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            await LogExAsync(ex, 400);
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     // ── Menus (categories) ───────────────────────────────────────────────────
@@ -267,7 +315,11 @@ public class AdminController : ControllerBase
         long id, [FromBody] UpdateMenuRequest request)
     {
         try   { return Ok(await _admin.UpdateMenuAsync(id, request)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // PATCH /api/admin/menus/{id}/toggle
@@ -275,7 +327,11 @@ public class AdminController : ControllerBase
     public async Task<ActionResult<AdminMenuDto>> ToggleMenu(long id)
     {
         try   { return Ok(await _admin.ToggleMenuAsync(id)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // DELETE /api/admin/menus/{id}
@@ -283,7 +339,11 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> DeleteMenu(long id)
     {
         try   { await _admin.DeleteMenuAsync(id); return NoContent(); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // POST /api/admin/menus/{menuId}/items/{itemId}
@@ -291,7 +351,11 @@ public class AdminController : ControllerBase
     public async Task<ActionResult<AdminMenuDto>> AddItemToMenu(long menuId, long itemId)
     {
         try   { return Ok(await _admin.AddItemToMenuAsync(menuId, itemId)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // DELETE /api/admin/menus/{menuId}/items/{itemId}
@@ -299,7 +363,11 @@ public class AdminController : ControllerBase
     public async Task<ActionResult<AdminMenuDto>> RemoveItemFromMenu(long menuId, long itemId)
     {
         try   { return Ok(await _admin.RemoveItemFromMenuAsync(menuId, itemId)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // PATCH /api/admin/menus/{menuId}/items/reorder
@@ -308,7 +376,11 @@ public class AdminController : ControllerBase
         long menuId, [FromBody] ReorderMenuItemsRequest request)
     {
         try   { return Ok(await _admin.ReorderMenuItemsAsync(menuId, request)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // ── Menu items ────────────────────────────────────────────────────────────
@@ -333,7 +405,11 @@ public class AdminController : ControllerBase
         long id, [FromBody] UpdateMenuItemRequest request)
     {
         try   { return Ok(await _admin.UpdateMenuItemAsync(id, request)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // PATCH /api/admin/menu-items/{id}/prices
@@ -342,7 +418,11 @@ public class AdminController : ControllerBase
         long id, [FromBody] UpdateMenuItemPricesRequest request)
     {
         try   { return Ok(await _admin.UpdateMenuItemPricesAsync(id, request)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // DELETE /api/admin/menu-items/{id}
@@ -350,7 +430,11 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> DeleteMenuItem(long id)
     {
         try   { await _admin.DeleteMenuItemAsync(id); return NoContent(); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // ── Offers ────────────────────────────────────────────────────────────────
@@ -371,7 +455,11 @@ public class AdminController : ControllerBase
         long id, [FromBody] UpdateOfferRequest request)
     {
         try   { return Ok(await _admin.UpdateOfferAsync(id, request)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // PATCH /api/admin/offers/{id}/toggle
@@ -379,7 +467,11 @@ public class AdminController : ControllerBase
     public async Task<ActionResult<AdminOfferDto>> ToggleOffer(long id)
     {
         try   { return Ok(await _admin.ToggleOfferAsync(id)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // DELETE /api/admin/offers/{id}
@@ -387,7 +479,11 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> DeleteOffer(long id)
     {
         try   { await _admin.DeleteOfferAsync(id); return NoContent(); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // ── Branches ─────────────────────────────────────────────────────────────
@@ -408,7 +504,11 @@ public class AdminController : ControllerBase
         long id, [FromBody] UpdateBranchRequest request)
     {
         try   { return Ok(await _admin.UpdateBranchAsync(id, request)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // ── Branch schedules ──────────────────────────────────────────────────────
@@ -424,7 +524,11 @@ public class AdminController : ControllerBase
         long id, [FromBody] List<UpsertDayScheduleRequest> request)
     {
         try   { return Ok(await _schedules.UpsertScheduleAsync(id, request)); }
-        catch (InvalidOperationException ex) { return BadRequest(ex.Message); }
+        catch (InvalidOperationException ex)
+        {
+            await LogExAsync(ex, 400);
+            return BadRequest(ex.Message);
+        }
     }
 
     // ── Branch closures (scheduled / weekly-off) ──────────────────────────────
@@ -441,8 +545,16 @@ public class AdminController : ControllerBase
     {
         var adminEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "admin";
         try   { return Ok(await _closures.CreateAsync(id, request, adminEmail)); }
-        catch (KeyNotFoundException ex)      { return NotFound(new { message = ex.Message }); }
-        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            await LogExAsync(ex, 400);
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     // DELETE /api/admin/branches/{id}/closures/{closureId}
@@ -450,7 +562,11 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> DeleteClosure(long id, long closureId)
     {
         try   { await _closures.DeleteAsync(id, closureId); return NoContent(); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // GET /api/admin/closures/conflicts?branchId=1&scope=Reservation&startDate=2026-07-08&endDate=2026-07-08&startTime=10:00&endTime=14:00
@@ -504,7 +620,11 @@ public class AdminController : ControllerBase
     {
         var adminEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "admin";
         try   { return Ok(await _serviceStatus.ToggleAsync(id, request.ServiceType, request.IsClosed, adminEmail, request.Note, request.NoteDa)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // GET /api/admin/service-closures?branchId=&serviceType=&from=&to=
@@ -531,7 +651,11 @@ public class AdminController : ControllerBase
     public async Task<ActionResult<AdminCustomerDetailDto>> GetCustomer(long id)
     {
         try   { return Ok(await _admin.GetCustomerDetailAsync(id)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // ── Hero Slides ─────────────────────────────────────────────────────────
@@ -560,7 +684,11 @@ public class AdminController : ControllerBase
         long id, [FromBody] UpdateHeroSlideRequest request)
     {
         try { return Ok(await _heroSlides.UpdateAsync(id, request)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // DELETE /api/admin/hero-slides/{id}
@@ -568,7 +696,11 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> DeleteHeroSlide(long id)
     {
         try { await _heroSlides.DeleteAsync(id); return NoContent(); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // PUT /api/admin/hero-slides/{id}/reorder
@@ -577,7 +709,11 @@ public class AdminController : ControllerBase
         long id, [FromBody] ReorderHeroSlideRequest request)
     {
         try { return Ok(await _heroSlides.ReorderAsync(id, request.SortOrder)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // ── Gallery ───────────────────────────────────────────────────────────────
@@ -598,7 +734,11 @@ public class AdminController : ControllerBase
         long id, [FromBody] UpdateGalleryImageRequest request)
     {
         try   { return Ok(await _gallery.UpdateAsync(id, request)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // DELETE /api/admin/gallery/{id}
@@ -615,7 +755,11 @@ public class AdminController : ControllerBase
         long id, [FromBody] int sortOrder)
     {
         try   { return Ok(await _gallery.ReorderAsync(id, sortOrder)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // ── Why Choose Us ─────────────────────────────────────────────────────────
@@ -635,7 +779,11 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> UpdateWhyChooseUs(long id, [FromBody] SaveWhyChooseUsItemRequest req)
     {
         try   { return Ok(await _whyChooseUs.UpdateAsync(id, req)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // DELETE /api/admin/why-choose-us/{id}
@@ -682,7 +830,11 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> UpdateAboutStat(long id, [FromBody] SaveAboutStatRequest req)
     {
         try   { return Ok(await _about.UpdateStatAsync(id, req)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // DELETE /api/admin/about/stats/{id}
@@ -705,7 +857,11 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> UpdateAboutMvv(long id, [FromBody] SaveAboutMvvRequest req)
     {
         try   { return Ok(await _about.UpdateMvvAsync(id, req)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // DELETE /api/admin/about/mvv/{id}
@@ -728,7 +884,11 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> UpdateAboutTimelineItem(long id, [FromBody] SaveAboutTimelineRequest req)
     {
         try   { return Ok(await _about.UpdateTimelineItemAsync(id, req)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // DELETE /api/admin/about/timeline/{id}
@@ -751,7 +911,11 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> UpdateAboutTeamMember(long id, [FromBody] SaveTeamMemberRequest req)
     {
         try   { return Ok(await _about.UpdateTeamMemberAsync(id, req)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
     }
 
     // DELETE /api/admin/about/team/{id}

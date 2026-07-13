@@ -1220,6 +1220,9 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                     b.Property<long>("BranchId")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("CancellationReason")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ContactEmail")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Search, ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
+import { ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DataTable, type ColumnDef } from "@/components/ui/data-table";
@@ -21,16 +21,17 @@ const LOG_LEVELS: { label: string; value: LogLevel }[] = [
 ];
 
 const MODULES = [
-  { label: "All modules", value: "" },
-  { label: "/api/auth",         value: "/api/auth" },
-  { label: "/api/admin",        value: "/api/admin" },
-  { label: "/api/orders",       value: "/api/orders" },
-  { label: "/api/reservations", value: "/api/reservations" },
-  { label: "/api/menu",         value: "/api/menu" },
-  { label: "/api/offers",       value: "/api/offers" },
-  { label: "/api/addresses",    value: "/api/addresses" },
-  { label: "/api/customer",     value: "/api/customer" },
-  { label: "/api/location",     value: "/api/location" },
+  { label: "All Modules",    value: "" },
+  { label: "Auth",           value: "/api/auth" },
+  { label: "Admin",          value: "/api/admin" },
+  { label: "Orders",         value: "/api/orders" },
+  { label: "Reservations",   value: "/api/reservations" },
+  { label: "Menu",           value: "/api/menu" },
+  { label: "Offers",         value: "/api/offers" },
+  { label: "Addresses",      value: "/api/addresses" },
+  { label: "Customer",       value: "/api/customer" },
+  { label: "Location",       value: "/api/location" },
+  { label: "Email",          value: "/email" },
 ];
 
 const METHOD_COLORS: Record<string, string> = {
@@ -39,7 +40,39 @@ const METHOD_COLORS: Record<string, string> = {
   PUT:    "bg-amber-100  text-amber-700",
   PATCH:  "bg-orange-100 text-orange-700",
   DELETE: "bg-red-100    text-red-700",
+  EMAIL:  "bg-purple-100 text-purple-700",
 };
+
+// ── Module name derivation ────────────────────────────────────────────────────
+
+const MODULE_LABELS: Record<string, string> = {
+  auth: "Auth", admin: "Admin", orders: "Orders",
+  reservations: "Reservations", menu: "Menu", offers: "Offers",
+  addresses: "Addresses", customer: "Customer", location: "Location",
+  contacts: "Contact",
+};
+
+const ADMIN_SUB_LABELS: Record<string, string> = {
+  "menu-items": "Menu Items", menus: "Menus", orders: "Orders",
+  "order-statuses": "Order Statuses", "order-status-transitions": "Order Status Transitions",
+  reservations: "Reservations", customers: "Customers", "hero-slides": "Hero Slides",
+  gallery: "Gallery", branches: "Branches", "exception-logs": "Exception Logs",
+  "email-settings": "Email Settings", offers: "Offers", dashboard: "Dashboard",
+  closures: "Closures", "service-status": "Service Status",
+};
+
+function getModuleName(httpMethod: string, requestPath: string): string {
+  if (httpMethod === "EMAIL") return "Email";
+  const parts = requestPath.split("/").filter(Boolean);
+  const mod = parts[1];
+  const sub = parts[2];
+  const label = MODULE_LABELS[mod] ?? mod ?? "—";
+  if (mod === "admin" && sub) {
+    const subLabel = ADMIN_SUB_LABELS[sub] ?? sub;
+    return `Admin › ${subLabel}`;
+  }
+  return label;
+}
 
 // ── Stack trace expand row ────────────────────────────────────────────────────
 
@@ -82,14 +115,12 @@ function ExceptionLogsPage() {
   }
 
   const [page,     setPage]     = useState(1);
-  const [search,   setSearch]   = useState("");
   const [from,     setFrom]     = useState("");
   const [to,       setTo]       = useState("");
   const [module,   setModule]   = useState("");
-  const [logLevel, setLogLevel] = useState<LogLevel>("all");
+  const [logLevel, setLogLevel] = useState<LogLevel>("exception");
 
   // Reset to page 1 whenever filters change
-  const applySearch   = (v: string)   => { setSearch(v);   setPage(1); };
   const applyFrom     = (v: string)   => { setFrom(v);     setPage(1); };
   const applyTo       = (v: string)   => { setTo(v);       setPage(1); };
   const applyModule   = (v: string)   => { setModule(v);   setPage(1); };
@@ -98,10 +129,9 @@ function ExceptionLogsPage() {
   const { data, isLoading, refetch } = useExceptionLogs({
     page,
     pageSize: PAGE_SIZE,
-    search:   search   || undefined,
-    from:     from     || undefined,
-    to:       to       || undefined,
-    module:   module   || undefined,
+    from:     from   || undefined,
+    to:       to     || undefined,
+    module:   module || undefined,
     logLevel,
   });
 
@@ -130,10 +160,16 @@ function ExceptionLogsPage() {
     },
     {
       accessorKey: "requestPath",
-      header: "Path",
-      cell: info => (
-        <span className="font-mono text-xs">{info.getValue<string>()}</span>
-      ),
+      header: "Module",
+      cell: info => {
+        const path = info.getValue<string>();
+        const method = info.row.original.httpMethod;
+        return (
+          <span className="text-xs font-medium" title={path}>
+            {getModuleName(method, path)}
+          </span>
+        );
+      },
     },
     {
       accessorKey: "exceptionType",
@@ -165,88 +201,65 @@ function ExceptionLogsPage() {
     },
   ];
 
+  const selectCls = "h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring";
+
   const toolbar = (
-    <div className="flex flex-col gap-2">
-      {/* Log level tabs */}
-      <div className="flex items-center gap-1">
+    <div className="flex flex-wrap items-center gap-2">
+      {/* Log level dropdown */}
+      <select
+        value={logLevel}
+        onChange={e => applyLogLevel(e.target.value as LogLevel)}
+        className={selectCls}
+        data-tagid="select-exception-logs-level"
+      >
         {LOG_LEVELS.map(lvl => (
-          <button
-            key={lvl.value}
-            onClick={() => applyLogLevel(lvl.value)}
-            data-tagid={`button-exception-logs-level-${lvl.value}`}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors
-              ${logLevel === lvl.value
-                ? lvl.value === "exception"
-                  ? "bg-destructive text-destructive-foreground"
-                  : lvl.value === "info"
-                  ? "bg-blue-500 text-white"
-                  : "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
-              }`}
-          >
-            {lvl.label}
-          </button>
+          <option key={lvl.value} value={lvl.value}>{lvl.label}</option>
         ))}
-      </div>
+      </select>
 
-      {/* Search + module + date range */}
-      <div className="flex flex-wrap items-center gap-2">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            placeholder="Search path / exception…"
-            value={search}
-            onChange={e => applySearch(e.target.value)}
-            className="pl-8 h-8 w-56 text-sm"
-            data-tagid="input-exception-logs-search"
-          />
-        </div>
+      {/* Module filter */}
+      <select
+        value={module}
+        onChange={e => applyModule(e.target.value)}
+        className={selectCls}
+        data-tagid="select-exception-logs-module"
+      >
+        {MODULES.map(m => (
+          <option key={m.value} value={m.value}>{m.label}</option>
+        ))}
+      </select>
 
-        {/* Module filter */}
-        <select
-          value={module}
-          onChange={e => applyModule(e.target.value)}
-          className="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-          data-tagid="select-exception-logs-module"
+      {/* Date range */}
+      <Input
+        type="date"
+        value={from}
+        onChange={e => applyFrom(e.target.value)}
+        className="h-8 w-36 text-xs"
+        title="From date"
+        data-tagid="input-exception-logs-date-from"
+      />
+      <span className="text-xs text-muted-foreground">to</span>
+      <Input
+        type="date"
+        value={to}
+        onChange={e => applyTo(e.target.value)}
+        className="h-8 w-36 text-xs"
+        title="To date"
+        data-tagid="input-exception-logs-date-to"
+      />
+
+      {/* Clear filters */}
+      {(from || to || module || logLevel !== "exception") && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 text-xs text-muted-foreground"
+          data-tagid="button-exception-logs-clear"
+          onClick={() => { applyFrom(""); applyTo(""); applyModule(""); applyLogLevel("exception"); }}
         >
-          {MODULES.map(m => (
-            <option key={m.value} value={m.value}>{m.label}</option>
-          ))}
-        </select>
-
-        {/* Date range */}
-        <Input
-          type="date"
-          value={from}
-          onChange={e => applyFrom(e.target.value)}
-          className="h-8 w-36 text-xs"
-          title="From date"
-          data-tagid="input-exception-logs-date-from"
-        />
-        <span className="text-xs text-muted-foreground">to</span>
-        <Input
-          type="date"
-          value={to}
-          onChange={e => applyTo(e.target.value)}
-          className="h-8 w-36 text-xs"
-          title="To date"
-          data-tagid="input-exception-logs-date-to"
-        />
-
-        {/* Clear filters */}
-        {(search || from || to || module || logLevel !== "all") && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-xs text-muted-foreground"
-            data-tagid="button-exception-logs-clear"
-            onClick={() => { applySearch(""); applyFrom(""); applyTo(""); applyModule(""); applyLogLevel("all"); }}
-          >
-            Clear
-          </Button>
-        )}
-      </div>
+          Clear
+        </Button>
+      )}
     </div>
   );
 

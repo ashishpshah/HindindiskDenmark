@@ -80,18 +80,18 @@ public class AdminService : IAdminService
     public async Task<IReadOnlyList<TopItemDto>> GetTopItemsAsync(int days)
     {
         var since = DenmarkTime.Today.AddDays(-days).ToDateTime(TimeOnly.MinValue);
-        var items = await _db.OrderItems
-            .Where(oi => oi.Order.CreatedAt >= since)
-            .GroupBy(oi => oi.MenuItem.Name)
-            .Select(g => new TopItemDto(
-                g.Key,
-                g.Sum(oi => oi.Quantity),
-                g.Sum(oi => oi.PriceAtPurchase * oi.Quantity)))
-            .OrderByDescending(x => x.Quantity)
-            .Take(10)
-            .ToListAsync();
 
-        return items;
+        return await (
+            from oi in _db.OrderItems
+            join o in _db.Orders    on oi.OrderId    equals o.Id
+            join m in _db.MenuItems on oi.MenuItemId equals m.Id
+            where o.CreatedAt >= since && o.Status != "Cancelled"
+            group new { oi.Quantity, Revenue = oi.PriceAtPurchase * oi.Quantity } by m.Name into g
+            select new TopItemDto(g.Key, g.Sum(x => x.Quantity), g.Sum(x => x.Revenue))
+        )
+        .OrderByDescending(x => x.Quantity)
+        .Take(10)
+        .ToListAsync();
     }
 
     public async Task<IReadOnlyList<BranchOverviewDto>> GetBranchOverviewAsync()
@@ -157,12 +157,29 @@ public class AdminService : IAdminService
 
     public async Task<OrderPageDto> GetOrdersAsync(
         int page, int pageSize,
-        string? status = null, long? branchId = null, string? search = null)
+        string? status = null, long? branchId = null, string? search = null,
+        string? dateFrom = null, string? dateTo = null)
     {
         IQueryable<Domain.Entities.Order> q = _db.Orders.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(status))
             q = q.Where(o => o.Status == status);
+
+        if (!string.IsNullOrWhiteSpace(dateFrom) && DateOnly.TryParse(dateFrom, out var from))
+        {
+            var fromDt = from.ToDateTime(TimeOnly.MinValue);
+            q = q.Where(o =>
+                (o.ScheduledDate.HasValue && o.ScheduledDate.Value >= from) ||
+                (!o.ScheduledDate.HasValue && o.CreatedAt >= fromDt));
+        }
+
+        if (!string.IsNullOrWhiteSpace(dateTo) && DateOnly.TryParse(dateTo, out var to))
+        {
+            var toDt = to.AddDays(1).ToDateTime(TimeOnly.MinValue);
+            q = q.Where(o =>
+                (o.ScheduledDate.HasValue && o.ScheduledDate.Value <= to) ||
+                (!o.ScheduledDate.HasValue && o.CreatedAt < toDt));
+        }
 
         if (branchId.HasValue)
             q = q.Where(o => o.BranchId == branchId.Value);
@@ -269,7 +286,9 @@ public class AdminService : IAdminService
 
     // ── Reservations ──────────────────────────────────────────────────────────
 
-    public async Task<IReadOnlyList<AdminReservationDto>> GetReservationsAsync(string? status, long? branchId, string? date)
+    public async Task<IReadOnlyList<AdminReservationDto>> GetReservationsAsync(
+        string? status, long? branchId, string? date,
+        string? dateFrom = null, string? dateTo = null)
     {
         var q = _db.Reservations
             .Include(r => r.Branch)
@@ -282,13 +301,28 @@ public class AdminService : IAdminService
             q = q.Where(r => r.BranchId == branchId.Value);
 
         if (!string.IsNullOrWhiteSpace(date) && DateTime.TryParse(date, out var parsedDate))
-            q = q.Where(r => r.Date.Date == parsedDate.Date);
+        {
+            var dayStart = parsedDate.Date;
+            q = q.Where(r => r.Date >= dayStart && r.Date < dayStart.AddDays(1));
+        }
+
+        if (!string.IsNullOrWhiteSpace(dateFrom) && DateOnly.TryParse(dateFrom, out var from))
+        {
+            var fromDt = from.ToDateTime(TimeOnly.MinValue);
+            q = q.Where(r => r.Date >= fromDt);
+        }
+
+        if (!string.IsNullOrWhiteSpace(dateTo) && DateOnly.TryParse(dateTo, out var to))
+        {
+            var toDt = to.AddDays(1).ToDateTime(TimeOnly.MinValue);
+            q = q.Where(r => r.Date < toDt);
+        }
 
         var reservations = await q.OrderByDescending(r => r.CreatedAt).ToListAsync();
         return reservations.Select(ToAdminReservationDto).ToList();
     }
 
-    public async Task<AdminReservationDto> UpdateReservationStatusAsync(long reservationId, string status)
+    public async Task<AdminReservationDto> UpdateReservationStatusAsync(long reservationId, string status, string? cancellationReason = null)
     {
         var valid = new[] { "Pending", "Confirmed", "Cancelled" };
         if (!valid.Contains(status))
@@ -300,6 +334,8 @@ public class AdminService : IAdminService
             ?? throw new KeyNotFoundException($"Reservation {reservationId} not found.");
 
         r.Status = status;
+        if (status == "Cancelled" && !string.IsNullOrWhiteSpace(cancellationReason))
+            r.CancellationReason = cancellationReason.Trim();
         await _db.SaveChangesAsync();
 
         // Push real-time update to the customer's browser
@@ -935,7 +971,8 @@ public class AdminService : IAdminService
             r.SpecialRequests,
             r.Status,
             r.CreatedAt,
-            r.UserId.HasValue
+            r.UserId.HasValue,
+            r.CancellationReason
         );
 
     private static AdminMenuItemDto ToAdminMenuItemDto(Domain.Entities.MenuItem i)

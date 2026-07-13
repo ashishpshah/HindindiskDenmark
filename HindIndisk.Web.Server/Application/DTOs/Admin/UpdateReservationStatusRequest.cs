@@ -6,4 +6,5 @@ public class UpdateReservationStatusRequest
 {
     [Required]
     public string Status { get; set; } = string.Empty;
+    public string? CancellationReason { get; set; }
 }

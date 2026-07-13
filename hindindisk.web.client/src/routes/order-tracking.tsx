@@ -218,7 +218,7 @@ function TrackPage() {
                           />
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{item.name}</p>
+                          <p className="text-sm font-medium truncate">{(lang === "da" ? item.nameDa : null) || item.name}</p>
                           <p className="text-xs text-muted-foreground">{item.quantity} × {item.priceAtPurchase.toFixed(0)} DKK</p>
                         </div>
                         <span className="text-sm font-semibold shrink-0">{(item.priceAtPurchase * item.quantity).toFixed(0)} DKK</span>
@@ -272,7 +272,7 @@ function TrackPage() {
                   <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
                     {legacyOrder.lines?.map((l) => (
                       <div key={l.name} className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">{l.qty} × {l.name}</span>
+                        <span className="text-muted-foreground">{l.qty} × {(lang === "da" ? l.nameDa : null) || l.name}</span>
                         <span className="font-medium">{l.price * l.qty} DKK</span>
                       </div>
                     ))}

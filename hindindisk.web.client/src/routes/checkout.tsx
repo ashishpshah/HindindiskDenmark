@@ -485,7 +485,7 @@ function CheckoutPage() {
                       {customer && !lookingUp && matchedBy === "phone" && (
                         <div className="mt-1 flex items-center gap-1.5 text-xs text-green-600">
                           <UserCheck className="h-3.5 w-3.5" />
-                          Customer found — details filled in
+                          {t("forms.customerFound")}
                         </div>
                       )}
                     </div>
@@ -507,8 +507,8 @@ function CheckoutPage() {
                       </FormField>
                       <div className="sm:col-span-2">
                         <div className="relative">
-                          <FormField label="Email *">
-                            <Input data-tagid="input-checkout-email" type="email" required placeholder="you@email.dk"
+                          <FormField label={t("forms.emailLabel")}>
+                            <Input data-tagid="input-checkout-email" type="email" required placeholder={t("forms.emailPlaceholder")}
                               value={details.email}
                               onChange={(e) => setDetails({ ...details, email: e.target.value })} />
                           </FormField>
@@ -518,7 +518,7 @@ function CheckoutPage() {
                           {customer && !lookingUp && matchedBy === "email" && (
                             <div className="mt-1 flex items-center gap-1.5 text-xs text-green-600">
                               <UserCheck className="h-3.5 w-3.5" />
-                              Customer found — details filled in
+                              {t("forms.customerFound")}
                             </div>
                           )}
                         </div>

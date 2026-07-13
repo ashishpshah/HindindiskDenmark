@@ -102,13 +102,13 @@ public class ReservationService : IReservationService
 
         // Case 3 only: new guest account — credentials before reservation confirmation
         if (sendCredentials)
-            _ = _email.SendNewCustomerCredentialsAsync(credentialsEmail!, credentialsName, credentialsPwd!);
+            await _email.SendNewCustomerCredentialsAsync(credentialsEmail!, credentialsName, credentialsPwd!);
 
         // Customer confirmation
-        _ = _email.SendReservationConfirmationAsync(reservation.ContactEmail, dto);
+        await _email.SendReservationConfirmationAsync(reservation.ContactEmail, dto);
 
         // Admin notification (always — goes to AdminToMail + BCC list)
-        _ = _email.SendAdminReservationNotificationAsync(dto);
+        await _email.SendAdminReservationNotificationAsync(dto);
 
         return dto;
     }
@@ -164,5 +164,6 @@ public class ReservationService : IReservationService
             r.ContactEmail,
             r.SpecialRequests,
             r.Status,
-            r.CreatedAt);
+            r.CreatedAt,
+            r.CancellationReason);
 }

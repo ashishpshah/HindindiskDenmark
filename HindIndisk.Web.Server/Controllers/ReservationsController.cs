@@ -8,7 +8,7 @@ namespace HindIndisk.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ReservationsController : ControllerBase
+public class ReservationsController : ApiBaseController
 {
     private readonly IReservationService _reservations;
 
@@ -31,6 +31,7 @@ public class ReservationsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            await LogExAsync(ex, 400);
             return BadRequest(new { message = ex.Message });
         }
     }

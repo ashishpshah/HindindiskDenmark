@@ -266,17 +266,17 @@ public class OrderService : IOrderService
 
         // Case 3 only: new guest account — credentials arrive before the order confirmation
         if (sendCredentials)
-            _ = _email.SendNewCustomerCredentialsAsync(credentialsEmail!, credentialsName, credentialsPwd!);
+            await _email.SendNewCustomerCredentialsAsync(credentialsEmail!, credentialsName, credentialsPwd!);
 
         // Customer confirmation
-        _ = _email.SendOrderConfirmationAsync(order.ContactEmail!, order.ContactName, dto);
+        await _email.SendOrderConfirmationAsync(order.ContactEmail!, order.ContactName, dto);
 
-        // Real-time admin notification
+        // Real-time admin notification — fire-and-forget is safe here (SignalR hub, no scoped services)
         _ = _adminHub.Clients.Group(AdminHub.GroupName)
                 .SendAsync("NewOrder", new { order.Id, order.Status, order.ContactName, order.Total });
 
         // Admin notification (always — goes to AdminToMail + BCC list)
-        _ = _email.SendAdminOrderNotificationAsync(dto);
+        await _email.SendAdminOrderNotificationAsync(dto);
 
         return dto;
     }
@@ -291,7 +291,7 @@ public class OrderService : IOrderService
             .Include(o => o.PlacedByUser)
             .AsNoTracking()
             .FirstOrDefaultAsync(o => o.Id == orderId && o.UserId == userId)
-            ?? throw new InvalidOperationException("Order not found.");
+            ?? throw new KeyNotFoundException("Order not found.");
 
         return ToDto(order);
     }

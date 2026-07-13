@@ -9,7 +9,7 @@ namespace HindIndisk.Api.Controllers;
 [ApiController]
 [Route("api/addresses")]
 [Authorize]
-public class AddressesController : ControllerBase
+public class AddressesController : ApiBaseController
 {
     private readonly IAddressService _addresses;
 
@@ -37,7 +37,7 @@ public class AddressesController : ControllerBase
     public async Task<ActionResult<AddressDto>> Update(long id, [FromBody] SaveAddressRequest request)
     {
         try   { return Ok(await _addresses.UpdateAddressAsync(GetUserId(), id, request)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex) { await LogExAsync(ex, 404); return NotFound(new { message = ex.Message }); }
     }
 
     // DELETE /api/addresses/{id}
@@ -45,6 +45,6 @@ public class AddressesController : ControllerBase
     public async Task<IActionResult> Delete(long id)
     {
         try   { await _addresses.DeleteAddressAsync(GetUserId(), id); return NoContent(); }
-        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (KeyNotFoundException ex) { await LogExAsync(ex, 404); return NotFound(new { message = ex.Message }); }
     }
 }

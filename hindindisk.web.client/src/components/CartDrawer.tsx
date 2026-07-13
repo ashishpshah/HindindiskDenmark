@@ -9,7 +9,7 @@ import { MenuItemPhoto } from "@/components/MenuItemPhoto";
 
 export function CartDrawer() {
   const { open, setOpen, lines, add, sub, remove, subtotal, delivery, discount, total } = useCart();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
 
   return (
     <AnimatePresence>
@@ -36,24 +36,27 @@ export function CartDrawer() {
                   </Button>
                 </div>
               )}
-              {lines.map((l) => (
+              {lines.map((l) => {
+                const displayName = (lang === "da" ? l.nameDa : null) || l.name;
+                return (
                 <div key={l.name} className="flex gap-3 rounded-2xl border bg-background p-3">
-                  <MenuItemPhoto src={l.image} alt={l.name} className="h-16 w-16 rounded-xl object-cover shrink-0" />
+                  <MenuItemPhoto src={l.image} alt={displayName} className="h-16 w-16 rounded-xl object-cover shrink-0" />
                   <div className="flex-1">
-                    <div className="font-semibold">{l.name}</div>
+                    <div className="font-semibold">{displayName}</div>
                     <div className="text-sm text-muted-foreground">{l.price} DKK</div>
                     <div className="mt-2 inline-flex items-center gap-2 rounded-full border px-1 py-0.5 text-sm">
-                      <button data-tagid={`button-cart-item-decrease-${l.name.toLowerCase().replace(/\s+/g, "-")}`} onClick={() => sub(l.name)} aria-label={`Decrease quantity of ${l.name}`} className="grid h-6 w-6 place-items-center rounded-full hover:bg-accent"><Minus className="h-3 w-3" /></button>
+                      <button data-tagid={`button-cart-item-decrease-${l.name.toLowerCase().replace(/\s+/g, "-")}`} onClick={() => sub(l.name)} aria-label={`Decrease quantity of ${displayName}`} className="grid h-6 w-6 place-items-center rounded-full hover:bg-accent"><Minus className="h-3 w-3" /></button>
                       <span className="min-w-4 text-center">{l.qty}</span>
-                      <button data-tagid={`button-cart-item-increase-${l.name.toLowerCase().replace(/\s+/g, "-")}`} onClick={() => add({ id: l.id, name: l.name, price: l.price, imageUrl: l.image })} aria-label={`Increase quantity of ${l.name}`} className="grid h-6 w-6 place-items-center rounded-full gradient-primary text-primary-foreground"><Plus className="h-3 w-3" /></button>
+                      <button data-tagid={`button-cart-item-increase-${l.name.toLowerCase().replace(/\s+/g, "-")}`} onClick={() => add({ id: l.id, name: l.name, nameDa: l.nameDa, price: l.price, imageUrl: l.image })} aria-label={`Increase quantity of ${displayName}`} className="grid h-6 w-6 place-items-center rounded-full gradient-primary text-primary-foreground"><Plus className="h-3 w-3" /></button>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="font-semibold">{l.price * l.qty} DKK</div>
-                    <button data-tagid={`button-cart-item-remove-${l.name.toLowerCase().replace(/\s+/g, "-")}`} onClick={() => remove(l.name)} aria-label={`Remove ${l.name} from cart`} className="mt-2 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+                    <button data-tagid={`button-cart-item-remove-${l.name.toLowerCase().replace(/\s+/g, "-")}`} onClick={() => remove(l.name)} aria-label={`Remove ${displayName} from cart`} className="mt-2 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
             {lines.length > 0 && (
               <div className="space-y-3 border-t bg-muted/30 p-5">

@@ -25,6 +25,7 @@ export type ReservationDto = {
   specialRequests?: string;
   status: string;
   createdAt: string;
+  cancellationReason?: string;
 };
 
 export function useCreateReservation() {

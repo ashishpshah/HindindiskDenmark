@@ -13,13 +13,13 @@ public interface IAdminService
     Task<IReadOnlyList<HourlyVolumeDto>>  GetHourlyVolumeAsync(string? date);
 
     // ── Orders ────────────────────────────────────────────────────────────────
-    Task<OrderPageDto> GetOrdersAsync(int page, int pageSize, string? status = null, long? branchId = null, string? search = null);
+    Task<OrderPageDto> GetOrdersAsync(int page, int pageSize, string? status = null, long? branchId = null, string? search = null, string? dateFrom = null, string? dateTo = null);
     Task<AdminOrderDto>                UpdateOrderStatusAsync(long orderId, string status, string? cancellationReason = null);
     Task<IReadOnlyList<StatusCountDto>> GetOrderCountsByStatusAsync();
 
     // ── Reservations ──────────────────────────────────────────────────────────
-    Task<IReadOnlyList<AdminReservationDto>> GetReservationsAsync(string? status, long? branchId, string? date);
-    Task<AdminReservationDto>          UpdateReservationStatusAsync(long reservationId, string status);
+    Task<IReadOnlyList<AdminReservationDto>> GetReservationsAsync(string? status, long? branchId, string? date, string? dateFrom = null, string? dateTo = null);
+    Task<AdminReservationDto>          UpdateReservationStatusAsync(long reservationId, string status, string? cancellationReason = null);
 
     // ── Menus (categories) ───────────────────────────────────────────────────
     Task<MenuPageDto> GetMenusAsync(int? page = null, int? pageSize = null, string? search = null, long? branchId = null);
