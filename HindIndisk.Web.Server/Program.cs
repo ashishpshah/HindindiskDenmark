@@ -30,8 +30,14 @@ namespace HindIndisk.Web.Server
 			});
 
 			// ── Database ──────────────────────────────────────────────────────────────────
+			// UseCompatibilityLevel(120): the hosted DB is pinned to SQL Server 2014
+			// compat mode, which doesn't support OPENJSON — EF Core 8 otherwise uses
+			// OPENJSON(@p) WITH ([value] ... '$') to translate list.Contains(x) queries,
+			// causing "Incorrect syntax near '$'." Forcing 120 makes EF fall back to a
+			// plain parameterized IN (...) clause instead.
 			builder.Services.AddDbContext<ApplicationDbContext>(options =>
-				options.UseSqlServer(builder.Configuration.GetConnectionString("Default")!));
+				options.UseSqlServer(builder.Configuration.GetConnectionString("Default")!,
+					sql => sql.UseCompatibilityLevel(120)));
 
 			// ── JWT Authentication ────────────────────────────────────────────────────────
 			var jwtSection = builder.Configuration.GetSection("Jwt");
