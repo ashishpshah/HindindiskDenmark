@@ -4,6 +4,7 @@ using HindIndisk.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HindIndisk.Api.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260729123909_MakeAboutContentBranchScoped")]
+    partial class MakeAboutContentBranchScoped
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -55,7 +58,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AboutMvvItems", (string)null);
+                    b.ToTable("AboutMvvItems");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.AboutPageSettings", b =>
@@ -82,7 +85,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                     b.HasIndex("BranchId")
                         .IsUnique();
 
-                    b.ToTable("AboutPageSettings", (string)null);
+                    b.ToTable("AboutPageSettings");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.AboutStat", b =>
@@ -110,7 +113,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AboutStats", (string)null);
+                    b.ToTable("AboutStats");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.AboutTimelineItem", b =>
@@ -151,7 +154,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("BranchId");
 
-                    b.ToTable("AboutTimelineItems", (string)null);
+                    b.ToTable("AboutTimelineItems");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.ApiExceptionLog", b =>
@@ -206,7 +209,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ApiExceptionLogs", (string)null);
+                    b.ToTable("ApiExceptionLogs");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.Branch", b =>
@@ -292,7 +295,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Branches", (string)null);
+                    b.ToTable("Branches");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.BranchClosure", b =>
@@ -348,7 +351,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("BranchId", "ClosureType");
 
-                    b.ToTable("BranchClosures", (string)null);
+                    b.ToTable("BranchClosures");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.BranchDaySchedule", b =>
@@ -394,7 +397,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                     b.HasIndex("BranchId", "DayOfWeek")
                         .IsUnique();
 
-                    b.ToTable("BranchDaySchedules", (string)null);
+                    b.ToTable("BranchDaySchedules");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.BranchMenu", b =>
@@ -409,7 +412,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("MenuId");
 
-                    b.ToTable("BranchMenus", (string)null);
+                    b.ToTable("BranchMenus");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.BranchMenuItemPrice", b =>
@@ -428,7 +431,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("MenuItemId");
 
-                    b.ToTable("BranchMenuItemPrices", (string)null);
+                    b.ToTable("BranchMenuItemPrices");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.BranchServiceClosure", b =>
@@ -465,7 +468,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("BranchId");
 
-                    b.ToTable("BranchServiceClosures", (string)null);
+                    b.ToTable("BranchServiceClosures");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.EmailConfig", b =>
@@ -547,7 +550,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("GalleryImages", (string)null);
+                    b.ToTable("GalleryImages");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.HeroSlide", b =>
@@ -606,7 +609,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("SortOrder");
 
-                    b.ToTable("HeroSlides", (string)null);
+                    b.ToTable("HeroSlides");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.HomeStorySectionSettings", b =>
@@ -676,7 +679,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("HomeStorySectionSettings", (string)null);
+                    b.ToTable("HomeStorySectionSettings");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.Menu", b =>
@@ -708,7 +711,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Menus", (string)null);
+                    b.ToTable("Menus");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.MenuItem", b =>
@@ -752,7 +755,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("MenuItems", (string)null);
+                    b.ToTable("MenuItems");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.MenuItemLabel", b =>
@@ -767,7 +770,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("LabelId");
 
-                    b.ToTable("MenuItemLabels", (string)null);
+                    b.ToTable("MenuItemLabels");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.MenuItemsMapping", b =>
@@ -785,7 +788,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("MenuItemId");
 
-                    b.ToTable("MenuItemsMappings", (string)null);
+                    b.ToTable("MenuItemsMappings");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.MenuLabel", b =>
@@ -806,7 +809,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("MenuLabels", (string)null);
+                    b.ToTable("MenuLabels");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.Offer", b =>
@@ -894,7 +897,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[CouponCode] IS NOT NULL");
 
-                    b.ToTable("Offers", (string)null);
+                    b.ToTable("Offers");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.OfferMenu", b =>
@@ -909,7 +912,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("MenuId");
 
-                    b.ToTable("OfferMenus", (string)null);
+                    b.ToTable("OfferMenus");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.OfferMenuItem", b =>
@@ -924,7 +927,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("MenuItemId");
 
-                    b.ToTable("OfferMenuItems", (string)null);
+                    b.ToTable("OfferMenuItems");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.Order", b =>
@@ -1018,7 +1021,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Orders", (string)null);
+                    b.ToTable("Orders");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.OrderAppliedOffer", b =>
@@ -1037,7 +1040,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("OfferId");
 
-                    b.ToTable("OrderAppliedOffers", (string)null);
+                    b.ToTable("OrderAppliedOffers");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.OrderItem", b =>
@@ -1072,7 +1075,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("OrderItems", (string)null);
+                    b.ToTable("OrderItems");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.OrderStatus", b =>
@@ -1116,7 +1119,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("OrderStatuses", (string)null);
+                    b.ToTable("OrderStatuses");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.OrderStatusHistory", b =>
@@ -1141,7 +1144,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("OrderStatusHistories", (string)null);
+                    b.ToTable("OrderStatusHistories");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.OrderStatusTransition", b =>
@@ -1169,7 +1172,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("ToStatusId");
 
-                    b.ToTable("OrderStatusTransitions", (string)null);
+                    b.ToTable("OrderStatusTransitions");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.PasswordOtp", b =>
@@ -1212,7 +1215,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("Email");
 
-                    b.ToTable("PasswordOtps", (string)null);
+                    b.ToTable("PasswordOtps");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.Reservation", b =>
@@ -1270,7 +1273,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Reservations", (string)null);
+                    b.ToTable("Reservations");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.Role", b =>
@@ -1287,7 +1290,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Roles", (string)null);
+                    b.ToTable("Roles");
 
                     b.HasData(
                         new
@@ -1344,7 +1347,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("BranchId");
 
-                    b.ToTable("TeamMembers", (string)null);
+                    b.ToTable("TeamMembers");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.User", b =>
@@ -1389,7 +1392,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.UserAddress", b =>
@@ -1430,7 +1433,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserAddresses", (string)null);
+                    b.ToTable("UserAddresses");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.UserBranch", b =>
@@ -1445,7 +1448,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasIndex("BranchId");
 
-                    b.ToTable("UserBranches", (string)null);
+                    b.ToTable("UserBranches");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.WhyChooseUsItem", b =>
@@ -1484,7 +1487,7 @@ namespace HindIndisk.Api.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("WhyChooseUsItems", (string)null);
+                    b.ToTable("WhyChooseUsItems");
                 });
 
             modelBuilder.Entity("HindIndisk.Api.Domain.Entities.AboutPageSettings", b =>

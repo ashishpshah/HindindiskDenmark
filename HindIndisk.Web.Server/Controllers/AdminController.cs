@@ -803,17 +803,17 @@ public class AdminController : ApiBaseController
     public async Task<IActionResult> UpdateHomeStory([FromBody] UpdateHomeStorySectionRequest req)
         => Ok(await _homeStory.UpdateAsync(req));
 
-    // ── About page ────────────────────────────────────────────────────────────
+    // ── About page: images/timeline/team (branch-scoped) ────────────────────────
 
-    // GET /api/admin/about/settings
-    [HttpGet("about/settings")]
-    public async Task<IActionResult> GetAboutSettings()
-        => Ok(await _about.GetSettingsAsync());
+    // GET /api/admin/branches/{id}/about/settings
+    [HttpGet("branches/{id:long}/about/settings")]
+    public async Task<IActionResult> GetAboutSettings(long id)
+        => Ok(await _about.GetSettingsAsync(id));
 
-    // PATCH /api/admin/about/settings
-    [HttpPatch("about/settings")]
-    public async Task<IActionResult> UpdateAboutSettings([FromBody] UpdateAboutSettingsRequest req)
-        => Ok(await _about.UpdateSettingsAsync(req));
+    // PATCH /api/admin/branches/{id}/about/settings
+    [HttpPatch("branches/{id:long}/about/settings")]
+    public async Task<IActionResult> UpdateAboutSettings(long id, [FromBody] UpdateAboutSettingsRequest req)
+        => Ok(await _about.UpdateSettingsAsync(id, req));
 
     // GET /api/admin/about/stats
     [HttpGet("about/stats")]
@@ -869,21 +869,21 @@ public class AdminController : ApiBaseController
     public async Task<IActionResult> DeleteAboutMvv(long id)
         => await _about.DeleteMvvAsync(id) ? NoContent() : NotFound();
 
-    // GET /api/admin/about/timeline
-    [HttpGet("about/timeline")]
-    public async Task<IActionResult> GetAboutTimeline()
-        => Ok(await _about.GetTimelineAsync());
+    // GET /api/admin/branches/{id}/about/timeline
+    [HttpGet("branches/{id:long}/about/timeline")]
+    public async Task<IActionResult> GetAboutTimeline(long id)
+        => Ok(await _about.GetTimelineAsync(id));
 
-    // POST /api/admin/about/timeline
-    [HttpPost("about/timeline")]
-    public async Task<IActionResult> CreateAboutTimelineItem([FromBody] SaveAboutTimelineRequest req)
-        => Ok(await _about.CreateTimelineItemAsync(req));
+    // POST /api/admin/branches/{id}/about/timeline
+    [HttpPost("branches/{id:long}/about/timeline")]
+    public async Task<IActionResult> CreateAboutTimelineItem(long id, [FromBody] SaveAboutTimelineRequest req)
+        => Ok(await _about.CreateTimelineItemAsync(id, req));
 
-    // PUT /api/admin/about/timeline/{id}
-    [HttpPut("about/timeline/{id:long}")]
-    public async Task<IActionResult> UpdateAboutTimelineItem(long id, [FromBody] SaveAboutTimelineRequest req)
+    // PUT /api/admin/branches/{id}/about/timeline/{itemId}
+    [HttpPut("branches/{id:long}/about/timeline/{itemId:long}")]
+    public async Task<IActionResult> UpdateAboutTimelineItem(long id, long itemId, [FromBody] SaveAboutTimelineRequest req)
     {
-        try   { return Ok(await _about.UpdateTimelineItemAsync(id, req)); }
+        try   { return Ok(await _about.UpdateTimelineItemAsync(id, itemId, req)); }
         catch (KeyNotFoundException ex)
         {
             await LogExAsync(ex, 404);
@@ -891,26 +891,26 @@ public class AdminController : ApiBaseController
         }
     }
 
-    // DELETE /api/admin/about/timeline/{id}
-    [HttpDelete("about/timeline/{id:long}")]
-    public async Task<IActionResult> DeleteAboutTimelineItem(long id)
-        => await _about.DeleteTimelineItemAsync(id) ? NoContent() : NotFound();
+    // DELETE /api/admin/branches/{id}/about/timeline/{itemId}
+    [HttpDelete("branches/{id:long}/about/timeline/{itemId:long}")]
+    public async Task<IActionResult> DeleteAboutTimelineItem(long id, long itemId)
+        => await _about.DeleteTimelineItemAsync(id, itemId) ? NoContent() : NotFound();
 
-    // GET /api/admin/about/team
-    [HttpGet("about/team")]
-    public async Task<IActionResult> GetAboutTeam()
-        => Ok(await _about.GetTeamAsync());
+    // GET /api/admin/branches/{id}/about/team
+    [HttpGet("branches/{id:long}/about/team")]
+    public async Task<IActionResult> GetAboutTeam(long id)
+        => Ok(await _about.GetTeamAsync(id));
 
-    // POST /api/admin/about/team
-    [HttpPost("about/team")]
-    public async Task<IActionResult> CreateAboutTeamMember([FromBody] SaveTeamMemberRequest req)
-        => Ok(await _about.CreateTeamMemberAsync(req));
+    // POST /api/admin/branches/{id}/about/team
+    [HttpPost("branches/{id:long}/about/team")]
+    public async Task<IActionResult> CreateAboutTeamMember(long id, [FromBody] SaveTeamMemberRequest req)
+        => Ok(await _about.CreateTeamMemberAsync(id, req));
 
-    // PUT /api/admin/about/team/{id}
-    [HttpPut("about/team/{id:long}")]
-    public async Task<IActionResult> UpdateAboutTeamMember(long id, [FromBody] SaveTeamMemberRequest req)
+    // PUT /api/admin/branches/{id}/about/team/{memberId}
+    [HttpPut("branches/{id:long}/about/team/{memberId:long}")]
+    public async Task<IActionResult> UpdateAboutTeamMember(long id, long memberId, [FromBody] SaveTeamMemberRequest req)
     {
-        try   { return Ok(await _about.UpdateTeamMemberAsync(id, req)); }
+        try   { return Ok(await _about.UpdateTeamMemberAsync(id, memberId, req)); }
         catch (KeyNotFoundException ex)
         {
             await LogExAsync(ex, 404);
@@ -918,10 +918,10 @@ public class AdminController : ApiBaseController
         }
     }
 
-    // DELETE /api/admin/about/team/{id}
-    [HttpDelete("about/team/{id:long}")]
-    public async Task<IActionResult> DeleteAboutTeamMember(long id)
-        => await _about.DeleteTeamMemberAsync(id) ? NoContent() : NotFound();
+    // DELETE /api/admin/branches/{id}/about/team/{memberId}
+    [HttpDelete("branches/{id:long}/about/team/{memberId:long}")]
+    public async Task<IActionResult> DeleteAboutTeamMember(long id, long memberId)
+        => await _about.DeleteTeamMemberAsync(id, memberId) ? NoContent() : NotFound();
 
     // ── Email settings ────────────────────────────────────────────────────────
 

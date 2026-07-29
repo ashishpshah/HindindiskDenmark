@@ -8,6 +8,8 @@ import { Target, Sparkles, Heart, Star, Shield, Leaf } from "lucide-react";
 import { WhyChooseUs } from "@/components/home/Sections";
 import { useI18n } from "@/i18n/I18nProvider";
 import { useAboutPage, type AboutTimelineDto } from "@/hooks/useAboutPage";
+import { useBranches } from "@/hooks/useBranches";
+import { useCart } from "@/context/CartContext";
 import { BASE } from "@/lib/api/client";
 
 export const Route = createFileRoute("/about")({
@@ -34,7 +36,10 @@ const ICON_MAP: Record<string, React.ElementType> = {
 
 function AboutPage() {
   const { t, lang } = useI18n();
-  const { data: about } = useAboutPage();
+  const { branch } = useCart();
+  const { data: branchesData = [] } = useBranches();
+  const resolvedBranchId = branchesData.find(b => b.name === branch)?.id;
+  const { data: about } = useAboutPage(resolvedBranchId);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({

@@ -1,14 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, Pencil, X, Save } from "lucide-react";
+import { Loader2, Plus, Trash2, Pencil, X, Save, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ImagePicker } from "@/components/admin/ImagePicker";
 import { BASE } from "@/lib/api/client";
+import { useBranches, type BranchDto } from "@/hooks/useBranches";
 import {
   useAdminAboutSettings, useUpdateAboutSettings,
   useAdminAboutStats, useCreateAboutStat, useUpdateAboutStat, useDeleteAboutStat, type SaveAboutStatInput,
@@ -29,11 +31,18 @@ function resolveUrl(url: string) {
 }
 
 const MVV_ICONS = ["Target", "Sparkles", "Heart", "Star", "Shield", "Leaf"];
+const BRANCH_SCOPED_TABS: Tab[] = ["images", "timeline", "team"];
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 function AboutAdmin() {
   const [tab, setTab] = useState<Tab>("images");
+  const { data: branches = [] } = useBranches();
+  const [branchId, setBranchId] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (!branchId && branches.length) setBranchId(branches[0].id);
+  }, [branches, branchId]);
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "images",   label: "Page Images" },
@@ -45,9 +54,17 @@ function AboutAdmin() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-3xl font-bold">About Page</h1>
-        <p className="text-muted-foreground text-sm mt-1">Manage all About page content</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="font-display text-3xl font-bold">About Page</h1>
+          <p className="text-muted-foreground text-sm mt-1">Manage all About page content</p>
+        </div>
+        <div className="space-y-1">
+          <BranchPicker branches={branches} value={branchId} onChange={setBranchId} />
+          {!BRANCH_SCOPED_TABS.includes(tab) && (
+            <p className="text-xs text-muted-foreground">Stats and Mission/Vision/Values are shared across all branches.</p>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-1 border-b">
@@ -68,21 +85,43 @@ function AboutAdmin() {
       </div>
 
       <div>
-        {tab === "images"   && <ImagesTab />}
+        {tab === "images"   && <ImagesTab branchId={branchId} />}
         {tab === "stats"    && <StatsTab />}
         {tab === "mvv"      && <MvvTab />}
-        {tab === "timeline" && <TimelineTab />}
-        {tab === "team"     && <TeamTab />}
+        {tab === "timeline" && <TimelineTab branchId={branchId} />}
+        {tab === "team"     && <TeamTab branchId={branchId} />}
       </div>
     </div>
   );
 }
 
+// ── Branch picker ────────────────────────────────────────────────────────────
+
+function BranchPicker({ branches, value, onChange }: {
+  branches: BranchDto[];
+  value: number | undefined;
+  onChange: (id: number) => void;
+}) {
+  return (
+    <Select value={value !== undefined ? String(value) : undefined} onValueChange={v => onChange(Number(v))}>
+      <SelectTrigger data-tagid="select-website-about-branch" className="w-full sm:w-64">
+        <div className="flex items-center gap-2">
+          <Store className="h-4 w-4 text-muted-foreground" />
+          <SelectValue placeholder="Select a branch" />
+        </div>
+      </SelectTrigger>
+      <SelectContent>
+        {branches.map(b => <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}
+      </SelectContent>
+    </Select>
+  );
+}
+
 // ── Images Tab ────────────────────────────────────────────────────────────────
 
-function ImagesTab() {
-  const { data: settings, isLoading } = useAdminAboutSettings();
-  const update = useUpdateAboutSettings();
+function ImagesTab({ branchId }: { branchId: number | undefined }) {
+  const { data: settings, isLoading } = useAdminAboutSettings(branchId);
+  const update = useUpdateAboutSettings(branchId);
 
   const [hero,  setHero]  = useState<string | null>(null);
   const [story, setStory] = useState<string | null>(null);
@@ -98,6 +137,7 @@ function ImagesTab() {
     } catch { toast.error("Failed to save"); }
   };
 
+  if (!branchId) return null;
   if (isLoading) return <Loader />;
 
   return (
@@ -265,16 +305,16 @@ function MvvTab() {
 
 const EMPTY_TL: SaveAboutTimelineInput = { year: "", title: "", titleDa: "", description: "", descriptionDa: "", sortOrder: 0 };
 
-function TimelineTab() {
-  const { data: items = [], isLoading } = useAdminAboutTimeline();
-  const createTl = useCreateAboutTimeline();
-  const deleteTl = useDeleteAboutTimeline();
+function TimelineTab({ branchId }: { branchId: number | undefined }) {
+  const { data: items = [], isLoading } = useAdminAboutTimeline(branchId);
+  const createTl = useCreateAboutTimeline(branchId);
+  const deleteTl = useDeleteAboutTimeline(branchId);
 
   const [showModal, setShowModal] = useState(false);
   const [editId,    setEditId]    = useState<number | null>(null);
   const [form,      setForm]      = useState<SaveAboutTimelineInput>(EMPTY_TL);
 
-  const updateTl = useUpdateAboutTimeline(editId ?? 0);
+  const updateTl = useUpdateAboutTimeline(branchId, editId ?? 0);
   const isSaving = createTl.isPending || updateTl.isPending;
 
   const openCreate = () => { setEditId(null); setForm({ ...EMPTY_TL, sortOrder: items.length }); setShowModal(true); };
@@ -289,6 +329,7 @@ function TimelineTab() {
     } catch { toast.error("Failed to save"); }
   };
 
+  if (!branchId) return null;
   if (isLoading) return <Loader />;
 
   return (
@@ -336,16 +377,16 @@ function TimelineTab() {
 
 const EMPTY_TEAM: SaveTeamMemberInput = { name: "", role: "", roleDa: "", image: "", sortOrder: 0, isActive: true };
 
-function TeamTab() {
-  const { data: members = [], isLoading } = useAdminAboutTeam();
-  const createMember = useCreateTeamMember();
-  const deleteMember = useDeleteTeamMember();
+function TeamTab({ branchId }: { branchId: number | undefined }) {
+  const { data: members = [], isLoading } = useAdminAboutTeam(branchId);
+  const createMember = useCreateTeamMember(branchId);
+  const deleteMember = useDeleteTeamMember(branchId);
 
   const [showModal, setShowModal] = useState(false);
   const [editId,    setEditId]    = useState<number | null>(null);
   const [form,      setForm]      = useState<SaveTeamMemberInput>(EMPTY_TEAM);
 
-  const updateMember = useUpdateTeamMember(editId ?? 0);
+  const updateMember = useUpdateTeamMember(branchId, editId ?? 0);
   const isSaving     = createMember.isPending || updateMember.isPending;
 
   const openCreate = () => { setEditId(null); setForm({ ...EMPTY_TEAM, sortOrder: members.length }); setShowModal(true); };
@@ -360,6 +401,7 @@ function TeamTab() {
     } catch { toast.error("Failed to save"); }
   };
 
+  if (!branchId) return null;
   if (isLoading) return <Loader />;
 
   return (

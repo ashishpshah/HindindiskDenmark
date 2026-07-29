@@ -75,6 +75,37 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(s => s.BranchId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // ── AboutPageSettings: one row per branch ────────────────────────────
+        modelBuilder.Entity<AboutPageSettings>()
+            .HasIndex(s => s.BranchId)
+            .IsUnique();
+
+        modelBuilder.Entity<AboutPageSettings>()
+            .HasOne(s => s.Branch)
+            .WithOne(b => b.AboutPageSettings)
+            .HasForeignKey<AboutPageSettings>(s => s.BranchId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // ── AboutTimelineItem: many per branch ───────────────────────────────
+        modelBuilder.Entity<AboutTimelineItem>()
+            .HasIndex(t => t.BranchId);
+
+        modelBuilder.Entity<AboutTimelineItem>()
+            .HasOne(t => t.Branch)
+            .WithMany(b => b.AboutTimelineItems)
+            .HasForeignKey(t => t.BranchId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // ── TeamMember: many per branch ───────────────────────────────────────
+        modelBuilder.Entity<TeamMember>()
+            .HasIndex(m => m.BranchId);
+
+        modelBuilder.Entity<TeamMember>()
+            .HasOne(m => m.Branch)
+            .WithMany(b => b.TeamMembers)
+            .HasForeignKey(m => m.BranchId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         // ── Composite primary keys (join tables) ──────────────────────────────
         modelBuilder.Entity<UserBranch>().HasKey(x => new { x.UserId, x.BranchId });
         modelBuilder.Entity<MenuItemLabel>().HasKey(x => new { x.MenuItemId, x.LabelId });
@@ -108,9 +139,6 @@ public class ApplicationDbContext : DbContext
             .HasIndex(h => h.SortOrder);
 
         // ── Single-row settings tables — no IDENTITY ─────────────────────────
-        modelBuilder.Entity<AboutPageSettings>()
-            .Property(s => s.Id)
-            .ValueGeneratedNever();
         modelBuilder.Entity<HomeStorySectionSettings>()
             .Property(s => s.Id)
             .ValueGeneratedNever();

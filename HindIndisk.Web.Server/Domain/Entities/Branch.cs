@@ -35,4 +35,7 @@ public class Branch
     public virtual ICollection<BranchMenuItemPrice>   BranchMenuItemPrices { get; set; } = [];
     public virtual ICollection<Order>                 Orders          { get; set; } = [];
     public virtual ICollection<Reservation>           Reservations    { get; set; } = [];
+    public virtual AboutPageSettings?                 AboutPageSettings { get; set; }
+    public virtual ICollection<AboutTimelineItem>     AboutTimelineItems { get; set; } = [];
+    public virtual ICollection<TeamMember>            TeamMembers     { get; set; } = [];
 }

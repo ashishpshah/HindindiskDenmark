@@ -19,33 +19,35 @@ export type AboutPageDto = {
 
 // ── Public hook ───────────────────────────────────────────────────────────────
 
-export function useAboutPage() {
+export function useAboutPage(branchId: number | undefined) {
   return useQuery({
-    queryKey: ["about-page"],
-    queryFn:  () => apiFetch<AboutPageDto>("/api/locations/about"),
+    queryKey: ["about-page", branchId],
+    queryFn:  () => apiFetch<AboutPageDto>(`/api/locations/about?branchId=${branchId}`),
+    enabled:  !!branchId,
     staleTime: 60_000,
   });
 }
 
-// ── Admin — settings ─────────────────────────────────────────────────────────
+// ── Admin — settings (branch-scoped) ────────────────────────────────────────
 
-export function useAdminAboutSettings() {
+export function useAdminAboutSettings(branchId: number | undefined) {
   return useQuery({
-    queryKey: ["admin-about-settings"],
-    queryFn:  () => apiFetch<AboutPageSettingsDto>("/api/admin/about/settings"),
+    queryKey: ["admin-about-settings", branchId],
+    queryFn:  () => apiFetch<AboutPageSettingsDto>(`/api/admin/branches/${branchId}/about/settings`),
+    enabled:  !!branchId,
   });
 }
 
-export function useUpdateAboutSettings() {
+export function useUpdateAboutSettings(branchId: number | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: Partial<AboutPageSettingsDto>) =>
-      apiFetch<AboutPageSettingsDto>("/api/admin/about/settings", {
+      apiFetch<AboutPageSettingsDto>(`/api/admin/branches/${branchId}/about/settings`, {
         method: "PATCH", body: JSON.stringify(input),
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-about-settings"] });
-      qc.invalidateQueries({ queryKey: ["about-page"] });
+      qc.invalidateQueries({ queryKey: ["admin-about-settings", branchId] });
+      qc.invalidateQueries({ queryKey: ["about-page", branchId] });
     },
   });
 }
@@ -124,76 +126,78 @@ export function useDeleteAboutMvv() {
   });
 }
 
-// ── Admin — timeline ──────────────────────────────────────────────────────────
+// ── Admin — timeline (branch-scoped) ────────────────────────────────────────
 
 export type SaveAboutTimelineInput = { year: string; title: string; titleDa: string; description: string; descriptionDa: string; sortOrder: number };
 
-export function useAdminAboutTimeline() {
+export function useAdminAboutTimeline(branchId: number | undefined) {
   return useQuery({
-    queryKey: ["admin-about-timeline"],
-    queryFn:  () => apiFetch<AboutTimelineDto[]>("/api/admin/about/timeline"),
+    queryKey: ["admin-about-timeline", branchId],
+    queryFn:  () => apiFetch<AboutTimelineDto[]>(`/api/admin/branches/${branchId}/about/timeline`),
+    enabled:  !!branchId,
   });
 }
 
-export function useCreateAboutTimeline() {
+export function useCreateAboutTimeline(branchId: number | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: SaveAboutTimelineInput) =>
-      apiFetch<AboutTimelineDto>("/api/admin/about/timeline", { method: "POST", body: JSON.stringify(input) }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-about-timeline"] }); qc.invalidateQueries({ queryKey: ["about-page"] }); },
+      apiFetch<AboutTimelineDto>(`/api/admin/branches/${branchId}/about/timeline`, { method: "POST", body: JSON.stringify(input) }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-about-timeline", branchId] }); qc.invalidateQueries({ queryKey: ["about-page", branchId] }); },
   });
 }
 
-export function useUpdateAboutTimeline(id: number) {
+export function useUpdateAboutTimeline(branchId: number | undefined, id: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: SaveAboutTimelineInput) =>
-      apiFetch<AboutTimelineDto>(`/api/admin/about/timeline/${id}`, { method: "PUT", body: JSON.stringify(input) }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-about-timeline"] }); qc.invalidateQueries({ queryKey: ["about-page"] }); },
+      apiFetch<AboutTimelineDto>(`/api/admin/branches/${branchId}/about/timeline/${id}`, { method: "PUT", body: JSON.stringify(input) }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-about-timeline", branchId] }); qc.invalidateQueries({ queryKey: ["about-page", branchId] }); },
   });
 }
 
-export function useDeleteAboutTimeline() {
+export function useDeleteAboutTimeline(branchId: number | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => apiFetch<void>(`/api/admin/about/timeline/${id}`, { method: "DELETE" }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-about-timeline"] }); qc.invalidateQueries({ queryKey: ["about-page"] }); },
+    mutationFn: (id: number) => apiFetch<void>(`/api/admin/branches/${branchId}/about/timeline/${id}`, { method: "DELETE" }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-about-timeline", branchId] }); qc.invalidateQueries({ queryKey: ["about-page", branchId] }); },
   });
 }
 
-// ── Admin — team ──────────────────────────────────────────────────────────────
+// ── Admin — team (branch-scoped) ────────────────────────────────────────────
 
 export type SaveTeamMemberInput = { name: string; role: string; roleDa: string; image: string; sortOrder: number; isActive: boolean };
 
-export function useAdminAboutTeam() {
+export function useAdminAboutTeam(branchId: number | undefined) {
   return useQuery({
-    queryKey: ["admin-about-team"],
-    queryFn:  () => apiFetch<TeamMemberDto[]>("/api/admin/about/team"),
+    queryKey: ["admin-about-team", branchId],
+    queryFn:  () => apiFetch<TeamMemberDto[]>(`/api/admin/branches/${branchId}/about/team`),
+    enabled:  !!branchId,
   });
 }
 
-export function useCreateTeamMember() {
+export function useCreateTeamMember(branchId: number | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: SaveTeamMemberInput) =>
-      apiFetch<TeamMemberDto>("/api/admin/about/team", { method: "POST", body: JSON.stringify(input) }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-about-team"] }); qc.invalidateQueries({ queryKey: ["about-page"] }); },
+      apiFetch<TeamMemberDto>(`/api/admin/branches/${branchId}/about/team`, { method: "POST", body: JSON.stringify(input) }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-about-team", branchId] }); qc.invalidateQueries({ queryKey: ["about-page", branchId] }); },
   });
 }
 
-export function useUpdateTeamMember(id: number) {
+export function useUpdateTeamMember(branchId: number | undefined, id: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: SaveTeamMemberInput) =>
-      apiFetch<TeamMemberDto>(`/api/admin/about/team/${id}`, { method: "PUT", body: JSON.stringify(input) }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-about-team"] }); qc.invalidateQueries({ queryKey: ["about-page"] }); },
+      apiFetch<TeamMemberDto>(`/api/admin/branches/${branchId}/about/team/${id}`, { method: "PUT", body: JSON.stringify(input) }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-about-team", branchId] }); qc.invalidateQueries({ queryKey: ["about-page", branchId] }); },
   });
 }
 
-export function useDeleteTeamMember() {
+export function useDeleteTeamMember(branchId: number | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => apiFetch<void>(`/api/admin/about/team/${id}`, { method: "DELETE" }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-about-team"] }); qc.invalidateQueries({ queryKey: ["about-page"] }); },
+    mutationFn: (id: number) => apiFetch<void>(`/api/admin/branches/${branchId}/about/team/${id}`, { method: "DELETE" }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["admin-about-team", branchId] }); qc.invalidateQueries({ queryKey: ["about-page", branchId] }); },
   });
 }

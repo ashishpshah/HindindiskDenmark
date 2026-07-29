@@ -86,11 +86,14 @@ public class LocationsController : ControllerBase
     public async Task<IActionResult> GetGallery()
         => Ok(await _gallery.GetActiveAsync());
 
-    /// <summary>All About page content (settings, stats, MVV, timeline, team).</summary>
+    /// <summary>All About page content (settings, stats, MVV, timeline, team) for a branch.</summary>
     [HttpGet("about")]
     [ProducesResponseType(typeof(AboutPageDto), 200)]
-    public async Task<IActionResult> GetAboutPage()
-        => Ok(await _about.GetPublicPageAsync());
+    public async Task<IActionResult> GetAboutPage([FromQuery] long branchId)
+    {
+        if (branchId <= 0) return BadRequest("branchId is required.");
+        return Ok(await _about.GetPublicPageAsync(branchId));
+    }
 
     /// <summary>Active Why Choose Us items for homepage.</summary>
     [HttpGet("why-choose-us")]

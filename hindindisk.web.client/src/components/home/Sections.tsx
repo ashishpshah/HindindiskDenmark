@@ -46,7 +46,10 @@ function Counter({ value }: { value: string }) {
 export function About() {
   const { t, lang } = useI18n();
   const { data: story } = useHomeStorySection();
-  const { data: about } = useAboutPage();
+  const { branch } = useCart();
+  const { data: branchesData = [] } = useBranches();
+  const resolvedBranchId = branchesData.find(b => b.name === branch)?.id;
+  const { data: about } = useAboutPage(resolvedBranchId);
 
   const da = lang === "da";
 

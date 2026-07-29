@@ -44,3 +44,4 @@ appsettings.Production.json
 e2e/
 test-results/
 HindIndisk.Web.Server/wwwroot/
+.claude/settings.json

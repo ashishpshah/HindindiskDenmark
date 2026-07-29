@@ -9,20 +9,20 @@ public class AboutService(ApplicationDbContext db) : IAboutService
 {
     // ── Settings ──────────────────────────────────────────────────────────────
 
-    public async Task<AboutPageSettingsDto> GetSettingsAsync()
+    public async Task<AboutPageSettingsDto> GetSettingsAsync(long branchId)
     {
-        var s = await db.AboutPageSettings.AsNoTracking().FirstOrDefaultAsync();
+        var s = await db.AboutPageSettings.AsNoTracking().FirstOrDefaultAsync(x => x.BranchId == branchId);
         return s is null
             ? new AboutPageSettingsDto(string.Empty, string.Empty)
             : MapSettings(s);
     }
 
-    public async Task<AboutPageSettingsDto> UpdateSettingsAsync(UpdateAboutSettingsRequest req)
+    public async Task<AboutPageSettingsDto> UpdateSettingsAsync(long branchId, UpdateAboutSettingsRequest req)
     {
-        var s = await db.AboutPageSettings.FirstOrDefaultAsync();
+        var s = await db.AboutPageSettings.FirstOrDefaultAsync(x => x.BranchId == branchId);
         if (s is null)
         {
-            s = new AboutPageSettings { Id = 1 };
+            s = new AboutPageSettings { BranchId = branchId };
             db.AboutPageSettings.Add(s);
         }
         if (req.HeroImage  is not null) s.HeroImage  = req.HeroImage;
@@ -102,23 +102,25 @@ public class AboutService(ApplicationDbContext db) : IAboutService
 
     // ── Timeline ──────────────────────────────────────────────────────────────
 
-    public async Task<IReadOnlyList<AboutTimelineDto>> GetTimelineAsync()
+    public async Task<IReadOnlyList<AboutTimelineDto>> GetTimelineAsync(long branchId)
     {
-        var rows = await db.AboutTimelineItems.AsNoTracking().OrderBy(x => x.SortOrder).ToListAsync();
+        var rows = await db.AboutTimelineItems.AsNoTracking()
+            .Where(x => x.BranchId == branchId)
+            .OrderBy(x => x.SortOrder).ToListAsync();
         return rows.Select(MapTimeline).ToList();
     }
 
-    public async Task<AboutTimelineDto> CreateTimelineItemAsync(SaveAboutTimelineRequest req)
+    public async Task<AboutTimelineDto> CreateTimelineItemAsync(long branchId, SaveAboutTimelineRequest req)
     {
-        var e = new AboutTimelineItem { Year = req.Year, Title = req.Title, TitleDa = req.TitleDa, Description = req.Description, DescriptionDa = req.DescriptionDa, SortOrder = req.SortOrder };
+        var e = new AboutTimelineItem { BranchId = branchId, Year = req.Year, Title = req.Title, TitleDa = req.TitleDa, Description = req.Description, DescriptionDa = req.DescriptionDa, SortOrder = req.SortOrder };
         db.AboutTimelineItems.Add(e);
         await db.SaveChangesAsync();
         return MapTimeline(e);
     }
 
-    public async Task<AboutTimelineDto> UpdateTimelineItemAsync(long id, SaveAboutTimelineRequest req)
+    public async Task<AboutTimelineDto> UpdateTimelineItemAsync(long branchId, long id, SaveAboutTimelineRequest req)
     {
-        var e = await db.AboutTimelineItems.FirstOrDefaultAsync(x => x.Id == id)
+        var e = await db.AboutTimelineItems.FirstOrDefaultAsync(x => x.Id == id && x.BranchId == branchId)
             ?? throw new KeyNotFoundException($"Timeline item {id} not found.");
         e.Year = req.Year; e.Title = req.Title; e.TitleDa = req.TitleDa;
         e.Description = req.Description; e.DescriptionDa = req.DescriptionDa; e.SortOrder = req.SortOrder;
@@ -126,9 +128,9 @@ public class AboutService(ApplicationDbContext db) : IAboutService
         return MapTimeline(e);
     }
 
-    public async Task<bool> DeleteTimelineItemAsync(long id)
+    public async Task<bool> DeleteTimelineItemAsync(long branchId, long id)
     {
-        var e = await db.AboutTimelineItems.FirstOrDefaultAsync(x => x.Id == id);
+        var e = await db.AboutTimelineItems.FirstOrDefaultAsync(x => x.Id == id && x.BranchId == branchId);
         if (e is null) return false;
         db.AboutTimelineItems.Remove(e);
         await db.SaveChangesAsync();
@@ -137,29 +139,33 @@ public class AboutService(ApplicationDbContext db) : IAboutService
 
     // ── Team ──────────────────────────────────────────────────────────────────
 
-    public async Task<IReadOnlyList<TeamMemberDto>> GetTeamAsync()
+    public async Task<IReadOnlyList<TeamMemberDto>> GetTeamAsync(long branchId)
     {
-        var rows = await db.TeamMembers.AsNoTracking().OrderBy(x => x.SortOrder).ToListAsync();
+        var rows = await db.TeamMembers.AsNoTracking()
+            .Where(x => x.BranchId == branchId)
+            .OrderBy(x => x.SortOrder).ToListAsync();
         return rows.Select(MapTeam).ToList();
     }
 
-    public async Task<IReadOnlyList<TeamMemberDto>> GetActiveTeamAsync()
+    public async Task<IReadOnlyList<TeamMemberDto>> GetActiveTeamAsync(long branchId)
     {
-        var rows = await db.TeamMembers.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.SortOrder).ToListAsync();
+        var rows = await db.TeamMembers.AsNoTracking()
+            .Where(x => x.BranchId == branchId && x.IsActive)
+            .OrderBy(x => x.SortOrder).ToListAsync();
         return rows.Select(MapTeam).ToList();
     }
 
-    public async Task<TeamMemberDto> CreateTeamMemberAsync(SaveTeamMemberRequest req)
+    public async Task<TeamMemberDto> CreateTeamMemberAsync(long branchId, SaveTeamMemberRequest req)
     {
-        var e = new TeamMember { Name = req.Name, Role = req.Role, RoleDa = req.RoleDa, Image = req.Image, SortOrder = req.SortOrder, IsActive = req.IsActive };
+        var e = new TeamMember { BranchId = branchId, Name = req.Name, Role = req.Role, RoleDa = req.RoleDa, Image = req.Image, SortOrder = req.SortOrder, IsActive = req.IsActive };
         db.TeamMembers.Add(e);
         await db.SaveChangesAsync();
         return MapTeam(e);
     }
 
-    public async Task<TeamMemberDto> UpdateTeamMemberAsync(long id, SaveTeamMemberRequest req)
+    public async Task<TeamMemberDto> UpdateTeamMemberAsync(long branchId, long id, SaveTeamMemberRequest req)
     {
-        var e = await db.TeamMembers.FirstOrDefaultAsync(x => x.Id == id)
+        var e = await db.TeamMembers.FirstOrDefaultAsync(x => x.Id == id && x.BranchId == branchId)
             ?? throw new KeyNotFoundException($"Team member {id} not found.");
         e.Name = req.Name; e.Role = req.Role; e.RoleDa = req.RoleDa;
         e.Image = req.Image; e.SortOrder = req.SortOrder; e.IsActive = req.IsActive;
@@ -167,9 +173,9 @@ public class AboutService(ApplicationDbContext db) : IAboutService
         return MapTeam(e);
     }
 
-    public async Task<bool> DeleteTeamMemberAsync(long id)
+    public async Task<bool> DeleteTeamMemberAsync(long branchId, long id)
     {
-        var e = await db.TeamMembers.FirstOrDefaultAsync(x => x.Id == id);
+        var e = await db.TeamMembers.FirstOrDefaultAsync(x => x.Id == id && x.BranchId == branchId);
         if (e is null) return false;
         db.TeamMembers.Remove(e);
         await db.SaveChangesAsync();
@@ -178,13 +184,13 @@ public class AboutService(ApplicationDbContext db) : IAboutService
 
     // ── Public aggregate ──────────────────────────────────────────────────────
 
-    public async Task<AboutPageDto> GetPublicPageAsync()
+    public async Task<AboutPageDto> GetPublicPageAsync(long branchId)
     {
-        var settings  = await GetSettingsAsync();
+        var settings  = await GetSettingsAsync(branchId);
         var stats     = await GetStatsAsync();
         var mvv       = await GetMvvAsync();
-        var timeline  = await GetTimelineAsync();
-        var team      = await GetActiveTeamAsync();
+        var timeline  = await GetTimelineAsync(branchId);
+        var team      = await GetActiveTeamAsync(branchId);
         return new AboutPageDto(settings, stats, mvv, timeline, team);
     }
 

@@ -4,8 +4,8 @@ namespace HindIndisk.Api.Application.Services;
 
 public interface IAboutService
 {
-    Task<AboutPageSettingsDto> GetSettingsAsync();
-    Task<AboutPageSettingsDto> UpdateSettingsAsync(UpdateAboutSettingsRequest req);
+    Task<AboutPageSettingsDto> GetSettingsAsync(long branchId);
+    Task<AboutPageSettingsDto> UpdateSettingsAsync(long branchId, UpdateAboutSettingsRequest req);
 
     Task<IReadOnlyList<AboutStatDto>> GetStatsAsync();
     Task<AboutStatDto> CreateStatAsync(SaveAboutStatRequest req);
@@ -17,16 +17,16 @@ public interface IAboutService
     Task<AboutMvvDto> UpdateMvvAsync(long id, SaveAboutMvvRequest req);
     Task<bool> DeleteMvvAsync(long id);
 
-    Task<IReadOnlyList<AboutTimelineDto>> GetTimelineAsync();
-    Task<AboutTimelineDto> CreateTimelineItemAsync(SaveAboutTimelineRequest req);
-    Task<AboutTimelineDto> UpdateTimelineItemAsync(long id, SaveAboutTimelineRequest req);
-    Task<bool> DeleteTimelineItemAsync(long id);
+    Task<IReadOnlyList<AboutTimelineDto>> GetTimelineAsync(long branchId);
+    Task<AboutTimelineDto> CreateTimelineItemAsync(long branchId, SaveAboutTimelineRequest req);
+    Task<AboutTimelineDto> UpdateTimelineItemAsync(long branchId, long id, SaveAboutTimelineRequest req);
+    Task<bool> DeleteTimelineItemAsync(long branchId, long id);
 
-    Task<IReadOnlyList<TeamMemberDto>> GetTeamAsync();
-    Task<IReadOnlyList<TeamMemberDto>> GetActiveTeamAsync();
-    Task<TeamMemberDto> CreateTeamMemberAsync(SaveTeamMemberRequest req);
-    Task<TeamMemberDto> UpdateTeamMemberAsync(long id, SaveTeamMemberRequest req);
-    Task<bool> DeleteTeamMemberAsync(long id);
+    Task<IReadOnlyList<TeamMemberDto>> GetTeamAsync(long branchId);
+    Task<IReadOnlyList<TeamMemberDto>> GetActiveTeamAsync(long branchId);
+    Task<TeamMemberDto> CreateTeamMemberAsync(long branchId, SaveTeamMemberRequest req);
+    Task<TeamMemberDto> UpdateTeamMemberAsync(long branchId, long id, SaveTeamMemberRequest req);
+    Task<bool> DeleteTeamMemberAsync(long branchId, long id);
 
-    Task<AboutPageDto> GetPublicPageAsync();
+    Task<AboutPageDto> GetPublicPageAsync(long branchId);
 }
