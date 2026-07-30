@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
-import { Phone, MapPin, Package, Clock, Loader2, ChevronRight, ChevronLeft, Search, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Phone, MapPin, Package, Clock, Loader2, ChevronRight, ChevronLeft, Search, ChevronsLeft, ChevronsRight, Mail } from "lucide-react";
 import { todayInDenmark } from "@/lib/denmarkTime";
 import { toast } from "sonner";
 import { useAdminOrders, type AdminOrderDto, type OrderStatusHistoryDto } from "@/hooks/useAdminOrders";
 import { useUpdateOrderStatus } from "@/hooks/useUpdateOrderStatus";
+import { useResendOrderEmail } from "@/hooks/useResendEmail";
 import { useAdminOrderStatuses, type OrderStatusDto } from "@/hooks/useAdminOrderStatuses";
 import { useAdminOrderStatusTransitions } from "@/hooks/useAdminOrderStatusTransitions";
 import { useBranches } from "@/hooks/useBranches";
@@ -20,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { formatDate, formatTime, formatDateStr, formatTimeStr } from "@/lib/dateFormat";
-import { useI18n } from "@/i18n/I18nProvider";
 
 function fmtDate(iso: string) {
   return { date: formatDate(iso), time: formatTime(iso) };
@@ -50,7 +50,6 @@ function statusStyle(statusName: string, statuses: OrderStatusDto[]) {
 
 function StatusPill({ status, allStatuses }: { status: string; allStatuses: OrderStatusDto[] }) {
   const { color, s } = statusStyle(status, allStatuses);
-  const { lang } = useI18n();
   return (
     <span
       className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
@@ -59,7 +58,7 @@ function StatusPill({ status, allStatuses }: { status: string; allStatuses: Orde
         color,
       }}
     >
-      {lang === "da" ? (s?.nameDa ?? status) : (s?.name ?? status)}
+      {s?.name ?? status}
     </span>
   );
 }
@@ -77,6 +76,7 @@ function OrderModal({
   total,
   allStatuses,
   allTransitions,
+  transitionsUnavailable,
 }: {
   order: AdminOrderDto;
   onClose: () => void;
@@ -90,6 +90,7 @@ function OrderModal({
   total: number;
   allStatuses: OrderStatusDto[];
   allTransitions: { fromStatusName: string; toStatusName: string; serviceType: string }[];
+  transitionsUnavailable: boolean;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -100,7 +101,7 @@ function OrderModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [hasPrev, hasNext, onPrev, onNext]);
 
-  const { lang } = useI18n();
+  const resendEmail = useResendOrderEmail();
   const activeStatuses = allStatuses.filter(s => s.isActive);
   const transitionsFromCurrent = allTransitions.filter(t => t.fromStatusName === order.status);
   const availableTargets = transitionsFromCurrent
@@ -229,17 +230,41 @@ function OrderModal({
           <div className="border-t pt-5">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Change Status</p>
-              {isUpdating && (
-                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Updating…
-                </span>
-              )}
+              <div className="flex items-center gap-3">
+                {isUpdating && (
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Updating…
+                  </span>
+                )}
+                <button
+                  data-tagid="button-orders-resend-email"
+                  type="button"
+                  disabled={resendEmail.isPending}
+                  onClick={() => {
+                    resendEmail.mutate(order.id, {
+                      onSuccess: () => toast.success(`Resent "${order.status}" email to customer`),
+                      onError: (e) => toast.error((e as Error).message || "Failed to resend email"),
+                    });
+                  }}
+                  className="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {resendEmail.isPending
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <Mail className="h-3.5 w-3.5" />}
+                  Resend Email
+                </button>
+              </div>
             </div>
+            {transitionsUnavailable && (
+              <p className="mb-2 text-xs text-amber-600">
+                Status options couldn't be loaded — buttons are disabled until this succeeds. Try refreshing the page.
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
               {activeStatuses.map(s => {
                 const isCurrent = order.status === s.name;
                 const isAllowed = allowedStatuses.some(a => a.name === s.name);
-                const isDisabled = isCurrent || isUpdating || !isAllowed;
+                const isDisabled = isCurrent || isUpdating || !isAllowed || transitionsUnavailable;
                 const { color } = statusStyle(s.name, allStatuses);
                 return (
                   <button data-tagid={`button-orders-status-${s.name}`}
@@ -256,7 +281,7 @@ function OrderModal({
                       color: isCurrent ? "#ffffff" : isAllowed ? color : hexToRgba(color, 0.4),
                     }}
                   >
-                    {lang === "da" ? (s.nameDa ?? s.name) : s.name}
+                    {s.name}
                     {isCurrent && <span className="ml-1.5 opacity-60">✓</span>}
                   </button>
                 );
@@ -351,8 +376,6 @@ const PRESET_LABELS: { key: DatePreset; label: string }[] = [
 ];
 
 function AdminOrders() {
-  const { lang } = useI18n();
-
   const [tab, setTab] = useState<string>("All");
   const [branchId, setBranchId] = useState<number | undefined>(undefined);
   const [search, setSearch] = useState("");
@@ -385,8 +408,8 @@ function AdminOrders() {
     orderType: orderType !== "All" ? orderType : undefined,
   });
   const { data: branches = [] } = useBranches();
-  const { data: statuses = [] } = useAdminOrderStatuses();
-  const { data: transitions = [] } = useAdminOrderStatusTransitions();
+  const { data: statuses = [], isLoading: statusesLoading, isError: statusesError } = useAdminOrderStatuses();
+  const { data: transitions = [], isLoading: transitionsLoading, isError: transitionsError } = useAdminOrderStatusTransitions();
   const updateStatus = useUpdateOrderStatus();
 
   const activeStatuses = useMemo(() =>
@@ -571,7 +594,7 @@ function AdminOrders() {
                     : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
                 ].join(" ")}
               >
-                {lang === "da" ? (activeStatuses.find(s => s.name === t)?.nameDa ?? t) : t}
+                {t}
                 {isActive && !isLoading && (
                   <span className="inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold min-w-[18px] bg-primary/10 text-primary">
                     {totalOrders}
@@ -595,7 +618,7 @@ function AdminOrders() {
           </div>
         ) : filteredOrders.length === 0 ? (
           <div className="py-16 text-center text-sm text-muted-foreground">
-            No orders{tab !== "All" ? ` with status "${lang === "da" ? (activeStatuses.find(s => s.name === tab)?.nameDa ?? tab) : tab}"` : ""}.
+            No orders{tab !== "All" ? ` with status "${tab}"` : ""}.
           </div>
         ) : (
           <div className="divide-y">
@@ -603,11 +626,14 @@ function AdminOrders() {
             <div className="flex items-center gap-3 px-4 py-2.5 bg-muted/50 border-l-4 border-l-transparent">
               <div className="w-[80px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Order</div>
               <div className="flex-1 min-w-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Customer</div>
-              <div className="hidden lg:block w-[148px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Date & Time</div>
+              <div className="hidden md:block w-[110px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Branch</div>
+              <div className="hidden lg:block w-[110px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Order Time</div>
               <div className="hidden sm:block w-[80px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Priority</div>
               <div className="hidden md:block w-[80px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Type</div>
+              <div className="hidden md:block w-[60px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-center">Items</div>
               <div className="w-[126px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Status</div>
               <div className="hidden md:block w-[76px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Total</div>
+              <div className="hidden lg:block w-[110px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-right">Created</div>
               <div className="w-4 shrink-0" />
             </div>
 
@@ -652,21 +678,27 @@ function AdminOrders() {
                   {/* Customer */}
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{order.customerName || order.customerEmail}</div>
-                    <div className="text-xs text-muted-foreground truncate">
+                    <div className="text-xs text-muted-foreground truncate md:hidden">
                       {order.branchName.replace("Hind Indisk ", "")} · {order.orderType} · {order.itemCount} items
                     </div>
                   </div>
 
-                  {/* Date & Time */}
-                  {(() => {
-                    const f = fmtDate(order.createdAt);
-                    return (
-                      <div className="hidden lg:flex flex-col items-end w-[148px] shrink-0 text-right">
-                        <span className="text-xs font-medium text-foreground tabular-nums">{f.date}</span>
-                        <span className="text-[11px] text-muted-foreground tabular-nums">{f.time}</span>
-                      </div>
-                    );
-                  })()}
+                  {/* Branch */}
+                  <div className="hidden md:block w-[110px] shrink-0 text-sm text-muted-foreground truncate">
+                    {order.branchName.replace("Hind Indisk ", "")}
+                  </div>
+
+                  {/* Order Time */}
+                  <div className="hidden lg:flex flex-col items-end w-[110px] shrink-0 text-right">
+                    {order.scheduledDate && order.scheduledTime ? (
+                      <>
+                        <span className="text-xs font-medium text-foreground tabular-nums">{formatDateStr(order.scheduledDate)}</span>
+                        <span className="text-[11px] text-muted-foreground tabular-nums">{formatTimeStr(order.scheduledTime)}</span>
+                      </>
+                    ) : (
+                      <span className="text-xs font-semibold text-red-600">ASAP</span>
+                    )}
+                  </div>
 
                   {/* Priority */}
                   <div className="hidden sm:flex w-[80px] shrink-0">
@@ -685,6 +717,11 @@ function AdminOrders() {
                     </span>
                   </div>
 
+                  {/* Items */}
+                  <div className="hidden md:block w-[60px] shrink-0 text-center text-sm text-muted-foreground tabular-nums">
+                    {order.itemCount}
+                  </div>
+
                   {/* Status */}
                   <div className="w-[126px] shrink-0">
                     <StatusPill status={order.status} allStatuses={activeStatuses} />
@@ -694,6 +731,17 @@ function AdminOrders() {
                   <span className="hidden md:block w-[76px] shrink-0 font-semibold tabular-nums text-sm whitespace-nowrap text-right">
                     {order.total.toFixed(0)} DKK
                   </span>
+
+                  {/* Created */}
+                  {(() => {
+                    const created = fmtDate(order.createdAt);
+                    return (
+                      <div className="hidden lg:flex flex-col items-end w-[110px] shrink-0 text-right">
+                        <span className="text-xs font-medium text-foreground tabular-nums">{created.date}</span>
+                        <span className="text-[11px] text-muted-foreground tabular-nums">{created.time}</span>
+                      </div>
+                    );
+                  })()}
 
                   {/* Chevron */}
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -812,6 +860,7 @@ function AdminOrders() {
             total={totalOrders}
             allStatuses={activeStatuses}
             allTransitions={transitions}
+            transitionsUnavailable={statusesLoading || transitionsLoading || statusesError || transitionsError}
           />
         );
       })()}

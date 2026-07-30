@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
-import { UserCheck, UserX, Search, ChevronRight, Loader2, ChevronLeft, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { UserCheck, UserX, Search, ChevronRight, Loader2, ChevronLeft, ChevronsLeft, ChevronsRight, Mail } from "lucide-react";
 import { getPriority } from "@/lib/priority";
-import { formatDate, formatDateStr, formatTimeStr } from "@/lib/dateFormat";
+import { formatDate, formatTime, formatDateStr, formatTimeStr } from "@/lib/dateFormat";
 import { toast } from "sonner";
 import { useAdminReservations, type AdminReservationDto } from "@/hooks/useAdminReservations";
 import { useUpdateReservationStatus } from "@/hooks/useUpdateReservationStatus";
+import { useResendReservationEmail } from "@/hooks/useResendEmail";
 import { useBranches } from "@/hooks/useBranches";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -81,6 +82,7 @@ function ReservationExpandedRow({
   onStatus: (id: number, s: string) => void;
   isUpdating: boolean;
 }) {
+  const resendEmail = useResendReservationEmail();
   return (
     <div className="grid gap-4 sm:grid-cols-3 text-sm">
       <div className="space-y-1">
@@ -88,6 +90,14 @@ function ReservationExpandedRow({
         <p className="font-medium">{r.contactName}</p>
         <p className="text-muted-foreground">{r.contactPhone}</p>
         <p className="text-muted-foreground text-xs">{r.contactEmail}</p>
+      </div>
+      <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Reservation Date &amp; Time</p>
+        <p className="font-medium tabular-nums">{formatDateStr(r.date)} at {formatTimeStr(r.timeSlot)}</p>
+      </div>
+      <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Created</p>
+        <p className="font-medium tabular-nums">{formatDate(r.createdAt)} {formatTime(r.createdAt)}</p>
       </div>
       {r.specialRequests && (
         <div className="space-y-1">
@@ -110,6 +120,20 @@ function ReservationExpandedRow({
               <UserCheck className="mr-1.5 h-3.5 w-3.5" /> Confirm
             </Button>
           )}
+          <Button size="sm" variant="outline"
+            disabled={resendEmail.isPending}
+            onClick={() => {
+              resendEmail.mutate(r.id, {
+                onSuccess: () => toast.success(`Resent "${r.status}" email to guest`),
+                onError: (e) => toast.error((e as Error).message || "Failed to resend email"),
+              });
+            }}
+            data-tagid={`button-reservations-resend-email-${r.id}`}>
+            {resendEmail.isPending
+              ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              : <Mail className="mr-1.5 h-3.5 w-3.5" />}
+            Resend Email
+          </Button>
           {r.status !== "Cancelled" && (
             <Button size="sm" variant="outline" className="text-red-700 border-red-200 hover:bg-red-50"
               disabled={isUpdating} onClick={() => onStatus(r.id, "Cancelled")} data-tagid={`button-reservations-cancel-${r.id}`}>
@@ -348,10 +372,10 @@ function AdminReservations() {
               <div className="w-[80px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">#</div>
               <div className="flex-1 min-w-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Guest</div>
               <div className="hidden lg:block w-[120px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Branch</div>
-              <div className="hidden sm:block w-[130px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Date / Time</div>
+              <div className="hidden sm:block w-[130px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Reservation Time</div>
               <div className="hidden md:block w-[60px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground text-center">Guests</div>
               <div className="w-[110px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Status</div>
-              <div className="hidden lg:block w-[100px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Booked On</div>
+              <div className="hidden lg:block w-[130px] shrink-0 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Created</div>
               <div className="w-4 shrink-0" />
             </div>
 
@@ -387,7 +411,7 @@ function AdminReservations() {
                         {r.isLinkedToAccount && (
                           <span className="rounded-full bg-blue-100 text-blue-700 px-1.5 py-0.5 text-[10px] font-semibold shrink-0">Member</span>
                         )}
-                        <span className="truncate">{r.branchName.replace("Hind Indisk ", "")}</span>
+                        <span className="truncate lg:hidden">{r.branchName.replace("Hind Indisk ", "")}</span>
                       </div>
                     </div>
 
@@ -396,7 +420,7 @@ function AdminReservations() {
                       {r.branchName.replace("Hind Indisk ", "")}
                     </div>
 
-                    {/* Date / Time */}
+                    {/* Reservation Time */}
                     <div className="hidden sm:flex flex-col w-[130px] shrink-0">
                       <span className="text-xs font-medium tabular-nums">{formatDateStr(r.date)}</span>
                       <span className="text-[11px] text-muted-foreground tabular-nums">{formatTimeStr(r.timeSlot)}</span>
@@ -419,9 +443,10 @@ function AdminReservations() {
                       </span>
                     </div>
 
-                    {/* Booked On */}
-                    <div className="hidden lg:block w-[100px] shrink-0 text-xs text-muted-foreground tabular-nums">
-                      {formatDate(r.createdAt)}
+                    {/* Created */}
+                    <div className="hidden lg:flex flex-col w-[130px] shrink-0 text-xs text-muted-foreground tabular-nums">
+                      <span>{formatDate(r.createdAt)}</span>
+                      <span className="text-[11px]">{formatTime(r.createdAt)}</span>
                     </div>
 
                     <ChevronRight className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
