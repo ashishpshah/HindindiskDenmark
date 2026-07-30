@@ -1,6 +1,7 @@
 using HindIndisk.Api.Application.DTOs.About;
 using HindIndisk.Api.Application.DTOs.Closure;
 using HindIndisk.Api.Application.DTOs.Homepage;
+using HindIndisk.Api.Application.DTOs.Footer;
 using HindIndisk.Api.Application.DTOs.Gallery;
 using HindIndisk.Api.Application.DTOs.HeroSlide;
 using HindIndisk.Api.Application.DTOs.Location;
@@ -22,11 +23,13 @@ public class LocationsController : ControllerBase
     private readonly IAboutService            _about;
     private readonly IWhyChooseUsService      _whyChooseUs;
     private readonly IHomeStorySectionService _homeStory;
+    private readonly IFooterSettingsService   _footerSettings;
 
     public LocationsController(ILocationService locations, SlotService slots,
         BranchClosureService closures, IHeroSlideService heroSlides,
         IGalleryImageService gallery, IAboutService about,
-        IWhyChooseUsService whyChooseUs, IHomeStorySectionService homeStory)
+        IWhyChooseUsService whyChooseUs, IHomeStorySectionService homeStory,
+        IFooterSettingsService footerSettings)
     {
         _locations   = locations;
         _slots       = slots;
@@ -36,6 +39,7 @@ public class LocationsController : ControllerBase
         _about       = about;
         _whyChooseUs = whyChooseUs;
         _homeStory   = homeStory;
+        _footerSettings = footerSettings;
     }
 
     /// <summary>All restaurant branches with address, hours, and contact details.</summary>
@@ -106,4 +110,10 @@ public class LocationsController : ControllerBase
     [ProducesResponseType(typeof(HomeStorySectionDto), 200)]
     public async Task<IActionResult> GetHomeStory()
         => Ok(await _homeStory.GetAsync());
+
+    /// <summary>Footer copyright text (EN/DA).</summary>
+    [HttpGet("footer-settings")]
+    [ProducesResponseType(typeof(FooterSettingsDto), 200)]
+    public async Task<IActionResult> GetFooterSettings()
+        => Ok(await _footerSettings.GetAsync());
 }

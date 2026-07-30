@@ -45,6 +45,7 @@ import { Route as AdminMenuIndexRouteImport } from './routes/admin.menu.index'
 import { Route as AdminBranchesIndexRouteImport } from './routes/admin.branches.index'
 import { Route as AdminWebsiteHomepageRouteImport } from './routes/admin.website.Homepage'
 import { Route as AdminWebsiteGalleryRouteImport } from './routes/admin.website.Gallery'
+import { Route as AdminWebsiteFooterRouteImport } from './routes/admin.website.Footer'
 import { Route as AdminWebsiteAboutRouteImport } from './routes/admin.website.About'
 import { Route as AdminMenusNewRouteImport } from './routes/admin.menus.new'
 import { Route as AdminMenusMenuIdRouteImport } from './routes/admin.menus.$menuId'
@@ -233,6 +234,11 @@ const AdminWebsiteGalleryRoute = AdminWebsiteGalleryRouteImport.update({
   path: '/Gallery',
   getParentRoute: () => AdminWebsiteRoute,
 } as any)
+const AdminWebsiteFooterRoute = AdminWebsiteFooterRouteImport.update({
+  id: '/Footer',
+  path: '/Footer',
+  getParentRoute: () => AdminWebsiteRoute,
+} as any)
 const AdminWebsiteAboutRoute = AdminWebsiteAboutRouteImport.update({
   id: '/About',
   path: '/About',
@@ -308,6 +314,7 @@ export interface FileRoutesByFullPath {
   '/admin/menus/$menuId': typeof AdminMenusMenuIdRoute
   '/admin/menus/new': typeof AdminMenusNewRoute
   '/admin/website/About': typeof AdminWebsiteAboutRoute
+  '/admin/website/Footer': typeof AdminWebsiteFooterRoute
   '/admin/website/Gallery': typeof AdminWebsiteGalleryRoute
   '/admin/website/Homepage': typeof AdminWebsiteHomepageRoute
   '/admin/branches/': typeof AdminBranchesIndexRoute
@@ -347,6 +354,7 @@ export interface FileRoutesByTo {
   '/admin/menus/$menuId': typeof AdminMenusMenuIdRoute
   '/admin/menus/new': typeof AdminMenusNewRoute
   '/admin/website/About': typeof AdminWebsiteAboutRoute
+  '/admin/website/Footer': typeof AdminWebsiteFooterRoute
   '/admin/website/Gallery': typeof AdminWebsiteGalleryRoute
   '/admin/website/Homepage': typeof AdminWebsiteHomepageRoute
   '/admin/branches': typeof AdminBranchesIndexRoute
@@ -393,6 +401,7 @@ export interface FileRoutesById {
   '/admin/menus/$menuId': typeof AdminMenusMenuIdRoute
   '/admin/menus/new': typeof AdminMenusNewRoute
   '/admin/website/About': typeof AdminWebsiteAboutRoute
+  '/admin/website/Footer': typeof AdminWebsiteFooterRoute
   '/admin/website/Gallery': typeof AdminWebsiteGalleryRoute
   '/admin/website/Homepage': typeof AdminWebsiteHomepageRoute
   '/admin/branches/': typeof AdminBranchesIndexRoute
@@ -440,6 +449,7 @@ export interface FileRouteTypes {
     | '/admin/menus/$menuId'
     | '/admin/menus/new'
     | '/admin/website/About'
+    | '/admin/website/Footer'
     | '/admin/website/Gallery'
     | '/admin/website/Homepage'
     | '/admin/branches/'
@@ -479,6 +489,7 @@ export interface FileRouteTypes {
     | '/admin/menus/$menuId'
     | '/admin/menus/new'
     | '/admin/website/About'
+    | '/admin/website/Footer'
     | '/admin/website/Gallery'
     | '/admin/website/Homepage'
     | '/admin/branches'
@@ -524,6 +535,7 @@ export interface FileRouteTypes {
     | '/admin/menus/$menuId'
     | '/admin/menus/new'
     | '/admin/website/About'
+    | '/admin/website/Footer'
     | '/admin/website/Gallery'
     | '/admin/website/Homepage'
     | '/admin/branches/'
@@ -800,6 +812,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWebsiteGalleryRouteImport
       parentRoute: typeof AdminWebsiteRoute
     }
+    '/admin/website/Footer': {
+      id: '/admin/website/Footer'
+      path: '/Footer'
+      fullPath: '/admin/website/Footer'
+      preLoaderRoute: typeof AdminWebsiteFooterRouteImport
+      parentRoute: typeof AdminWebsiteRoute
+    }
     '/admin/website/About': {
       id: '/admin/website/About'
       path: '/About'
@@ -921,12 +940,14 @@ const AdminMenusRouteWithChildren = AdminMenusRoute._addFileChildren(
 
 interface AdminWebsiteRouteChildren {
   AdminWebsiteAboutRoute: typeof AdminWebsiteAboutRoute
+  AdminWebsiteFooterRoute: typeof AdminWebsiteFooterRoute
   AdminWebsiteGalleryRoute: typeof AdminWebsiteGalleryRoute
   AdminWebsiteHomepageRoute: typeof AdminWebsiteHomepageRoute
 }
 
 const AdminWebsiteRouteChildren: AdminWebsiteRouteChildren = {
   AdminWebsiteAboutRoute: AdminWebsiteAboutRoute,
+  AdminWebsiteFooterRoute: AdminWebsiteFooterRoute,
   AdminWebsiteGalleryRoute: AdminWebsiteGalleryRoute,
   AdminWebsiteHomepageRoute: AdminWebsiteHomepageRoute,
 }

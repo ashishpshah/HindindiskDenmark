@@ -109,6 +109,7 @@ namespace HindIndisk.Web.Server
 			builder.Services.AddScoped<IAboutService, AboutService>();
 			builder.Services.AddScoped<IWhyChooseUsService, WhyChooseUsService>();
 			builder.Services.AddScoped<IHomeStorySectionService, HomeStorySectionService>();
+			builder.Services.AddScoped<IFooterSettingsService, FooterSettingsService>();
 			builder.Services.AddTransient<IExceptionLogService, ExceptionLogService>();
 
 			// ── Email service ─────────────────────────────────────────────────────────────

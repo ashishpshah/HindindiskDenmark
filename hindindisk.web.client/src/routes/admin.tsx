@@ -4,6 +4,7 @@ import {
   LayoutDashboard, ShoppingBag, CalendarCheck, ExternalLink, LogOut,
   UtensilsCrossed, Users, Eye, EyeOff, Loader2, BookOpen, Store, Menu, X,
   PowerOff, AlertTriangle, Globe, Home, ImageIcon, ChevronDown, Info, Mail,
+  Copyright,
 } from "lucide-react";
 import { useAdminAuth, isAdminUser } from "@/context/AdminAuthContext";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ const NAV: NavEntry[] = [
       { to: "/admin/website/Homepage", label: "Homepage", icon: Home },
       { to: "/admin/website/Gallery",  label: "Gallery",  icon: ImageIcon },
       { to: "/admin/website/About",    label: "About",    icon: Info },
+      { to: "/admin/website/Footer",   label: "Footer",   icon: Copyright },
     ],
   },
 ];

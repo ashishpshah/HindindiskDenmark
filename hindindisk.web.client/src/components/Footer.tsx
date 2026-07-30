@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Facebook, Instagram, Twitter, Phone, Mail, MapPin } from "lucide-react";
 import { logoUrl, navLinks } from "@/data/mock";
 import { useBranches } from "@/hooks/useBranches";
+import { useFooterSettings } from "@/hooks/useFooterSettings";
 import { useI18n } from "@/i18n/I18nProvider";
 import { nowInDenmark } from "@/lib/denmarkTime";
 
@@ -15,8 +16,11 @@ const NAV_KEY_MAP: Record<string, string> = {
 };
 
 export function Footer() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { data: branchesData = [] } = useBranches();
+  const { data: footerSettings } = useFooterSettings();
+  const copyright =
+    (lang === "da" ? footerSettings?.copyrightDa : footerSettings?.copyright) || t("footer.copyright");
   return (
     <footer className="relative mt-32 overflow-hidden bg-secondary text-secondary-foreground">
       <div className="absolute inset-0 opacity-30" style={{ background: "var(--gradient-dark)" }} />
@@ -50,16 +54,21 @@ export function Footer() {
           </ul>
         </div>
 
-        {branchesData.map((b) => (
+        {branchesData.map((b) => {
+          const name         = (lang === "da" ? b.nameDa         : b.name)         || b.name;
+          const address      = (lang === "da" ? b.addressDa      : b.address)      || b.address;
+          const addressLine2 = (lang === "da" ? b.addressLine2Da : b.addressLine2) || b.addressLine2;
+          const city         = (lang === "da" ? b.cityDa         : b.city)         || b.city;
+          return (
           <div key={b.id}>
-            <h4 className="mb-4 font-display text-xl text-primary">{b.name}</h4>
+            <h4 className="mb-4 font-display text-xl text-primary">{name}</h4>
             <div className="space-y-2.5 text-base font-sans text-white/70">
               <div className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-primary/70" />
                 <div>
-                  <div>{b.address}</div>
-                  {b.addressLine2 && <div>{b.addressLine2}</div>}
-                  <div>{b.city}, {b.postalCode}</div>
+                  <div>{address}</div>
+                  {addressLine2 && <div>{addressLine2}</div>}
+                  <div>{city}, {b.postalCode}</div>
                 </div>
               </div>
               {b.phone && (
@@ -82,11 +91,13 @@ export function Footer() {
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
-      <div className="relative border-t border-white/10 px-6 py-6 text-center text-sm text-white/50">
-        © {nowInDenmark().getFullYear()} {t("footer.copyright")}
-      </div>
+      <div
+        className="relative border-t border-white/10 px-6 py-6 text-center text-sm text-white/50 [&_a]:text-primary [&_a]:hover:underline"
+        dangerouslySetInnerHTML={{ __html: `© ${nowInDenmark().getFullYear()} ${copyright}` }}
+      />
     </footer>
   );
 }

@@ -39,6 +39,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<GalleryImage>       GalleryImages       => Set<GalleryImage>();
     public DbSet<WhyChooseUsItem>    WhyChooseUsItems    => Set<WhyChooseUsItem>();
     public DbSet<HomeStorySectionSettings> HomeStorySectionSettings => Set<HomeStorySectionSettings>();
+    public DbSet<FooterSettings> FooterSettings => Set<FooterSettings>();
     public DbSet<AboutPageSettings>  AboutPageSettings   => Set<AboutPageSettings>();
     public DbSet<AboutStat>          AboutStats          => Set<AboutStat>();
     public DbSet<AboutMvvItem>       AboutMvvItems       => Set<AboutMvvItem>();
@@ -141,6 +142,9 @@ public class ApplicationDbContext : DbContext
 
         // ── Single-row settings tables — no IDENTITY ─────────────────────────
         modelBuilder.Entity<HomeStorySectionSettings>()
+            .Property(s => s.Id)
+            .ValueGeneratedNever();
+        modelBuilder.Entity<FooterSettings>()
             .Property(s => s.Id)
             .ValueGeneratedNever();
         modelBuilder.Entity<EmailConfig>()
