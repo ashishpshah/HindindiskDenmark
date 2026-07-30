@@ -23,34 +23,11 @@ public class ReservationService : IReservationService
 
     public async Task<ReservationDto> CreateAsync(CreateReservationRequest request, long? loggedInUserId = null)
     {
-        long   userId;
+        long   userId = loggedInUserId ?? 0;
         bool   sendCredentials  = false;
         string? credentialsPwd  = null;
         string? credentialsEmail = null;
         string  credentialsName  = string.Empty;
-
-        if (loggedInUserId.HasValue)
-        {
-            // Cases 1 & 2: authenticated — use existing account, no creation
-            userId = loggedInUserId.Value;
-        }
-        else
-        {
-            // Cases 3 & 4: guest — find or create by contact details
-            var (customer, isNew, pwd) = await _customers.FindOrCreateAsync(
-                request.Firstname ?? string.Empty, request.Lastname ?? string.Empty, request.Phone, request.Email);
-            userId = customer.Id;
-
-            if (isNew && pwd is not null)
-            {
-                // Case 3: brand-new account
-                sendCredentials  = true;
-                credentialsPwd   = pwd;
-                credentialsEmail = customer.Email!;
-                credentialsName  = $"{customer.Firstname} {customer.Lastname}".Trim();
-            }
-            // Case 4: existing account — no email
-        }
 
         var branch = await _db.Branches.AsNoTracking()
             .FirstOrDefaultAsync(b => b.Id == request.BranchId)
@@ -115,8 +92,13 @@ public class ReservationService : IReservationService
 
     public async Task<IReadOnlyList<ReservationDto>> GetMyAsync(long userId)
     {
+            var userEmail = await _db.Users.AsNoTracking()
+                .Where(u => u.Id == userId)
+                .Select(u => u.Email)
+                .FirstOrDefaultAsync();
+
         var list = await _db.Reservations
-            .Where(r => r.UserId == userId)
+            .Where(r => r.UserId == userId || r.ContactEmail == userEmail)
             .Include(r => r.Branch)
             .OrderByDescending(r => r.Date)
             .AsNoTracking()

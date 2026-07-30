@@ -326,7 +326,6 @@ function CheckoutPage() {
                           >
                             <div className="flex items-center gap-2 font-semibold"><MapPin className="h-4 w-4 text-primary" />{b.name}</div>
                             <div className="mt-1 text-sm text-muted-foreground">{b.address}, {b.city}</div>
-                            <div className="mt-1 text-xs text-muted-foreground">{b.weekdayHours}</div>
                             {isClosedNow(b.id, "Delivery") && (
                               <div className="mt-2 text-xs text-orange-600 font-medium">
                                 Delivery temporarily closed

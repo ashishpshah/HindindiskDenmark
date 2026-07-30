@@ -45,7 +45,14 @@
       "Bash(wmic process *)",
       "Bash(curl -sS -i --max-time 15 \"http://localhost:5228/api/menu/items\")",
       "Bash(sqlcmd -S mssql1.unoeuro.com,1433 -U hindindisk_dk -P Dwy6xz9RAbH2eBcf4kgt -d hindindisk_dk_db_final -C -Q ' *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(npm ls *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
+      "Bash(npx playwright *)",
+      "Bash(sqlcmd -S mssql1.unoeuro.com,1433 -d hindindisk_dk_db_final -U hindindisk_dk -P 'Dwy6xz9RAbH2eBcf4kgt' -C -Q \"SET NOCOUNT ON; SELECT Id, UserId, PlacedByUserId, ContactEmail, Status, CreatedAt FROM Orders WHERE Id = 63;\" -W)",
+      "Bash(sqlcmd -S mssql1.unoeuro.com,1433 -d hindindisk_dk_db_final -U hindindisk_dk -P 'Dwy6xz9RAbH2eBcf4kgt' -C -Q \"SET NOCOUNT ON; SELECT Id, Email, Firstname, Lastname, Role FROM Users WHERE Id IN \\(1,149\\);\" -W)",
+      "Bash(sqlcmd -S mssql1.unoeuro.com,1433 -d hindindisk_dk_db_final -U hindindisk_dk -P 'Dwy6xz9RAbH2eBcf4kgt' -C -Q \"SET NOCOUNT ON; SELECT * FROM Users WHERE Id IN \\(1,149\\);\" -W)",
+      "Bash(node -e \"console.log\\(require\\('./package.json'\\).scripts\\)\")"
     ],
     "additionalDirectories": [
       "D:\\VK\\Projects\\Personal\\AI\\PracticalApps\\taste-of-denmark-main\\src",

@@ -25,42 +25,20 @@ public class OrderService : IOrderService
         _adminHub  = adminHub;
     }
 
-    public async Task<OrderDto> CreateOrderAsync(CreateOrderRequest request, long? loggedInUserId = null, long? placedByUserId = null)
+    public async Task<OrderDto> CreateOrderAsync(CreateOrderRequest request, long? loggedInUserId = null)
     {
-        long   userId;
+        long   userId = loggedInUserId ?? 0;
         bool   sendCredentials  = false;
         string? credentialsPwd  = null;
         string? credentialsEmail = null;
         string  credentialsName  = string.Empty;
 
-        if (loggedInUserId.HasValue && !placedByUserId.HasValue)
-        {
-            // Authenticated customer placing their own order
-            userId = loggedInUserId.Value;
-        }
-        else
-        {
-            // Guest checkout OR admin placing on behalf of a customer
-            // → find or create a customer account from the contact details
-            var (customer, isNew, pwd) = await _customers.FindOrCreateAsync(
-                request.Firstname ?? string.Empty, request.Lastname ?? string.Empty, request.Phone, request.Email);
-            userId = customer.Id;
-
-            if (isNew && pwd is not null)
-            {
-                sendCredentials  = true;
-                credentialsPwd   = pwd;
-                credentialsEmail = customer.Email!;
-                credentialsName  = $"{customer.Firstname} {customer.Lastname}".Trim();
-            }
-        }
-
         // Resolve the name of the admin/staff member who placed this order (if any)
         string? placedByName = null;
-        if (placedByUserId.HasValue)
+        if (loggedInUserId.HasValue)
         {
-            var placer = await _db.Users.AsNoTracking()
-                .Where(u => u.Id == placedByUserId.Value)
+            var placer =await _db.Users.AsNoTracking()
+                .Where(u => u.Id == loggedInUserId.Value)
                 .Select(u => new { u.Firstname, u.Lastname })
                 .FirstOrDefaultAsync();
             if (placer is not null)
@@ -121,7 +99,7 @@ public class OrderService : IOrderService
             if (appliedOffer.IsFirstOrderOnly)
             {
                 var hasPriorOrder = await _db.Orders
-                    .AnyAsync(o => o.UserId == userId && o.Status != "Cancelled");
+                    .AnyAsync(o => o.ContactEmail == request.Email.Trim() && o.Status != "Cancelled");
                 if (hasPriorOrder)
                     throw new InvalidOperationException("This offer is only valid on your first order.");
             }
@@ -188,7 +166,7 @@ public class OrderService : IOrderService
             ScheduledTime        = request.ScheduledTime,
             SpecialInstructions  = string.IsNullOrWhiteSpace(request.SpecialInstructions) ? null : request.SpecialInstructions.Trim(),
             CreatedAt            = DenmarkTime.Now,
-            PlacedByUserId       = placedByUserId,
+            PlacedByUserId       = loggedInUserId,
         };
         _db.Orders.Add(order);
         await _db.SaveChangesAsync(); // generates order.Id
@@ -298,8 +276,13 @@ public class OrderService : IOrderService
 
     public async Task<IReadOnlyList<OrderDto>> GetMyOrdersAsync(long userId)
     {
+            var userEmail = await _db.Users.AsNoTracking()
+                .Where(u => u.Id == userId)
+                .Select(u => u.Email)
+                .FirstOrDefaultAsync();
+
         var orders = await _db.Orders
-            .Where(o => o.UserId == userId)
+            .Where(o => o.UserId == userId || o.ContactEmail == userEmail)
             .Include(o => o.Branch)
             .Include(o => o.OrderStatus)
             .Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem)
