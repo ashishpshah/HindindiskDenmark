@@ -152,7 +152,7 @@ function ContactPage() {
         ))}
       </section>
 
-      {/* ── World Map ───────────────────────────────────────────────────────── */}
+      {/* ── World Map ───────────────────────────────────────────────────────── 
       <section className="bg-surface py-20 border-t">
         <div className="mx-auto max-w-7xl px-6">
           <div className="mx-auto max-w-2xl text-center mb-12">
@@ -177,7 +177,7 @@ function ContactPage() {
             </Suspense>
           </div>
         </div>
-      </section>
+      </section>*/}
       {/* ── Contact result dialog ──────────────────────────────────────────── */}
       <Dialog open={contactResult !== null} onOpenChange={(open) => { if (!open) setContactResult(null); }}>
         <DialogContent className="max-w-sm rounded-3xl p-8 text-center">
