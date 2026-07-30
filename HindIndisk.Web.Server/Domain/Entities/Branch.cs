@@ -6,11 +6,16 @@ public class Branch
 {
     public long Id { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string? NameDa { get; set; }
     public string AddressLine1 { get; set; } = string.Empty;
+    public string? AddressLine1Da { get; set; }
     public string? AddressLine2 { get; set; }
+    public string? AddressLine2Da { get; set; }
     public string City { get; set; } = string.Empty;
+    public string? CityDa { get; set; }
     public string PostalCode { get; set; } = string.Empty;
     public string Country { get; set; } = string.Empty;
+    public string? CountryDa { get; set; }
     public string Phone { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string GoogleMapsLink { get; set; } = string.Empty;

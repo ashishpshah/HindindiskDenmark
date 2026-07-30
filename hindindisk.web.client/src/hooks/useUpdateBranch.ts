@@ -3,11 +3,16 @@ import { apiFetch } from "@/lib/api/client";
 
 export type UpdateBranchInput = {
   name: string;
+  nameDa?: string;
   addressLine1: string;
+  addressLine1Da?: string;
   addressLine2?: string;
+  addressLine2Da?: string;
   city: string;
+  cityDa?: string;
   postalCode: string;
   country: string;
+  countryDa?: string;
   phone: string;
   email: string;
   googleMapsLink: string;
@@ -22,11 +27,16 @@ export type UpdateBranchInput = {
 export type AdminBranchDto = {
   id: number;
   name: string;
+  nameDa?: string | null;
   addressLine1: string;
+  addressLine1Da?: string | null;
   addressLine2?: string;
+  addressLine2Da?: string | null;
   city: string;
+  cityDa?: string | null;
   postalCode: string;
   country: string;
+  countryDa?: string | null;
   phone: string;
   email: string;
   googleMapsLink: string;

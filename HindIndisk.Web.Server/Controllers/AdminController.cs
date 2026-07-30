@@ -1,6 +1,7 @@
 using HindIndisk.Api.Application.DTOs.About;
 using HindIndisk.Api.Application.DTOs.Admin;
 using HindIndisk.Api.Application.DTOs.Homepage;
+using HindIndisk.Api.Application.DTOs.Footer;
 using HindIndisk.Api.Application.DTOs.Closure;
 using HindIndisk.Api.Application.DTOs.Gallery;
 using HindIndisk.Api.Application.DTOs.HeroSlide;
@@ -32,6 +33,7 @@ public class AdminController : ApiBaseController
     private readonly IHomeStorySectionService   _homeStory;
     private readonly IExceptionLogService       _exceptionLogs;
     private readonly IEmailSettingsService      _emailSettings;
+    private readonly IFooterSettingsService     _footerSettings;
 
     public AdminController(
         IAdminService admin, IWebHostEnvironment env,
@@ -39,7 +41,8 @@ public class AdminController : ApiBaseController
         BranchClosureService closures, IHeroSlideService heroSlides,
         IGalleryImageService gallery, IAboutService about,
         IWhyChooseUsService whyChooseUs, IHomeStorySectionService homeStory,
-        IExceptionLogService exceptionLogs, IEmailSettingsService emailSettings)
+        IExceptionLogService exceptionLogs, IEmailSettingsService emailSettings,
+        IFooterSettingsService footerSettings)
     {
         _admin         = admin;
         _env           = env;
@@ -53,6 +56,7 @@ public class AdminController : ApiBaseController
         _homeStory     = homeStory;
         _exceptionLogs = exceptionLogs;
         _emailSettings = emailSettings;
+        _footerSettings = footerSettings;
     }
 
     // POST /api/admin/upload/image
@@ -265,15 +269,37 @@ public class AdminController : ApiBaseController
         }
     }
 
-    // GET /api/admin/reservations?status=Confirmed&branchId=1&dateFrom=2026-07-13&dateTo=2026-07-19
+    // POST /api/admin/orders/{id}/resend-email
+    [HttpPost("orders/{id:long}/resend-email")]
+    public async Task<IActionResult> ResendOrderEmail(long id)
+    {
+        try
+        {
+            await _admin.ResendOrderStatusEmailAsync(id);
+            return Ok(new { message = "Email resent." });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            await LogExAsync(ex, 400);
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    // GET /api/admin/reservations?status=Confirmed&branchId=1&search=%2346&dateFrom=2026-07-13&dateTo=2026-07-19
     [HttpGet("reservations")]
     public async Task<ActionResult<IReadOnlyList<AdminReservationDto>>> Reservations(
         [FromQuery] string? status,
         [FromQuery] long?   branchId,
         [FromQuery] string? date,
+        [FromQuery] string? search   = null,
         [FromQuery] string? dateFrom = null,
         [FromQuery] string? dateTo   = null)
-        => Ok(await _admin.GetReservationsAsync(status, branchId, date, dateFrom, dateTo));
+        => Ok(await _admin.GetReservationsAsync(status, branchId, date, search, dateFrom, dateTo));
 
     // PATCH /api/admin/reservations/{id}/status
     [HttpPatch("reservations/{id:long}/status")]
@@ -281,6 +307,27 @@ public class AdminController : ApiBaseController
         long id, [FromBody] UpdateReservationStatusRequest request)
     {
         try   { return Ok(await _admin.UpdateReservationStatusAsync(id, request.Status, request.CancellationReason)); }
+        catch (KeyNotFoundException ex)
+        {
+            await LogExAsync(ex, 404);
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            await LogExAsync(ex, 400);
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    // POST /api/admin/reservations/{id}/resend-email
+    [HttpPost("reservations/{id:long}/resend-email")]
+    public async Task<IActionResult> ResendReservationEmail(long id)
+    {
+        try
+        {
+            await _admin.ResendReservationStatusEmailAsync(id);
+            return Ok(new { message = "Email resent." });
+        }
         catch (KeyNotFoundException ex)
         {
             await LogExAsync(ex, 404);
@@ -802,6 +849,18 @@ public class AdminController : ApiBaseController
     [HttpPatch("home-story")]
     public async Task<IActionResult> UpdateHomeStory([FromBody] UpdateHomeStorySectionRequest req)
         => Ok(await _homeStory.UpdateAsync(req));
+
+    // ── Footer settings ────────────────────────────────────────────────────────
+
+    // GET /api/admin/footer-settings
+    [HttpGet("footer-settings")]
+    public async Task<IActionResult> GetFooterSettings()
+        => Ok(await _footerSettings.GetAsync());
+
+    // PATCH /api/admin/footer-settings
+    [HttpPatch("footer-settings")]
+    public async Task<IActionResult> UpdateFooterSettings([FromBody] UpdateFooterSettingsRequest req)
+        => Ok(await _footerSettings.UpdateAsync(req));
 
     // ── About page: images/timeline/team (branch-scoped) ────────────────────────
 

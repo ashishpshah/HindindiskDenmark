@@ -12,8 +12,11 @@ import { ImagePicker } from "@/components/admin/ImagePicker";
 export const Route = createFileRoute("/admin/branches/new")({ component: BranchNewPage });
 
 export type BranchForm = {
-  name: string; addressLine1: string; addressLine2: string;
-  city: string; postalCode: string; country: string;
+  name: string; nameDa: string;
+  addressLine1: string; addressLine1Da: string;
+  addressLine2: string; addressLine2Da: string;
+  city: string; cityDa: string;
+  postalCode: string; country: string; countryDa: string;
   phone: string; email: string; googleMapsLink: string;
   imageUrl: string; rating: string; reviewCount: string;
   deliveryFee: string; deliveryFeeEnabled: boolean;
@@ -21,8 +24,12 @@ export type BranchForm = {
 };
 
 export const EMPTY_BRANCH: BranchForm = {
-  name: "", addressLine1: "", addressLine2: "", city: "", postalCode: "",
-  country: "Denmark", phone: "", email: "", googleMapsLink: "",
+  name: "", nameDa: "",
+  addressLine1: "", addressLine1Da: "",
+  addressLine2: "", addressLine2Da: "",
+  city: "", cityDa: "",
+  postalCode: "", country: "Denmark", countryDa: "Danmark",
+  phone: "", email: "", googleMapsLink: "",
   imageUrl: "", rating: "5.0", reviewCount: "0",
   deliveryFee: "39", deliveryFeeEnabled: true,
   maxAdvanceDays: "7",
@@ -40,9 +47,12 @@ function BranchNewPage() {
     if (!form.name.trim() || !form.addressLine1.trim()) return;
     try {
       await create.mutateAsync({
-        name: form.name, addressLine1: form.addressLine1,
+        name: form.name, nameDa: form.nameDa || undefined,
+        addressLine1: form.addressLine1, addressLine1Da: form.addressLine1Da || undefined,
         addressLine2: form.addressLine2 || undefined,
-        city: form.city, postalCode: form.postalCode, country: form.country,
+        addressLine2Da: form.addressLine2Da || undefined,
+        city: form.city, cityDa: form.cityDa || undefined,
+        postalCode: form.postalCode, country: form.country, countryDa: form.countryDa || undefined,
         phone: form.phone, email: form.email, googleMapsLink: form.googleMapsLink,
         imageUrl: form.imageUrl,
         rating: parseFloat(form.rating) || 5.0,
@@ -75,16 +85,25 @@ export function BranchFields({ form, f, onImageChange, onSave, isSaving, onCance
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5 sm:col-span-2"><Label>Branch Name *</Label>
+        <div className="space-y-1.5"><Label>Branch Name (EN) *</Label>
           <Input autoFocus value={form.name} onChange={f("name")} placeholder="e.g. Hind Indisk Odense" data-tagid="input-branches-name" /></div>
-        <div className="space-y-1.5 sm:col-span-2"><Label>Address Line 1 *</Label>
+        <div className="space-y-1.5"><Label>Branch Name (DA)</Label>
+          <Input value={form.nameDa} onChange={f("nameDa")} placeholder="f.eks. Hind Indisk Odense" data-tagid="input-branches-nameda" /></div>
+        <div className="space-y-1.5"><Label>Address Line 1 (EN) *</Label>
           <Input value={form.addressLine1} onChange={f("addressLine1")} placeholder="Street and number" data-tagid="input-branches-address1" /></div>
-        <div className="space-y-1.5 sm:col-span-2">
-          <Label>Address Line 2 <span className="text-xs text-muted-foreground">(optional)</span></Label>
+        <div className="space-y-1.5"><Label>Address Line 1 (DA)</Label>
+          <Input value={form.addressLine1Da} onChange={f("addressLine1Da")} placeholder="Gade og nummer" data-tagid="input-branches-address1da" /></div>
+        <div className="space-y-1.5">
+          <Label>Address Line 2 (EN) <span className="text-xs text-muted-foreground">(optional)</span></Label>
           <Input value={form.addressLine2} onChange={f("addressLine2")} placeholder="Floor, suite…" data-tagid="input-branches-address2" /></div>
-        <div className="space-y-1.5"><Label>City *</Label><Input value={form.city} onChange={f("city")} data-tagid="input-branches-city" /></div>
+        <div className="space-y-1.5">
+          <Label>Address Line 2 (DA) <span className="text-xs text-muted-foreground">(optional)</span></Label>
+          <Input value={form.addressLine2Da} onChange={f("addressLine2Da")} placeholder="Etage, suite…" data-tagid="input-branches-address2da" /></div>
+        <div className="space-y-1.5"><Label>City (EN) *</Label><Input value={form.city} onChange={f("city")} data-tagid="input-branches-city" /></div>
+        <div className="space-y-1.5"><Label>City (DA)</Label><Input value={form.cityDa} onChange={f("cityDa")} data-tagid="input-branches-cityda" /></div>
+        <div className="space-y-1.5"><Label>Country (EN)</Label><Input value={form.country} onChange={f("country")} data-tagid="input-branches-country" /></div>
+        <div className="space-y-1.5"><Label>Country (DA)</Label><Input value={form.countryDa} onChange={f("countryDa")} data-tagid="input-branches-countryda" /></div>
         <div className="space-y-1.5"><Label>Postal Code *</Label><Input value={form.postalCode} onChange={f("postalCode")} data-tagid="input-branches-postalcode" /></div>
-        <div className="space-y-1.5"><Label>Country</Label><Input value={form.country} onChange={f("country")} data-tagid="input-branches-country" /></div>
         <div className="space-y-1.5"><Label>Phone No.</Label>
           <Input value={form.phone} onChange={f("phone")} type="tel" placeholder="+45 …" data-tagid="input-branches-phone" /></div>
         <div className="space-y-1.5 sm:col-span-2"><Label>Email</Label>

@@ -53,7 +53,8 @@ public class LocationService : ILocationService
             var weekendClose  = weekend?.CloseTime.ToString("HH:mm") ?? "";
 
             return new BranchDto(
-                b.Id, b.Name, b.AddressLine1, b.AddressLine2, b.City, b.PostalCode,
+                b.Id, b.Name, b.NameDa, b.AddressLine1, b.AddressLine1Da, b.AddressLine2, b.AddressLine2Da,
+                b.City, b.CityDa, b.PostalCode,
                 b.Phone, b.Email, b.GoogleMapsLink,
                 weekdayHours, weekendHours,
                 weekdayOpen, weekdayClose, weekendOpen, weekendClose,

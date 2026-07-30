@@ -3,9 +3,13 @@ namespace HindIndisk.Api.Application.DTOs.Location;
 public record BranchDto(
     long    Id,
     string  Name,
+    string? NameDa,
     string  Address,
+    string? AddressDa,
     string? AddressLine2,
+    string? AddressLine2Da,
     string  City,
+    string? CityDa,
     string  PostalCode,
     string  Phone,
     string  Email,

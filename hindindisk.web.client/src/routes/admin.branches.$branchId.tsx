@@ -26,11 +26,16 @@ function BranchEditPage() {
     if (!branch) return;
     setForm({
       name:           branch.name,
+      nameDa:         branch.nameDa ?? "",
       addressLine1:   branch.addressLine1,
+      addressLine1Da: branch.addressLine1Da ?? "",
       addressLine2:   branch.addressLine2 ?? "",
+      addressLine2Da: branch.addressLine2Da ?? "",
       city:           branch.city,
+      cityDa:         branch.cityDa ?? "",
       postalCode:     branch.postalCode,
       country:        branch.country,
+      countryDa:      branch.countryDa ?? "",
       phone:          branch.phone,
       email:          branch.email,
       googleMapsLink:   branch.googleMapsLink,
@@ -51,9 +56,12 @@ function BranchEditPage() {
     try {
       await updateBranch.mutateAsync({
         id: branchIdNum,
-        name: form.name, addressLine1: form.addressLine1,
+        name: form.name, nameDa: form.nameDa || undefined,
+        addressLine1: form.addressLine1, addressLine1Da: form.addressLine1Da || undefined,
         addressLine2: form.addressLine2 || undefined,
-        city: form.city, postalCode: form.postalCode, country: form.country,
+        addressLine2Da: form.addressLine2Da || undefined,
+        city: form.city, cityDa: form.cityDa || undefined,
+        postalCode: form.postalCode, country: form.country, countryDa: form.countryDa || undefined,
         phone: form.phone, email: form.email, googleMapsLink: form.googleMapsLink,
         imageUrl: form.imageUrl,
         rating: parseFloat(form.rating) || 5.0,

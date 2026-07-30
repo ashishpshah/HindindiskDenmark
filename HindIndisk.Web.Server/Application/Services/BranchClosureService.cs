@@ -238,10 +238,18 @@ public class BranchClosureService(ApplicationDbContext db, IHubContext<ClosureHu
                 .ToListAsync();
             var cancelReason = string.IsNullOrWhiteSpace(reason)
                 ? "Branch closed during this period" : reason.Trim();
+
+            // Look up the live "Cancelled" status row so OrderStatusId stays in sync with the
+            // Status string — otherwise these orders silently stop matching status-transition
+            // checks on the admin Orders page (they compare by name via OrderStatusId's join).
+            var cancelledStatus = await db.OrderStatuses.FirstOrDefaultAsync(s => s.Name == "Cancelled");
+
             foreach (var o in list)
             {
                 o.Status             = "Cancelled";
                 o.CancellationReason = cancelReason;
+                if (cancelledStatus is not null)
+                    o.OrderStatusId = cancelledStatus.Id;
             }
         }
 

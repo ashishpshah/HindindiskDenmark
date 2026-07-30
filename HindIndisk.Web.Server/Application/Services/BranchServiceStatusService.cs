@@ -141,7 +141,8 @@ public class BranchServiceStatusService(ApplicationDbContext db, IHubContext<Clo
                 c.ServiceType == "Reservation" && c.ReopenedAt == null);
 
             return new AdminBranchDto(
-                b.Id, b.Name, b.AddressLine1, b.AddressLine2, b.City, b.PostalCode, b.Country,
+                b.Id, b.Name, b.NameDa, b.AddressLine1, b.AddressLine1Da, b.AddressLine2, b.AddressLine2Da,
+                b.City, b.CityDa, b.PostalCode, b.Country, b.CountryDa,
                 b.Phone, b.Email, b.GoogleMapsLink, b.ImageUrl, b.Rating, b.ReviewCount,
                 b.DeliveryFee, b.DeliveryFeeEnabled,
                 b.IsCloseOrder, b.CloseOrderNote, b.CloseOrderNoteDa,

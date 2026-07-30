@@ -153,6 +153,16 @@ public class AdminService : IAdminService
         return result;
     }
 
+    /// <summary>Parses a search term as a numeric ID, tolerating an optional leading "#" (as shown in the admin UI).</summary>
+    private static bool TryParseSearchId(string? search, out long id)
+    {
+        id = 0;
+        var trimmed = search?.Trim();
+        if (string.IsNullOrEmpty(trimmed)) return false;
+        if (trimmed[0] == '#') trimmed = trimmed[1..];
+        return long.TryParse(trimmed, out id);
+    }
+
     // ── Orders ────────────────────────────────────────────────────────────────
 
     public async Task<OrderPageDto> GetOrdersAsync(
@@ -187,7 +197,7 @@ public class AdminService : IAdminService
         if (!string.IsNullOrWhiteSpace(search))
         {
             var lower = search.ToLower();
-            if (long.TryParse(search.Trim(), out var oid))
+            if (TryParseSearchId(search, out var oid))
                 q = q.Where(o => o.Id == oid ||
                                   o.ContactName.ToLower().Contains(lower) ||
                                   (o.ContactEmail != null && o.ContactEmail.ToLower().Contains(lower)) ||
@@ -284,10 +294,29 @@ public class AdminService : IAdminService
         return ToAdminOrderDto(order);
     }
 
+    public async Task ResendOrderStatusEmailAsync(long orderId)
+    {
+        var order = await _db.Orders
+            .Include(o => o.User)
+            .FirstOrDefaultAsync(o => o.Id == orderId)
+            ?? throw new KeyNotFoundException($"Order {orderId} not found.");
+
+        var email = order.User?.Email ?? order.ContactEmail;
+        if (string.IsNullOrWhiteSpace(email))
+            throw new InvalidOperationException("This order has no contact email on file.");
+
+        var name = string.IsNullOrWhiteSpace(order.ContactName) ? "Customer" : order.ContactName;
+
+        if (order.Status == "Cancelled")
+            await _email.SendOrderCancelledCustomerAsync(email, name, order.Id, order.CancellationReason);
+        else
+            await _email.SendOrderStatusUpdateAsync(email, name, order.Id, order.Status);
+    }
+
     // ── Reservations ──────────────────────────────────────────────────────────
 
     public async Task<IReadOnlyList<AdminReservationDto>> GetReservationsAsync(
-        string? status, long? branchId, string? date,
+        string? status, long? branchId, string? date, string? search = null,
         string? dateFrom = null, string? dateTo = null)
     {
         var q = _db.Reservations
@@ -299,6 +328,21 @@ public class AdminService : IAdminService
 
         if (branchId.HasValue)
             q = q.Where(r => r.BranchId == branchId.Value);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var lower = search.ToLower();
+            if (TryParseSearchId(search, out var rid))
+                q = q.Where(r => r.Id == rid ||
+                                  r.ContactName.ToLower().Contains(lower) ||
+                                  r.ContactPhone.ToLower().Contains(lower) ||
+                                  r.ContactEmail.ToLower().Contains(lower));
+            else
+                q = q.Where(r =>
+                    r.ContactName.ToLower().Contains(lower) ||
+                    r.ContactPhone.ToLower().Contains(lower) ||
+                    r.ContactEmail.ToLower().Contains(lower));
+        }
 
         if (!string.IsNullOrWhiteSpace(date) && DateTime.TryParse(date, out var parsedDate))
         {
@@ -352,6 +396,23 @@ public class AdminService : IAdminService
                 status);
 
         return ToAdminReservationDto(r);
+    }
+
+    public async Task ResendReservationStatusEmailAsync(long reservationId)
+    {
+        var r = await _db.Reservations
+            .Include(r => r.Branch)
+            .FirstOrDefaultAsync(r => r.Id == reservationId)
+            ?? throw new KeyNotFoundException($"Reservation {reservationId} not found.");
+
+        if (string.IsNullOrWhiteSpace(r.ContactEmail))
+            throw new InvalidOperationException("This reservation has no contact email on file.");
+
+        await _email.SendReservationStatusUpdateAsync(
+            r.ContactEmail, r.ContactName,
+            r.Id, r.Branch.Name,
+            r.Date.ToString("yyyy-MM-dd"), r.TimeSlot, r.GuestCount,
+            r.Status);
     }
 
     // ── Menus (categories) ───────────────────────────────────────────────────
@@ -810,12 +871,28 @@ public class AdminService : IAdminService
         if (duplicate)
             throw new InvalidOperationException($"Order status '{request.Name}' already exists.");
 
-        status.Name         = request.Name.Trim();
+        var newName = request.Name.Trim();
+        var oldName = status.Name;
+
+        status.Name         = newName;
         status.NameDa       = request.NameDa?.Trim();
         status.ServiceType  = request.ServiceType;
         status.DisplayOrder = request.DisplayOrder;
         status.Color        = request.Color?.Trim();
         status.IsActive     = request.IsActive;
+
+        // Keep the denormalized Order.Status string in sync — otherwise every order
+        // already sitting in this status silently stops matching transitions/current-status
+        // checks on the admin Orders page (they compare by name, not by OrderStatusId).
+        if (newName != oldName)
+        {
+            var affectedOrders = await _db.Orders
+                .Where(o => o.OrderStatusId == id)
+                .ToListAsync();
+            foreach (var order in affectedOrders)
+                order.Status = newName;
+        }
+
         await _db.SaveChangesAsync();
 
         return new OrderStatusDto(
@@ -1024,7 +1101,8 @@ public class AdminService : IAdminService
             c.ServiceType == "Reservation" && c.ReopenedAt == null);
 
         return new AdminBranchDto(
-            b.Id, b.Name, b.AddressLine1, b.AddressLine2, b.City, b.PostalCode, b.Country,
+            b.Id, b.Name, b.NameDa, b.AddressLine1, b.AddressLine1Da, b.AddressLine2, b.AddressLine2Da,
+            b.City, b.CityDa, b.PostalCode, b.Country, b.CountryDa,
             b.Phone, b.Email, b.GoogleMapsLink,
             b.ImageUrl, b.Rating, b.ReviewCount,
             b.DeliveryFee, b.DeliveryFeeEnabled,
@@ -1040,11 +1118,16 @@ public class AdminService : IAdminService
         var branch = new Domain.Entities.Branch
         {
             Name             = request.Name,
+            NameDa           = request.NameDa,
             AddressLine1     = request.AddressLine1,
+            AddressLine1Da   = request.AddressLine1Da,
             AddressLine2     = request.AddressLine2,
+            AddressLine2Da   = request.AddressLine2Da,
             City             = request.City,
+            CityDa           = request.CityDa,
             PostalCode       = request.PostalCode,
             Country          = request.Country,
+            CountryDa        = request.CountryDa,
             Phone            = request.Phone,
             Email            = request.Email,
             GoogleMapsLink   = request.GoogleMapsLink,
@@ -1067,11 +1150,16 @@ public class AdminService : IAdminService
             ?? throw new KeyNotFoundException($"Branch {branchId} not found.");
 
         branch.Name             = request.Name;
+        branch.NameDa           = request.NameDa;
         branch.AddressLine1     = request.AddressLine1;
+        branch.AddressLine1Da   = request.AddressLine1Da;
         branch.AddressLine2     = request.AddressLine2;
+        branch.AddressLine2Da   = request.AddressLine2Da;
         branch.City             = request.City;
+        branch.CityDa           = request.CityDa;
         branch.PostalCode       = request.PostalCode;
         branch.Country          = request.Country;
+        branch.CountryDa        = request.CountryDa;
         branch.Phone            = request.Phone;
         branch.Email            = request.Email;
         branch.GoogleMapsLink   = request.GoogleMapsLink;
@@ -1087,7 +1175,8 @@ public class AdminService : IAdminService
     }
 
     private static AdminBranchDto ToAdminBranchDto(Domain.Entities.Branch b) =>
-        new(b.Id, b.Name, b.AddressLine1, b.AddressLine2, b.City, b.PostalCode, b.Country,
+        new(b.Id, b.Name, b.NameDa, b.AddressLine1, b.AddressLine1Da, b.AddressLine2, b.AddressLine2Da,
+            b.City, b.CityDa, b.PostalCode, b.Country, b.CountryDa,
             b.Phone, b.Email, b.GoogleMapsLink,
             b.ImageUrl, b.Rating, b.ReviewCount,
             b.DeliveryFee, b.DeliveryFeeEnabled,

@@ -4,9 +4,13 @@ import { apiFetch } from "@/lib/api/client";
 export type BranchDto = {
   id: number;
   name: string;
+  nameDa?: string | null;
   address: string;
+  addressDa?: string | null;
   addressLine2?: string;
+  addressLine2Da?: string | null;
   city: string;
+  cityDa?: string | null;
   postalCode: string;
   phone: string;
   email: string;
@@ -22,6 +26,9 @@ export type BranchDto = {
   reviewCount: number;
   deliveryFee: number;
   deliveryFeeEnabled: boolean;
+  isCloseOrder: boolean;
+  closeOrderNote: string | null;
+  closeOrderNoteDa: string | null;
   isCloseDelivery: boolean;
   closeDeliveryNote: string | null;
   isClosePickup: boolean;

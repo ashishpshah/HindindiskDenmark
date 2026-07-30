@@ -5,11 +5,16 @@ namespace HindIndisk.Api.Application.DTOs.Admin;
 public class CreateBranchRequest
 {
     [Required, MaxLength(100)] public string Name         { get; set; } = string.Empty;
+    [MaxLength(100)]           public string? NameDa       { get; set; }
     [Required, MaxLength(200)] public string AddressLine1 { get; set; } = string.Empty;
+    [MaxLength(200)]           public string? AddressLine1Da { get; set; }
     [MaxLength(200)]           public string? AddressLine2 { get; set; }
+    [MaxLength(200)]           public string? AddressLine2Da { get; set; }
     [Required, MaxLength(100)] public string City         { get; set; } = string.Empty;
+    [MaxLength(100)]           public string? CityDa       { get; set; }
     [Required, MaxLength(20)]  public string PostalCode   { get; set; } = string.Empty;
     [MaxLength(50)]            public string Country      { get; set; } = "Denmark";
+    [MaxLength(50)]            public string? CountryDa    { get; set; }
     [MaxLength(30)]            public string Phone        { get; set; } = string.Empty;
     [MaxLength(200)]           public string Email        { get; set; } = string.Empty;
     [MaxLength(500)]           public string GoogleMapsLink { get; set; } = string.Empty;
