@@ -3,7 +3,8 @@ import { Layout } from "@/components/Layout";
 import { Hero } from "@/components/home/Hero";
 import { Branches } from "@/components/home/Branches";
 import { About, FeaturedMenu, WhyChooseUs, CTA } from "@/components/home/Sections";
-import { GalleryStrip, FAQ } from "@/components/home/GalleryFAQ";
+// import { FAQ } from "@/components/home/GalleryFAQ";
+import { GalleryStrip } from "@/components/home/GalleryFAQ";
 import { Testimonials } from "@/components/home/Reviews";
 
 export const Route = createFileRoute("/")({
@@ -28,7 +29,7 @@ function Index() {
       <WhyChooseUs />
       <Testimonials />
       <GalleryStrip />
-      <FAQ />
+      {/* <FAQ /> */}
       <CTA />
     </Layout>
   );

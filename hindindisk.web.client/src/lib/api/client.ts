@@ -1,5 +1,11 @@
 export const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
 
+export function resolveUrl(url: string): string {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `${BASE}${url}`;
+}
+
 function getToken(): string | null {
   try {
     // Admin token takes precedence; only one zone's session is ever active at a time
