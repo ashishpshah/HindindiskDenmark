@@ -18,7 +18,7 @@ public class AddressesController : ApiBaseController
     private long GetUserId()
     {
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!long.TryParse(raw, out var id)) throw new UnauthorizedAccessException();
+        if (!long.TryParse(raw, out var id)) throw new UnauthorizedAccessException("Invalid token claims.");
         return id;
     }
 

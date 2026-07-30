@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api/client";
+import { useAuth } from "@/context/AuthContext";
 
 export type AddressDto = {
   id: number;
@@ -21,10 +22,11 @@ export type SaveAddressInput = {
 };
 
 export function useAddresses(enabled = true) {
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ["addresses"],
+    queryKey: ["addresses", user?.id],
     queryFn:  () => apiFetch<AddressDto[]>("/api/addresses"),
-    enabled,
+    enabled: enabled && !!user,
   });
 }
 
