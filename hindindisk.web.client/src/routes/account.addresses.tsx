@@ -60,7 +60,8 @@ function AddressesPage() {
     setDialog("edit");
   };
 
-  const handleSave = async () => {
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
       if (dialog === "add") {
         await addAddress.mutateAsync(form);
@@ -148,7 +149,7 @@ function AddressesPage() {
             <DialogTitle>{dialog === "add" ? t("pages.addresses.newTitle") : t("pages.addresses.editTitle")}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-3">
+          <form onSubmit={handleSave} className="space-y-3">
             <div className="space-y-1.5">
               <Label>{t("pages.addresses.typeLabel")}</Label>
               <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
@@ -206,25 +207,26 @@ function AddressesPage() {
               <Input
                 value={form.country}
                 onChange={(e) => setForm({ ...form, country: e.target.value })}
+                required
                 data-tagid="input-account-addresses-country"
               />
             </div>
-          </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialog(null)} data-tagid="button-account-addresses-cancel">{t("actions.cancel")}</Button>
-            <Button
-              className="gradient-primary text-primary-foreground"
-              disabled={addAddress.isPending || updateAddress.isPending}
-              onClick={handleSave}
-              data-tagid="button-account-addresses-save"
-            >
-              {(addAddress.isPending || updateAddress.isPending) && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              {dialog === "add" ? t("pages.addresses.addBtn") : t("pages.addresses.saveBtn")}
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setDialog(null)} data-tagid="button-account-addresses-cancel">{t("actions.cancel")}</Button>
+              <Button
+                type="submit"
+                className="gradient-primary text-primary-foreground"
+                disabled={addAddress.isPending || updateAddress.isPending}
+                data-tagid="button-account-addresses-save"
+              >
+                {(addAddress.isPending || updateAddress.isPending) && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {dialog === "add" ? t("pages.addresses.addBtn") : t("pages.addresses.saveBtn")}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
