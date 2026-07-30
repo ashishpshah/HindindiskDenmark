@@ -45,4 +45,4 @@ e2e/
 test-results/
 HindIndisk.Web.Server/wwwroot/
 .claude/settings.json
-.claude/settings.json
+hindindisk.web.client/.tanstack/
