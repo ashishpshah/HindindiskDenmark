@@ -34,6 +34,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<OfferMenuItem> OfferMenuItems => Set<OfferMenuItem>();
     public DbSet<ApiExceptionLog> ApiExceptionLogs => Set<ApiExceptionLog>();
     public DbSet<PasswordOtp>    PasswordOtps     => Set<PasswordOtp>();
+    public DbSet<RegistrationOtp> RegistrationOtps => Set<RegistrationOtp>();
     public DbSet<HeroSlide>          HeroSlides          => Set<HeroSlide>();
     public DbSet<GalleryImage>       GalleryImages       => Set<GalleryImage>();
     public DbSet<WhyChooseUsItem>    WhyChooseUsItems    => Set<WhyChooseUsItem>();
@@ -268,6 +269,13 @@ public class ApplicationDbContext : DbContext
             .HasIndex(o => o.Email);
 
         modelBuilder.Entity<PasswordOtp>()
+            .HasIndex(o => o.CreatedAt);
+
+        // ── RegistrationOtp ───────────────────────────────────────────────────
+        modelBuilder.Entity<RegistrationOtp>()
+            .HasIndex(o => o.Email);
+
+        modelBuilder.Entity<RegistrationOtp>()
             .HasIndex(o => o.CreatedAt);
 
         // ── OrderStatus ───────────────────────────────────────────────────────

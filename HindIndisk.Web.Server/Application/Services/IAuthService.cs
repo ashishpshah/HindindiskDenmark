@@ -4,7 +4,8 @@ namespace HindIndisk.Api.Application.Services;
 
 public interface IAuthService
 {
-    Task<AuthResponse> RegisterAsync(RegisterRequest request);
+    Task                    StartRegistrationAsync(RegisterRequest request);
+    Task<AuthResponse>      VerifyRegistrationOtpAsync(VerifyRegistrationOtpRequest request);
     Task<AuthResponse> LoginAsync(LoginRequest request);
     Task<UserDto>      GetMeAsync(long userId);
     Task<UserDto>      UpdateProfileAsync(long userId, UpdateProfileRequest request);

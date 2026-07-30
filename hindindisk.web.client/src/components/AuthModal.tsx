@@ -12,10 +12,11 @@ import { apiFetch } from "@/lib/api/client";
 type Alert = { type: "success" | "error" | "info"; message: string };
 
 export function AuthModal() {
-  const { modalOpen, closeModal, modalMode, setModalMode, login, register } = useAuth();
+  const { modalOpen, closeModal, modalMode, setModalMode, login, register, verifyRegisterOtp } = useAuth();
   const { t } = useI18n();
-  const [loading,    setLoading]    = useState(false);
-  const [forgotStep, setForgotStep] = useState<1 | 2 | 3>(1);
+  const [loading,     setLoading]     = useState(false);
+  const [forgotStep,  setForgotStep]  = useState<1 | 2 | 3>(1);
+  const [registerStep, setRegisterStep] = useState<1 | 2>(1);
   const [alert,      setAlert]      = useState<Alert | null>(null);
   const [resetToken, setResetToken] = useState("");
   const [form, setForm] = useState({
@@ -33,15 +34,18 @@ export function AuthModal() {
       setResetToken("");
     } else {
       setForgotStep(1);
+      setRegisterStep(1);
     }
   }, [modalOpen]);
 
   useEffect(() => {
     if (modalMode !== "forgot") setForgotStep(1);
+    if (modalMode !== "register") setRegisterStep(1);
     setAlert(null);
   }, [modalMode]);
 
   useEffect(() => { setAlert(null); }, [forgotStep]);
+  useEffect(() => { setAlert(null); }, [registerStep]);
 
   // ── Login ──────────────────────────────────────────────────────────────────
   const onLogin = async (e: React.FormEvent) => {
@@ -58,7 +62,7 @@ export function AuthModal() {
     }
   };
 
-  // ── Register ───────────────────────────────────────────────────────────────
+  // ── Register: Step 1 — submit details, send OTP ───────────────────────────
   const onRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (form.password.length < 8) {
@@ -74,9 +78,35 @@ export function AuthModal() {
     setAlert(null);
     try {
       await register({ firstname: form.firstname, lastname: form.lastname, email: form.email, phone: form.phone || undefined, password: form.password });
+      setRegisterStep(2);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Registration failed. Please try again.";
+      // Active OTP exists (too soon / daily limit + still valid) → skip to OTP input
+      const hasActiveOtp = msg.includes("OTP_ALREADY_ACTIVE") || msg.toLowerCase().includes("please wait");
+      if (hasActiveOtp) {
+        setRegisterStep(2);
+        setAlert({ type: "info", message: "OTP already sent to your email. Please check your inbox." });
+      } else {
+        setAlert({ type: "error", message: msg });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Register: Step 2 — verify OTP, create account ──────────────────────────
+  const onVerifyRegisterOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (form.otp.length !== 6 || !/^\d{6}$/.test(form.otp)) {
+      setAlert({ type: "error", message: "Please enter the 6-digit OTP sent to your email." }); return;
+    }
+    setLoading(true);
+    setAlert(null);
+    try {
+      await verifyRegisterOtp(form.email, form.otp);
       closeModal();
     } catch (err: unknown) {
-      setAlert({ type: "error", message: err instanceof Error ? err.message : "Registration failed. Please try again." });
+      setAlert({ type: "error", message: err instanceof Error ? err.message : "Invalid OTP. Please try again." });
     } finally {
       setLoading(false);
     }
@@ -219,40 +249,91 @@ export function AuthModal() {
 
               {/* ── Register ──────────────────────────────────────────────── */}
               {modalMode === "register" && (
-                <form onSubmit={onRegister} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field icon={<UserIcon className="h-4 w-4" />} label="First Name">
-                      <Input data-tagid="input-auth-register-firstname" required placeholder="John" value={form.firstname} onChange={set("firstname")} />
-                    </Field>
-                    <Field label="Last Name">
-                      <Input data-tagid="input-auth-register-lastname" required placeholder="Doe" value={form.lastname} onChange={set("lastname")} />
-                    </Field>
+                <div className="space-y-4">
+                  {/* Progress bar */}
+                  <div className="mb-2 flex items-center gap-2">
+                    {([1, 2] as const).map((n) => (
+                      <div key={n} className={`h-1 flex-1 rounded-full transition-colors ${registerStep >= n ? "bg-primary" : "bg-muted"}`} />
+                    ))}
                   </div>
-                  <Field icon={<Mail className="h-4 w-4" />} label={t("auth.email")}>
-                    <Input data-tagid="input-auth-register-email" required type="email" value={form.email} onChange={set("email")} placeholder="you@email.dk" />
-                  </Field>
-                  <Field icon={<Phone className="h-4 w-4" />} label={
-                    <span className="flex items-center gap-1">
-                      {t("auth.phone")}
-                      <span className="text-xs text-muted-foreground font-normal">(optional)</span>
-                    </span>
-                  }>
-                    <Input data-tagid="input-auth-register-phone" type="tel" value={form.phone} onChange={set("phone")} placeholder="+45 12 34 56 78" />
-                  </Field>
-                  <Field icon={<Lock className="h-4 w-4" />} label={t("auth.password")}>
-                    <PasswordInput data-tagid="input-auth-register-password" required value={form.password} onChange={set("password")} placeholder="Min. 8 characters" />
-                  </Field>
-                  <Field icon={<Lock className="h-4 w-4" />} label={t("auth.confirmPassword")}>
-                    <PasswordInput data-tagid="input-auth-register-confirm-password" required value={form.confirm} onChange={set("confirm")} placeholder="Repeat password" />
-                  </Field>
-                  <label className="flex items-start gap-2 text-sm"><Checkbox data-tagid="button-auth-register-terms" required className="mt-0.5" /> <span>{t("auth.acceptTerms")}</span></label>
-                  <AlertBanner />
-                  <Button data-tagid="button-auth-register-submit" disabled={loading} className="w-full gradient-primary text-primary-foreground">{t("actions.register")}</Button>
-                  <p className="pt-2 text-center text-sm text-muted-foreground">
-                    {t("auth.haveAccount")}{" "}
-                    <button data-tagid="button-auth-register-to-login" type="button" onClick={() => setModalMode("login")} className="font-semibold text-primary hover:underline">{t("actions.login")}</button>
-                  </p>
-                </form>
+
+                  {/* Step 1: registration details */}
+                  {registerStep === 1 && (
+                    <form onSubmit={onRegister} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <Field icon={<UserIcon className="h-4 w-4" />} label="First Name">
+                          <Input data-tagid="input-auth-register-firstname" required placeholder="John" value={form.firstname} onChange={set("firstname")} />
+                        </Field>
+                        <Field label="Last Name">
+                          <Input data-tagid="input-auth-register-lastname" required placeholder="Doe" value={form.lastname} onChange={set("lastname")} />
+                        </Field>
+                      </div>
+                      <Field icon={<Mail className="h-4 w-4" />} label={t("auth.email")}>
+                        <Input data-tagid="input-auth-register-email" required type="email" value={form.email} onChange={set("email")} placeholder="you@email.dk" />
+                      </Field>
+                      <Field icon={<Phone className="h-4 w-4" />} label={
+                        <span className="flex items-center gap-1">
+                          {t("auth.phone")}
+                          <span className="text-xs text-muted-foreground font-normal">(optional)</span>
+                        </span>
+                      }>
+                        <Input data-tagid="input-auth-register-phone" type="tel" value={form.phone} onChange={set("phone")} placeholder="+45 12 34 56 78" />
+                      </Field>
+                      <Field icon={<Lock className="h-4 w-4" />} label={t("auth.password")}>
+                        <PasswordInput data-tagid="input-auth-register-password" required value={form.password} onChange={set("password")} placeholder="Min. 8 characters" />
+                      </Field>
+                      <Field icon={<Lock className="h-4 w-4" />} label={t("auth.confirmPassword")}>
+                        <PasswordInput data-tagid="input-auth-register-confirm-password" required value={form.confirm} onChange={set("confirm")} placeholder="Repeat password" />
+                      </Field>
+                      <label className="flex items-start gap-2 text-sm"><Checkbox data-tagid="button-auth-register-terms" required className="mt-0.5" /> <span>{t("auth.acceptTerms")}</span></label>
+                      <AlertBanner />
+                      <Button data-tagid="button-auth-register-submit" disabled={loading} className="w-full gradient-primary text-primary-foreground">
+                        {loading ? "Sending…" : "Send OTP"}
+                      </Button>
+                      <p className="pt-2 text-center text-sm text-muted-foreground">
+                        {t("auth.haveAccount")}{" "}
+                        <button data-tagid="button-auth-register-to-login" type="button" onClick={() => setModalMode("login")} className="font-semibold text-primary hover:underline">{t("actions.login")}</button>
+                      </p>
+                    </form>
+                  )}
+
+                  {/* Step 2: verify OTP */}
+                  {registerStep === 2 && (
+                    <form onSubmit={onVerifyRegisterOtp} className="space-y-4">
+                      <div className="rounded-xl bg-primary/5 border border-primary/20 px-4 py-3 flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                        <p className="text-sm text-muted-foreground">
+                          OTP sent to <strong className="text-foreground">{form.email}</strong>. Check your inbox (and spam folder).
+                        </p>
+                      </div>
+                      <Field label={t("auth.otpCode")}>
+                        <Input
+                          data-tagid="input-auth-register-otp"
+                          required
+                          inputMode="numeric"
+                          pattern="\d{6}"
+                          maxLength={6}
+                          value={form.otp}
+                          onChange={set("otp")}
+                          placeholder="6-digit code"
+                          className="text-center text-xl tracking-widest font-mono"
+                        />
+                      </Field>
+                      <AlertBanner />
+                      <Button data-tagid="button-auth-register-verify-otp" disabled={loading} className="w-full gradient-primary text-primary-foreground">
+                        {loading ? "Verifying…" : "Verify OTP & Create Account"}
+                      </Button>
+                      <button
+                        data-tagid="button-auth-register-resend"
+                        type="button"
+                        className="block w-full text-center text-xs text-muted-foreground hover:text-primary transition"
+                        onClick={() => { setRegisterStep(1); }}
+                      >
+                        Didn't receive it? Go back and resend
+                      </button>
+                    </form>
+                  )}
+                </div>
               )}
 
               {/* ── Forgot password ────────────────────────────────────────── */}

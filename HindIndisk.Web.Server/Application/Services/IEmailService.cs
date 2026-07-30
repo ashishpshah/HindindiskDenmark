@@ -13,6 +13,7 @@ public interface IEmailService
          string branchName, string date, string timeSlot, int guestCount, string newStatus);
     Task SendWelcomeEmailAsync(string toEmail, string toName);
     Task SendOtpEmailAsync(string toEmail, string toName, string otp);
+    Task SendRegistrationOtpEmailAsync(string toEmail, string toName, string otp);
     /// <summary>Sent once when an order/reservation auto-creates a new account. Includes login credentials.</summary>
     Task SendNewCustomerCredentialsAsync(string toEmail, string toName, string plainPassword);
 

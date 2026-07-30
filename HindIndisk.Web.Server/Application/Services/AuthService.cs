@@ -31,25 +31,109 @@ public class AuthService : IAuthService
         _email  = email;
     }
 
-    public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
+    public async Task StartRegistrationAsync(RegisterRequest request)
     {
         var normalizedEmail = request.Email.Trim().ToLower();
 
         if (await _db.Users.AnyAsync(u => u.Email == normalizedEmail))
             throw new InvalidOperationException("Email is already registered.");
 
-        var user = new User
+        var now = DenmarkTime.Now;
+
+        // If a valid (non-expired, non-used) OTP already exists, tell the client to
+        // skip straight to the OTP input — regardless of daily limit or cooldown.
+        var activeOtp = await _db.RegistrationOtps
+            .Where(o => o.Email == normalizedEmail && !o.IsUsed && o.ExpiresAt > now)
+            .OrderByDescending(o => o.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        if (activeOtp is not null)
+            throw new InvalidOperationException("OTP_ALREADY_ACTIVE");
+
+        // Max 3 OTPs per email per day
+        var todayStart = now.Date;
+        var countToday = await _db.RegistrationOtps
+            .CountAsync(o => o.Email == normalizedEmail && o.CreatedAt >= todayStart);
+        if (countToday >= OtpDailyLimit)
+            throw new InvalidOperationException("Maximum OTP requests reached for today. Please try again tomorrow.");
+
+        // 1-minute cooldown between OTP requests
+        var lastOtp = await _db.RegistrationOtps
+            .Where(o => o.Email == normalizedEmail)
+            .OrderByDescending(o => o.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        if (lastOtp is not null)
+        {
+            var secondsSinceLast = (now - lastOtp.CreatedAt).TotalSeconds;
+            if (secondsSinceLast < OtpCooldownSeconds)
+            {
+                var wait = (int)Math.Ceiling(OtpCooldownSeconds - secondsSinceLast);
+                throw new InvalidOperationException($"Please wait {wait} second{(wait == 1 ? "" : "s")} before requesting another OTP.");
+            }
+        }
+
+        var otp = Random.Shared.Next(100_000, 1_000_000).ToString();
+
+        var otpEntity = new RegistrationOtp
         {
             Firstname    = request.Firstname,
             Lastname     = request.Lastname,
             Email        = normalizedEmail,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
             Phone        = string.IsNullOrWhiteSpace(request.Phone) ? string.Empty : request.Phone.Trim(),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            OtpCode      = otp,
+            CreatedAt    = now,
+            ExpiresAt    = now.AddMinutes(OtpExpiryMinutes),
+            IsUsed       = false,
+        };
+        _db.RegistrationOtps.Add(otpEntity);
+        await _db.SaveChangesAsync();
+
+        try
+        {
+            await _email.SendRegistrationOtpEmailAsync(normalizedEmail, $"{request.Firstname} {request.Lastname}".Trim(), otp);
+        }
+        catch
+        {
+            // Roll back the saved OTP so the user can retry immediately without hitting the active-OTP block.
+            _db.RegistrationOtps.Remove(otpEntity);
+            await _db.SaveChangesAsync();
+            throw;
+        }
+    }
+
+    public async Task<AuthResponse> VerifyRegistrationOtpAsync(VerifyRegistrationOtpRequest request)
+    {
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var now             = DenmarkTime.Now;
+
+        var otpRecord = await _db.RegistrationOtps
+            .Where(o => o.Email    == normalizedEmail
+                     && o.OtpCode  == request.Otp
+                     && !o.IsUsed
+                     && o.ExpiresAt > now)
+            .OrderByDescending(o => o.CreatedAt)
+            .FirstOrDefaultAsync()
+            ?? throw new InvalidOperationException("Invalid or expired OTP. Please request a new one.");
+
+        // Defensive re-check: someone else may have registered this email in the meantime
+        if (await _db.Users.AnyAsync(u => u.Email == normalizedEmail))
+            throw new InvalidOperationException("Email is already registered.");
+
+        var user = new User
+        {
+            Firstname    = otpRecord.Firstname,
+            Lastname     = otpRecord.Lastname,
+            Email        = normalizedEmail,
+            PasswordHash = otpRecord.PasswordHash,
+            Phone        = otpRecord.Phone,
             RoleId       = 3, // Customer
-            CreatedAt    = DenmarkTime.Now,
+            CreatedAt    = now,
         };
 
         _db.Users.Add(user);
+        otpRecord.IsUsed = true;
         await _db.SaveChangesAsync();
 
         // Load role for the token / DTO
@@ -102,8 +186,8 @@ public class AuthService : IAuthService
     {
         var normalizedEmail = email.Trim().ToLowerInvariant();
 
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail);
-        if (user is null) return; // silent — don't reveal whether email exists
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail)
+            ?? throw new InvalidOperationException("Email is not registered.");
 
         var now        = DenmarkTime.Now;
         var todayStart = now.Date;

@@ -14,16 +14,35 @@ public class AuthController : ApiBaseController
 
     public AuthController(IAuthService auth) => _auth = auth;
 
-    /// <summary>Register a new customer account.</summary>
+    /// <summary>Start registering a new customer account — sends a 6-digit OTP to the given email.</summary>
     [HttpPost("register")]
-
-    [ProducesResponseType(typeof(AuthResponse), 200)]
+    [AllowAnonymous]
+    [ProducesResponseType(200)]
     [ProducesResponseType(400)]
     public async Task<IActionResult> Register(RegisterRequest request)
     {
         try
         {
-            return Ok(await _auth.RegisterAsync(request));
+            await _auth.StartRegistrationAsync(request);
+            return Ok(new { message = "OTP sent to your email." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            await LogExAsync(ex, 400);
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>Verify the registration OTP and create the customer account.</summary>
+    [HttpPost("register/verify-otp")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(AuthResponse), 200)]
+    [ProducesResponseType(400)]
+    public async Task<IActionResult> VerifyRegistrationOtp([FromBody] VerifyRegistrationOtpRequest request)
+    {
+        try
+        {
+            return Ok(await _auth.VerifyRegistrationOtpAsync(request));
         }
         catch (InvalidOperationException ex)
         {
@@ -103,12 +122,11 @@ public class AuthController : ApiBaseController
         try
         {
             await _auth.ForgotPasswordAsync(request.Email);
-            // Always 200 — don't reveal whether the email is registered
-            return Ok(new { message = "If that email is registered, an OTP has been sent." });
+            return Ok(new { message = "OTP sent to your email." });
         }
         catch (InvalidOperationException ex)
         {
-            // Surfaces rate-limit errors and email delivery failures to the client
+            // Surfaces unregistered-email, rate-limit, and email delivery failures to the client
             return BadRequest(new { message = ex.Message });
         }
     }

@@ -32,6 +32,7 @@ type Ctx = {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   register: (data: { firstname: string; lastname: string; email: string; phone?: string; password: string }) => Promise<void>;
+  verifyRegisterOtp: (email: string, otp: string) => Promise<void>;
   logout: () => void;
   updateProfile: (u: Partial<User>) => void;
   modalOpen: boolean;
@@ -89,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [persist]);
 
   const register = useCallback(async (data: { firstname: string; lastname: string; email: string; phone?: string; password: string }) => {
-    const res = await apiFetch<AuthResponse>("/api/auth/register", {
+    await apiFetch<{ message: string }>("/api/auth/register", {
       method: "POST",
       body: JSON.stringify({
         firstname: data.firstname.trim(),
@@ -98,6 +99,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password:  data.password,
         phone:     data.phone?.trim() || undefined,
       }),
+    });
+  }, []);
+
+  const verifyRegisterOtp = useCallback(async (email: string, otp: string) => {
+    const res = await apiFetch<AuthResponse>("/api/auth/register/verify-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, otp }),
     });
     lsSet("hind-token", res.token);
     persist({
@@ -128,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const closeModal = useCallback(() => setModalOpen(false), []);
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateProfile, modalOpen, openModal, closeModal, modalMode, setModalMode }}>
+    <AuthContext.Provider value={{ user, login, register, verifyRegisterOtp, logout, updateProfile, modalOpen, openModal, closeModal, modalMode, setModalMode }}>
       {children}
     </AuthContext.Provider>
   );
