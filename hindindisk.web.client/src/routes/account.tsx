@@ -84,7 +84,7 @@ function AccountLayout() {
     { to: "/account/orders",       label: t("account.myOrders"),       icon: ShoppingBag },
     { to: "/account/reservations", label: t("account.myReservations"), icon: CalendarCheck },
     { to: "/account/addresses",    label: t("account.savedAddresses"), icon: MapPin },
-    { to: "/account/coupons",      label: t("account.coupons"),        icon: Ticket },
+    // { to: "/account/coupons",      label: t("account.coupons"),        icon: Ticket },
   ];
 
   useEffect(() => {

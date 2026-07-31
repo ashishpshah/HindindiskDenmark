@@ -15,7 +15,7 @@ export default defineConfig({
     launchOptions: {
       slowMo: 1500,
       headless: false,
-      args: ["--window-size=1280,900"],
+      args: ["--window-size=1900,1080"],
     },
   },
   projects: [
