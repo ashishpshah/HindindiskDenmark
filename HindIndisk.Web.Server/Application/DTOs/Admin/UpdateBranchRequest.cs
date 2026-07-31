@@ -23,5 +23,7 @@ public class UpdateBranchRequest
     [Range(0, int.MaxValue)]   public int     ReviewCount      { get; set; } = 0;
     [Range(0, 9999)] public decimal DeliveryFee       { get; set; } = 39.0m;
     public bool    DeliveryFeeEnabled { get; set; } = true;
+    [Range(0, 9999)] public decimal BagCharge         { get; set; } = 0m;
+    public bool    BagChargeEnabled { get; set; } = false;
     [Range(0, 90)] public int MaxAdvanceDays { get; set; } = 7;
 }

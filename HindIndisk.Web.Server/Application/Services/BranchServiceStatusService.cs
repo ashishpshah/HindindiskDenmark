@@ -145,6 +145,7 @@ public class BranchServiceStatusService(ApplicationDbContext db, IHubContext<Clo
                 b.City, b.CityDa, b.PostalCode, b.Country, b.CountryDa,
                 b.Phone, b.Email, b.GoogleMapsLink, b.ImageUrl, b.Rating, b.ReviewCount,
                 b.DeliveryFee, b.DeliveryFeeEnabled,
+                b.BagCharge, b.BagChargeEnabled,
                 b.IsCloseOrder, b.CloseOrderNote, b.CloseOrderNoteDa,
                 reservationClosure != null, reservationClosure?.Note, reservationClosure?.NoteDa,
                 deliveryClosure != null, deliveryClosure?.Note, deliveryClosure?.NoteDa,

@@ -20,6 +20,7 @@ export type BranchForm = {
   phone: string; email: string; googleMapsLink: string;
   imageUrl: string; rating: string; reviewCount: string;
   deliveryFee: string; deliveryFeeEnabled: boolean;
+  bagCharge: string; bagChargeEnabled: boolean;
   maxAdvanceDays: string;
 };
 
@@ -32,6 +33,7 @@ export const EMPTY_BRANCH: BranchForm = {
   phone: "", email: "", googleMapsLink: "",
   imageUrl: "", rating: "5.0", reviewCount: "0",
   deliveryFee: "39", deliveryFeeEnabled: true,
+  bagCharge: "0", bagChargeEnabled: false,
   maxAdvanceDays: "7",
 };
 
@@ -59,6 +61,8 @@ function BranchNewPage() {
         reviewCount: parseInt(form.reviewCount) || 0,
         deliveryFee: parseFloat(form.deliveryFee) || 39,
         deliveryFeeEnabled: form.deliveryFeeEnabled,
+        bagCharge: parseFloat(form.bagCharge) || 0,
+        bagChargeEnabled: form.bagChargeEnabled,
         maxAdvanceDays: parseInt(form.maxAdvanceDays) || 0,
       });
       toast.success(`${form.name} created.`);

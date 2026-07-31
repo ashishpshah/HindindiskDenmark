@@ -44,6 +44,8 @@ function BranchEditPage() {
       reviewCount:      String(branch.reviewCount),
       deliveryFee:        String(branch.deliveryFee),
       deliveryFeeEnabled: branch.deliveryFeeEnabled,
+      bagCharge:          String(branch.bagCharge),
+      bagChargeEnabled:   branch.bagChargeEnabled,
       maxAdvanceDays:     String(branch.maxAdvanceDays),
     });
   }, [branch]);
@@ -68,6 +70,8 @@ function BranchEditPage() {
         reviewCount: parseInt(form.reviewCount) || 0,
         deliveryFee:        parseFloat(form.deliveryFee) || 39,
         deliveryFeeEnabled: form.deliveryFeeEnabled,
+        bagCharge:          parseFloat(form.bagCharge) || 0,
+        bagChargeEnabled:   form.bagChargeEnabled,
         maxAdvanceDays:     parseInt(form.maxAdvanceDays) || 0,
       });
       toast.success(`${form.name} updated.`);

@@ -7,6 +7,8 @@ type BranchApiDto = {
   name: string;
   deliveryFeeEnabled: boolean;
   deliveryFee: number;
+  bagChargeEnabled: boolean;
+  bagCharge: number;
 };
 
 // Full metadata stored per entry — no mock.ts lookup needed at render time
@@ -66,10 +68,13 @@ const CartContext = createContext<Ctx | null>(null);
 export type BranchPricingConfig = {
   deliveryFeeEnabled: boolean;
   deliveryFee: number;
+  bagChargeEnabled: boolean;
+  bagCharge: number;
 };
 
 const DEFAULT_PRICING: BranchPricingConfig = {
   deliveryFeeEnabled: true, deliveryFee: 39,
+  bagChargeEnabled: false, bagCharge: 0,
 };
 
 const COUPONS: Record<string, { type: "percent" | "freeDelivery"; value: number }> = {
@@ -108,9 +113,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (!selectedBranch) return;
     setBranchPricing(prev =>
       prev.deliveryFeeEnabled === selectedBranch.deliveryFeeEnabled &&
-      prev.deliveryFee        === selectedBranch.deliveryFee
+      prev.deliveryFee        === selectedBranch.deliveryFee &&
+      prev.bagChargeEnabled   === selectedBranch.bagChargeEnabled &&
+      prev.bagCharge          === selectedBranch.bagCharge
         ? prev
-        : { deliveryFeeEnabled: selectedBranch.deliveryFeeEnabled, deliveryFee: selectedBranch.deliveryFee }
+        : {
+            deliveryFeeEnabled: selectedBranch.deliveryFeeEnabled, deliveryFee: selectedBranch.deliveryFee,
+            bagChargeEnabled:   selectedBranch.bagChargeEnabled,   bagCharge:   selectedBranch.bagCharge,
+          }
     );
   }, [branch, branches]);
 
@@ -176,8 +186,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const subtotal = lines.reduce((a, l) => a + l.price * l.qty, 0);
     const totalQty = lines.reduce((a, l) => a + l.qty, 0);
 
-    const baseDelivery = branch && orderType === "delivery" && subtotal > 0 && branchPricing.deliveryFeeEnabled
-      ? branchPricing.deliveryFee : 0;
+    const baseDelivery = !branch || subtotal === 0 ? 0
+      : orderType === "delivery"
+        ? (branchPricing.deliveryFeeEnabled ? branchPricing.deliveryFee : 0)
+        : (branchPricing.bagChargeEnabled   ? branchPricing.bagCharge   : 0);
     let discount = 0;
     let delivery = baseDelivery;
     if (coupon && COUPONS[coupon]) {

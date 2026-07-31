@@ -219,7 +219,9 @@ function OrderModal({
               </div>
               <div className="flex flex-wrap justify-end gap-4 text-xs text-muted-foreground border-t px-4 py-2.5 bg-muted/10">
                 <span>Subtotal <strong className="text-foreground">{order.subtotal.toFixed(0)} DKK</strong></span>
-                {order.deliveryFee > 0 && <span>Delivery <strong className="text-foreground">{order.deliveryFee.toFixed(0)} DKK</strong></span>}
+                {order.deliveryFee > 0 && (
+                  <span>{order.orderType === "Delivery" ? "Delivery Fee" : "Pose Charges"} <strong className="text-foreground">{order.deliveryFee.toFixed(0)} DKK</strong></span>
+                )}
                 {order.discount > 0 && <span>Discount <strong className="text-green-600">−{order.discount.toFixed(0)} DKK</strong></span>}
                 <span className="font-bold text-foreground text-sm">Total {order.total.toFixed(0)} DKK</span>
               </div>

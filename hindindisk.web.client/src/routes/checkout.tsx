@@ -170,9 +170,9 @@ function CheckoutPage() {
       if (!branch) { toast.error("Please select a branch."); return; }
     }
     if (step === 2) {
-      const hours = branchHours(currentBranch);
-      if (!branchOpen) { toast.error("This branch is closed on the selected date.", { description: hours ?? "Please choose a different date or branch." }); return; }
-      if (orderSlots.length === 0) { toast.error("No time slots available on the selected date.", { description: hours ?? "Please try a different date." }); return; }
+      // const hours = branchHours(currentBranch);
+      if (!branchOpen) { toast.error("This branch is closed on the selected date.", { description: "Please choose a different date or branch." }); return; }
+      if (orderSlots.length === 0) { toast.error("No time slots available on the selected date.", { description: "Please try a different date." }); return; }
       if (!scheduledTime) { toast.error("Please select a preferred time slot."); return; }
     }
     if (step === 3) {
@@ -363,7 +363,8 @@ function CheckoutPage() {
                         <Truck className="h-6 w-6 text-primary" />
                         <div className="mt-2 font-semibold">{t("checkout.delivery")}</div>
                         <div className="text-sm text-muted-foreground">
-                          {currentBranch?.deliveryFeeEnabled ? `+${currentBranch.deliveryFee} DKK` : t("checkout.free")}
+                          {currentBranch?.deliveryFeeEnabled && currentBranch.deliveryFee > 0
+                            ? `+${currentBranch.deliveryFee} DKK` : t("checkout.free")}
                         </div>
                         {currentBranch && isClosedNow(currentBranch.id, "Delivery") && (
                           <div className="mt-1.5 text-xs text-orange-600 font-medium">Temporarily closed</div>
@@ -379,7 +380,10 @@ function CheckoutPage() {
                       >
                         <Store className="h-6 w-6 text-primary" />
                         <div className="mt-2 font-semibold">{t("checkout.pickup")}</div>
-                        <div className="text-sm text-muted-foreground">{t("checkout.free")}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {currentBranch?.bagChargeEnabled && currentBranch.bagCharge > 0
+                            ? `+${currentBranch.bagCharge} DKK` : t("checkout.free")}
+                        </div>
                         {currentBranch && isClosedNow(currentBranch.id, "Pickup") && (
                           <div className="mt-1.5 text-xs text-orange-600 font-medium">Temporarily closed</div>
                         )}
@@ -468,7 +472,40 @@ function CheckoutPage() {
                   <div className="space-y-4">
                     <h2 className="font-display text-2xl font-semibold">{t("checkout.step3")}</h2>
 
-                    <div className="relative">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+                      <FormField label={t("forms.firstNameLabelOpt")}>
+                        <Input
+                          data-tagid="input-checkout-firstname"
+                          value={details.firstname}
+                          onChange={(e) => setDetails({ ...details, firstname: e.target.value })}
+                        />
+                      </FormField>
+                      <FormField label={t("forms.lastNameLabelOpt")}>
+                        <Input
+                          data-tagid="input-checkout-lastname"
+                          value={details.lastname}
+                          onChange={(e) => setDetails({ ...details, lastname: e.target.value })}
+                        />
+                      </FormField>
+                      {/* <div className="sm:col-span-2">
+                        <div className="relative"> */}
+                          <FormField label={t("forms.emailLabel")}>
+                            <Input data-tagid="input-checkout-email" type="email" required placeholder={t("forms.emailPlaceholder")}
+                              value={details.email}
+                              onChange={(e) => setDetails({ ...details, email: e.target.value })} />
+                          </FormField>
+                          {lookingUp && matchedBy !== "phone" && (
+                            <Loader2 className="absolute right-3 top-9 h-4 w-4 animate-spin text-muted-foreground" />
+                          )}
+                          {/* {customer && !lookingUp && matchedBy === "email" && (
+                            <div className="mt-1 flex items-center gap-1.5 text-xs text-green-600">
+                              <UserCheck className="h-3.5 w-3.5" />
+                              {t("forms.customerFound")}
+                            </div>
+                          )} */}
+                        {/* </div>
+                        
+                    <div className="relative"> */}
                       <FormField label={t("forms.phoneLabelOpt")}>
                         <Input
                           data-tagid="input-checkout-phone"
@@ -487,42 +524,10 @@ function CheckoutPage() {
                           {t("forms.customerFound")}
                         </div>
                       )}
-                    </div>
+                    {/* </div>
 
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <FormField label={t("forms.firstNameLabelOpt")}>
-                        <Input
-                          data-tagid="input-checkout-firstname"
-                          value={details.firstname}
-                          onChange={(e) => setDetails({ ...details, firstname: e.target.value })}
-                        />
-                      </FormField>
-                      <FormField label={t("forms.lastNameLabelOpt")}>
-                        <Input
-                          data-tagid="input-checkout-lastname"
-                          value={details.lastname}
-                          onChange={(e) => setDetails({ ...details, lastname: e.target.value })}
-                        />
-                      </FormField>
-                      <div className="sm:col-span-2">
-                        <div className="relative">
-                          <FormField label={t("forms.emailLabel")}>
-                            <Input data-tagid="input-checkout-email" type="email" required placeholder={t("forms.emailPlaceholder")}
-                              value={details.email}
-                              onChange={(e) => setDetails({ ...details, email: e.target.value })} />
-                          </FormField>
-                          {lookingUp && matchedBy !== "phone" && (
-                            <Loader2 className="absolute right-3 top-9 h-4 w-4 animate-spin text-muted-foreground" />
-                          )}
-                          {customer && !lookingUp && matchedBy === "email" && (
-                            <div className="mt-1 flex items-center gap-1.5 text-xs text-green-600">
-                              <UserCheck className="h-3.5 w-3.5" />
-                              {t("forms.customerFound")}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                      </div>*/}
+                    </div> 
 
                     {/* Delivery address — shown below contact fields when delivery is selected */}
                     <AnimatePresence>
@@ -682,7 +687,7 @@ function CheckoutPage() {
               ))}
             </div>
             <div className="mt-4 border-t pt-3">
-              <OrderSummary subtotal={subtotal} discount={discount} delivery={delivery} total={total} />
+              <OrderSummary subtotal={subtotal} discount={discount} delivery={delivery} total={total} orderType={orderType} />
             </div>
           </aside>
         </div>
@@ -731,7 +736,7 @@ function CheckoutPage() {
                 <div className="mt-6 flex justify-center gap-2">
                   <Button
                     data-tagid="button-checkout-track-order"
-                    onClick={() => navigate({ to: "/order-tracking", search: { id: String(confirmedOrder.id) } })}
+                    onClick={() => navigate({ to: "/order-tracking", search: { id: confirmedOrder.id } })}
                     className="gradient-primary text-primary-foreground">
                     {t("checkout.trackOrder")}
                   </Button>

@@ -8,7 +8,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { MenuItemPhoto } from "@/components/MenuItemPhoto";
 
 export function CartDrawer() {
-  const { open, setOpen, lines, add, sub, remove, subtotal, delivery, discount, total } = useCart();
+  const { open, setOpen, lines, add, sub, remove, subtotal, delivery, discount, total, orderType } = useCart();
   const { t, lang } = useI18n();
 
   return (
@@ -60,7 +60,7 @@ export function CartDrawer() {
             </div>
             {lines.length > 0 && (
               <div className="space-y-3 border-t bg-muted/30 p-5">
-                <OrderSummary subtotal={subtotal} discount={discount} delivery={delivery} total={total} />
+                <OrderSummary subtotal={subtotal} discount={discount} delivery={delivery} total={total} orderType={orderType} />
                 <Button data-tagid="a-cart-checkout" asChild size="lg" className="w-full gradient-primary text-primary-foreground" onClick={() => setOpen(false)}>
                   <Link to="/checkout">{t("actions.checkout")}</Link>
                 </Button>

@@ -21,6 +21,8 @@ export type UpdateBranchInput = {
   reviewCount: number;
   deliveryFee: number;
   deliveryFeeEnabled: boolean;
+  bagCharge: number;
+  bagChargeEnabled: boolean;
   maxAdvanceDays: number;
 };
 
@@ -45,6 +47,8 @@ export type AdminBranchDto = {
   reviewCount: number;
   deliveryFee: number;
   deliveryFeeEnabled: boolean;
+  bagCharge: number;
+  bagChargeEnabled: boolean;
   isCloseOrder: boolean;
   closeOrderNote?: string | null;
   closeOrderNoteDa?: string | null;

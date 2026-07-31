@@ -22,7 +22,7 @@ function resolveUrl(url: string) {
   return `${BASE}${url}`;
 }
 
-const search = z.object({ id: z.string().optional() });
+const search = z.object({ id: z.coerce.string().optional() });
 
 export const Route = createFileRoute("/order-tracking")({
   validateSearch: (s) => search.parse(s),
@@ -83,6 +83,19 @@ function TrackPage() {
   );
 
   const isNumericId = id !== undefined && /^\d+$/.test(id);
+
+  // Tidy up stale links from before the search-serialization fix (e.g. ?id=%227%22) —
+  // the id itself already parses correctly, this just cleans up the visible URL.
+  useEffect(() => {
+    if (id !== undefined && window.location.search.includes("%22")) {
+      // The parsed `id` is already correct, so TanStack's own navigate() sees no state
+      // change and won't touch the URL — rewrite the address bar directly instead.
+      const params = new URLSearchParams(window.location.search);
+      params.set("id", id);
+      window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data: apiOrder, isLoading } = useOrder(id);
   const legacyOrder = !isNumericId && id ? loadLegacyOrder(id) : null;
@@ -146,7 +159,7 @@ function TrackPage() {
         {!id ? (
           <form
             className="mx-auto max-w-md flex gap-2"
-            onSubmit={(e) => { e.preventDefault(); if (code) navigate({ to: "/order-tracking", search: { id: code } }); }}
+            onSubmit={(e) => { e.preventDefault(); if (code) navigate({ to: "/order-tracking", search: { id: /^\d+$/.test(code) ? Number(code) : code } }); }}
           >
             <Input data-tagid="input-tracking-order-id" value={code} onChange={(e) => setCode(e.target.value)} placeholder={t("pages.tracking.placeholder")} />
             <Button data-tagid="button-tracking-track" className="gradient-primary text-primary-foreground">{t("pages.tracking.trackBtn")}</Button>
@@ -234,6 +247,7 @@ function TrackPage() {
                     discount={apiOrder.discount}
                     delivery={apiOrder.deliveryFee}
                     total={apiOrder.total}
+                    orderType={apiOrder.orderType === "Delivery" ? "delivery" : "pickup"}
                   />
                   {apiOrder.couponCode && (
                     <p className="mt-1.5 text-xs text-primary font-medium">

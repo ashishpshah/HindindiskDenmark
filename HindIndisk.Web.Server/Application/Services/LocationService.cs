@@ -60,6 +60,7 @@ public class LocationService : ILocationService
                 weekdayOpen, weekdayClose, weekendOpen, weekendClose,
                 b.ImageUrl, b.Rating, b.ReviewCount,
                 b.DeliveryFee, b.DeliveryFeeEnabled,
+                b.BagCharge, b.BagChargeEnabled,
                 b.IsCloseOrder, b.CloseOrderNote, b.CloseOrderNoteDa,
                 reservationClosure != null, reservationClosure?.Note, reservationClosure?.NoteDa,
                 deliveryClosure != null, deliveryClosure?.Note, deliveryClosure?.NoteDa,

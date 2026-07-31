@@ -21,6 +21,8 @@ public record AdminBranchDto(
     int     ReviewCount,
     decimal DeliveryFee,
     bool    DeliveryFeeEnabled,
+    decimal BagCharge,
+    bool    BagChargeEnabled,
     bool    IsCloseOrder,
     string? CloseOrderNote,
     string? CloseOrderNoteDa,
