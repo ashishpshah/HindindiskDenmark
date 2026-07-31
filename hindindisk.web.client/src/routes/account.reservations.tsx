@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { CalendarCheck, Loader2, ChevronLeft, ChevronRight, X, User } from "lucide-react";
+import { CalendarCheck, Loader2, ChevronLeft, ChevronRight, X, User, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMyReservations } from "@/hooks/useMyReservations";
@@ -19,11 +19,25 @@ const STATUS_COLORS: Record<string, string> = {
   Cancelled: "bg-red-100 text-red-700",
 };
 
-function contactRelation(contactName: string, contactEmail: string, user: AuthUser | null) {
+function reservationRelation(
+  reservationUserId: number,
+  contactName: string,
+  contactEmail: string,
+  ownerName: string | null | undefined,
+  user: AuthUser | null
+) {
   if (!user) return null;
-  const isSelf = contactName.trim().toLowerCase() === user.name.trim().toLowerCase();
-  if (isSelf) return null;
-  return { type: "for" as const, name: contactName.trim() || contactEmail };
+
+  const sameAccount = reservationUserId === user.id;
+  const sameEmail = contactEmail.trim().toLowerCase() === user.email.trim().toLowerCase();
+
+  // Own account, but contact details point elsewhere (e.g. booked as a gift) — "Created for {name}".
+  if (sameAccount && !sameEmail) return { type: "for" as const, name: contactName.trim() || contactEmail };
+
+  // Different account, but same contact email as the viewer — "Created by {name}".
+  if (!sameAccount && sameEmail) return { type: "linked" as const, name: ownerName?.trim() || contactName.trim() || contactEmail };
+
+  return null;
 }
 
 function ReservationsPage() {
@@ -171,7 +185,7 @@ function ReservationsPage() {
 
       {/* ── Reservation cards ──────────────────────────────────────────── */}
       {paginated.map((r) => {
-        const relation = contactRelation(r.contactName, r.contactEmail, user);
+        const relation = reservationRelation(r.userId, r.contactName, r.contactEmail, r.ownerName, user);
         return (
           <div key={r.id} className="rounded-3xl border bg-card p-5 shadow-soft">
             <div className="flex items-start justify-between gap-4">
@@ -189,10 +203,16 @@ function ReservationsPage() {
                   </span>
                 </div>
                 <div className="mt-0.5 text-xs text-muted-foreground">{t("reservations.createdAt")} {formatDateTime(r.createdAt)}</div>
-                {relation && (
+                {relation?.type === "for" && (
                   <div className="mt-1.5 flex items-center gap-1.5 text-xs text-sky-600">
                     <User className="h-3.5 w-3.5 shrink-0" />
                     <span>{t("filters.for")} <strong>{relation.name}</strong></span>
+                  </div>
+                )}
+                {relation?.type === "linked" && (
+                  <div className="mt-1.5 flex items-center gap-1.5 text-xs text-violet-600">
+                    <Users className="h-3.5 w-3.5 shrink-0" />
+                    <span>{t("account.createdBy")} <strong>{relation.name}</strong></span>
                   </div>
                 )}
                 {r.specialRequests && (

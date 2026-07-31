@@ -51,6 +51,8 @@ export type OrderDto = {
   specialInstructions?: string;
   cancellationReason?: string;
   placedByName?: string;
+  userId: number;
+  ownerName?: string | null;
 };
 
 export function useCreateOrder() {

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
-import { ShoppingBag, Loader2, MapPin, Banknote, UserCog, User, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ShoppingBag, Loader2, MapPin, Banknote, UserCog, User, Users, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMyOrders } from "@/hooks/useMyOrders";
@@ -26,12 +26,27 @@ function statusColorStyle(statusName: string, statuses: { name: string; color?: 
   return s?.color ?? "#6b7280";
 }
 
-function orderRelation(contactName: string, contactEmail: string | undefined, placedByName: string | null | undefined, user: AuthUser | null) {
+function orderRelation(
+  orderUserId: number,
+  contactName: string,
+  contactEmail: string | undefined,
+  placedByName: string | null | undefined,
+  ownerName: string | null | undefined,
+  user: AuthUser | null
+) {
   if (placedByName) return { type: "by" as const, name: placedByName };
   if (!user) return null;
-  const isSelf = contactName.trim().toLowerCase() === user.name.trim().toLowerCase();
-  if (isSelf) return null;
-  return { type: "for" as const, name: contactName.trim() || contactEmail || "" };
+
+  const sameAccount = orderUserId === user.id;
+  const sameEmail = !!contactEmail && contactEmail.trim().toLowerCase() === user.email.trim().toLowerCase();
+
+  // Own account, but contact details point elsewhere (e.g. ordered as a gift) — "Created for {name}".
+  if (sameAccount && !sameEmail) return { type: "for" as const, name: contactName.trim() || contactEmail || "" };
+
+  // Different account, but same contact email as the viewer — "Created by {name}".
+  if (!sameAccount && sameEmail) return { type: "linked" as const, name: ownerName?.trim() || contactName.trim() || contactEmail || "" };
+
+  return null;
 }
 
 function OrdersPage() {
@@ -192,7 +207,7 @@ function OrdersPage() {
 
       {/* ── Order cards ────────────────────────────────────────────────── */}
       {paginated.map((o) => {
-        const relation = orderRelation(o.contactName, o.contactEmail, o.placedByName, user);
+        const relation = orderRelation(o.userId, o.contactName, o.contactEmail, o.placedByName, o.ownerName, user);
         const color = statusColorStyle(o.status, activeStatuses);
         return (
         <div key={o.id} className="rounded-3xl border bg-card p-5 shadow-soft">
@@ -227,6 +242,12 @@ function OrdersPage() {
                 <div className="mt-1.5 flex items-center gap-1.5 text-xs text-sky-600">
                   <User className="h-3.5 w-3.5 shrink-0" />
                   <span>{t("filters.for")} <strong>{relation.name}</strong></span>
+                </div>
+              )}
+              {relation?.type === "linked" && (
+                <div className="mt-1.5 flex items-center gap-1.5 text-xs text-violet-600">
+                  <Users className="h-3.5 w-3.5 shrink-0" />
+                  <span>{t("account.createdBy")} <strong>{relation.name}</strong></span>
                 </div>
               )}
             </div>
@@ -284,7 +305,7 @@ function OrdersPage() {
 
           <div className="mt-3">
             <Button asChild size="sm" variant="outline" data-tagid={`button-account-orders-track-${o.id}`}>
-              <Link to="/order-tracking" search={{ id: String(o.id) }}>{t("orders.track")}</Link>
+              <Link to="/order-tracking" search={{ id: o.id }}>{t("orders.track")}</Link>
             </Button>
           </div>
         </div>

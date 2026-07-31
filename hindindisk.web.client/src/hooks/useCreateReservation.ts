@@ -26,6 +26,8 @@ export type ReservationDto = {
   status: string;
   createdAt: string;
   cancellationReason?: string;
+  userId: number;
+  ownerName?: string | null;
 };
 
 export function useCreateReservation() {
