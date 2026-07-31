@@ -11,6 +11,7 @@ export type OrderStatusDto = {
   isTerminal: boolean;
   isActive: boolean;
   createdAt: string;
+  isEmailSend: boolean;
 };
 
 export type CreateOrderStatusRequest = {
@@ -28,6 +29,7 @@ export type UpdateOrderStatusMetaRequest = {
   displayOrder: number;
   color?: string;
   isActive: boolean;
+  isEmailSend: boolean;
 };
 
 export function useAdminOrderStatuses() {

@@ -21,9 +21,6 @@ public static class DataSeeder
                 SmtpPass    = sec["SmtpPass"]    ?? string.Empty,
                 FromName    = sec["FromName"]    ?? string.Empty,
                 FromAddress = sec["FromAddress"] ?? string.Empty,
-                AdminToMail = sec["AdminToMail"] ?? string.Empty,
-                CC          = sec["CC"]          ?? string.Empty,
-                BCC         = sec["BCC"]         ?? string.Empty,
                 Enabled     = sec.GetValue<bool>("Enabled", false),
             });
             await context.SaveChangesAsync();
@@ -273,6 +270,14 @@ public static class DataSeeder
             );
             await context.SaveChangesAsync();
             await context.Database.ExecuteSqlRawAsync("SET IDENTITY_INSERT [Branches] OFF");
+
+            // 5a. Branch email recipients — fan out from appsettings.json ──────
+            var emailSec = config.GetSection("Email");
+            await context.BranchEmailRecipients.AddRangeAsync(
+                new BranchEmailRecipients { BranchId = 1, AdminToMail = emailSec["AdminToMail"] ?? string.Empty, CC = emailSec["CC"] ?? string.Empty, BCC = emailSec["BCC"] ?? string.Empty },
+                new BranchEmailRecipients { BranchId = 2, AdminToMail = emailSec["AdminToMail"] ?? string.Empty, CC = emailSec["CC"] ?? string.Empty, BCC = emailSec["BCC"] ?? string.Empty }
+            );
+            await context.SaveChangesAsync();
 
             // 5b. Branch day schedules (Mon–Sat open, Sunday closed) ───────────
             await context.BranchDaySchedules.AddRangeAsync(

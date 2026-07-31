@@ -104,6 +104,7 @@ namespace HindIndisk.Web.Server
 			builder.Services.AddScoped<HindIndisk.Api.Application.Services.BranchServiceStatusService>();
 			builder.Services.AddScoped<HindIndisk.Api.Application.Services.BranchClosureService>();
 			builder.Services.AddScoped<IEmailSettingsService, EmailSettingsService>();
+			builder.Services.AddScoped<IEmailRecipientsService, EmailRecipientsService>();
 			builder.Services.AddScoped<IHeroSlideService, HeroSlideService>();
 			builder.Services.AddScoped<IGalleryImageService, GalleryImageService>();
 			builder.Services.AddScoped<IAboutService, AboutService>();

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, Mail, Server, User, Send, ToggleLeft, ToggleRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api/client";
 import { useAdminEmailSettings, useUpdateEmailSettings, type EmailSettingsDto } from "@/hooks/useEmailSettings";
+import { useAdminEmailRecipients, useUpdateEmailRecipients } from "@/hooks/useEmailRecipients";
+import { useServiceStatus } from "@/hooks/useServiceStatus";
+import { BranchPicker } from "@/components/admin/BranchPicker";
 
 export const Route = createFileRoute("/admin/email-settings")({ component: EmailSettingsPage });
 
@@ -28,6 +31,34 @@ function EmailSettingsPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmPwd, setConfirmPwd] = useState("");
   const [confirmError, setConfirmError] = useState("");
+
+  const branchesQ   = useServiceStatus();
+  const branches    = branchesQ.data ?? [];
+  const recipientsQ = useAdminEmailRecipients();
+  const updateRecipients = useUpdateEmailRecipients();
+  const [selectedBranchId, setSelectedBranchId] = useState<number>();
+  const branchId = selectedBranchId ?? branches[0]?.id;
+  const recipients = recipientsQ.data?.find(r => r.branchId === branchId);
+
+  const [adminToMail, setAdminToMail] = useState("");
+  const [cc, setCc]                   = useState("");
+  const [bcc, setBcc]                 = useState("");
+
+  useEffect(() => {
+    if (recipients) {
+      setAdminToMail(recipients.adminToMail);
+      setCc(recipients.cc);
+      setBcc(recipients.bcc);
+    }
+  }, [recipients]);
+
+  function saveRecipients() {
+    if (!branchId) return;
+    updateRecipients.mutate({ branchId, adminToMail, cc, bcc }, {
+      onSuccess: () => toast.success("Admin recipients saved"),
+      onError:   () => toast.error("Failed to save recipients"),
+    });
+  }
 
   function val<K extends keyof EmailSettingsDto>(key: K): EmailSettingsDto[K] {
     return (draft[key] !== undefined ? draft[key] : settings?.[key]) as EmailSettingsDto[K];
@@ -52,9 +83,6 @@ function EmailSettingsPage() {
       smtpUser:    val("smtpUser"),
       fromName:    val("fromName"),
       fromAddress: val("fromAddress"),
-      adminToMail: val("adminToMail"),
-      cc:          val("cc"),
-      bcc:         val("bcc"),
       enabled:     isEnabled,
     };
     if (draft.smtpPass?.trim()) payload.smtpPass = draft.smtpPass.trim();
@@ -182,21 +210,37 @@ function EmailSettingsPage() {
           <h3 className="font-semibold text-sm flex items-center gap-2">
             <Send className="h-4 w-4 text-primary" /> Admin Recipients
           </h3>
+          <p className="text-xs text-muted-foreground -mt-2">
+            Who gets notified about new orders/reservations for each branch. Configured per branch — pick a branch below.
+          </p>
+
+          <BranchPicker branches={branches} value={selectedBranchId ?? branches[0]?.id} onChange={setSelectedBranchId} />
+
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Admin To Mail">
-              <Input value={val("adminToMail") ?? ""} onChange={set("adminToMail")} placeholder="admin@hindindisk.dk" data-tagid="input-email-settings-admintomail" />
+              <Input value={adminToMail} onChange={e => setAdminToMail(e.target.value)} placeholder="admin@hindindisk.dk" data-tagid="input-email-settings-admintomail" />
             </Field>
             <div className="sm:col-span-2">
               <Field label="CC (comma-separated)">
-                <Input value={val("cc") ?? ""} onChange={set("cc")} placeholder="cc1@example.com, cc2@example.com" data-tagid="input-email-settings-cc" />
+                <Input value={cc} onChange={e => setCc(e.target.value)} placeholder="cc1@example.com, cc2@example.com" data-tagid="input-email-settings-cc" />
               </Field>
             </div>
             <div className="sm:col-span-2">
               <Field label="BCC (comma-separated)">
-                <Input value={val("bcc") ?? ""} onChange={set("bcc")} placeholder="bcc@example.com" data-tagid="input-email-settings-bcc" />
+                <Input value={bcc} onChange={e => setBcc(e.target.value)} placeholder="bcc@example.com" data-tagid="input-email-settings-bcc" />
               </Field>
             </div>
           </div>
+
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={saveRecipients}
+            disabled={updateRecipients.isPending || !branchId}
+            data-tagid="button-email-settings-recipients-save"
+          >
+            {updateRecipients.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving…</> : "Save Admin Recipients"}
+          </Button>
         </div>
 
         {/* Footer */}

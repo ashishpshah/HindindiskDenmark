@@ -8,7 +8,8 @@ public interface IEmailService
     // ── Customer transactional ────────────────────────────────────────────────
     Task SendOrderConfirmationAsync(string toEmail, string toName, OrderDto order);
     Task SendReservationConfirmationAsync(string toEmail, ReservationDto reservation);
-    Task SendOrderStatusUpdateAsync(string toEmail, string toName, long orderId, string newStatus);
+    Task SendOrderStatusUpdateAsync(string toEmail, string toName, long orderId, string newStatus,
+         string branchName, string orderType, DateOnly? scheduledDate, string? scheduledTime);
     Task SendReservationStatusUpdateAsync(string toEmail, string toName, long reservationId,
          string branchName, string date, string timeSlot, int guestCount, string newStatus);
     Task SendWelcomeEmailAsync(string toEmail, string toName);
@@ -17,12 +18,14 @@ public interface IEmailService
     /// <summary>Sent once when an order/reservation auto-creates a new account. Includes login credentials.</summary>
     Task SendNewCustomerCredentialsAsync(string toEmail, string toName, string plainPassword);
 
-    Task SendOrderCancelledCustomerAsync(string toEmail, string toName, long orderId, string? reason);
-    Task SendOrderCancelledAdminAsync(long orderId, string customerName, string customerEmail, string? reason);
+    Task SendOrderCancelledCustomerAsync(string toEmail, string toName, long orderId, string? reason,
+         string branchName, string orderType, DateOnly? scheduledDate, string? scheduledTime);
+    Task SendOrderCancelledAdminAsync(long orderId, long branchId, string customerName, string customerEmail, string? reason,
+         string branchName, string orderType, DateOnly? scheduledDate, string? scheduledTime);
 
     // ── Admin notifications ───────────────────────────────────────────────────
     Task SendAdminOrderNotificationAsync(OrderDto order);
     Task SendAdminReservationNotificationAsync(ReservationDto reservation);
-    Task SendContactEnquiryAsync(string fromName, string fromEmail, string subject, string message);
+    Task SendContactEnquiryAsync(string fromName, string fromEmail, string subject, string message, long? branchId = null);
     Task SendContactConfirmationAsync(string toEmail, string toName, string subject, string message);
 }

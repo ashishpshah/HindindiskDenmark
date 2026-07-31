@@ -14,6 +14,7 @@ import {
   type ServiceType,
 } from "@/hooks/useServiceStatus";
 import { useUpdateBranch, type AdminBranchDto, type UpdateBranchInput } from "@/hooks/useUpdateBranch";
+import { BranchPicker } from "@/components/admin/BranchPicker";
 import { useSchedule, useUpsertSchedule, type DayScheduleDto } from "@/hooks/useSchedule";
 import {
   useClosures, useAllClosures, useCreateClosure, useDeleteClosure, useDeleteClosureById,
@@ -77,6 +78,7 @@ function branchPayload(b: AdminBranchDto): UpdateBranchInput & { id: number } {
     phone: b.phone, email: b.email, googleMapsLink: b.googleMapsLink,
     imageUrl: b.imageUrl, rating: b.rating, reviewCount: b.reviewCount,
     deliveryFee: b.deliveryFee, deliveryFeeEnabled: b.deliveryFeeEnabled,
+    bagCharge: b.bagCharge, bagChargeEnabled: b.bagChargeEnabled,
     maxAdvanceDays: b.maxAdvanceDays,
   };
 }
@@ -104,39 +106,6 @@ function ToggleButton({ label, isClosed, loading = false, disabled, onToggle }: 
 // StatusPanel / OrderTypesPanel tables were replaced by per-branch controls
 // rendered inline in AvailabilityClosuresPanel (driven by its Branch dropdown).
 
-// ── Shared branch picker ──────────────────────────────────────────────────────
-
-const BRANCH_ALL = "__all__";
-
-function BranchPicker({ branches, value, onChange, allLabel, hideLabel }: {
-  branches: AdminBranchDto[];
-  value: number | undefined;
-  onChange: (id: number | undefined) => void;
-  allLabel?: string;
-  hideLabel?: boolean;
-}) {
-  return (
-    <div className="space-y-1.5">
-      {!hideLabel && <Label className="text-xs font-medium text-muted-foreground">Branch</Label>}
-      <Select
-        value={value !== undefined ? String(value) : BRANCH_ALL}
-        onValueChange={v => onChange(v !== BRANCH_ALL ? Number(v) : undefined)}
-      >
-        <SelectTrigger data-tagid="select-settings-branch" className="w-full sm:w-72">
-          <div className="flex items-center gap-2">
-            <Store className="h-4 w-4 text-muted-foreground" />
-            <SelectValue placeholder="Select a branch" />
-          </div>
-        </SelectTrigger>
-        <SelectContent>
-          {allLabel && <SelectItem value={BRANCH_ALL}>{allLabel}</SelectItem>}
-          {branches.map(b => <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-
 // ── Delivery Fee / Pricing + Advance Booking ──────────────────────────────────
 
 function PricingBookingPanel({ branches }: { branches: AdminBranchDto[] }) {
@@ -144,11 +113,16 @@ function PricingBookingPanel({ branches }: { branches: AdminBranchDto[] }) {
   const update = useUpdateBranch();
   const [selectedBranchId, setSelectedBranchId] = useState<number | undefined>(branches[0]?.id);
   const branch = branches.find(b => b.id === selectedBranchId);
-  const [fee, setFee]   = useState("");
-  const [days, setDays] = useState("");
+  const [fee, setFee]         = useState("");
+  const [bagFee, setBagFee]   = useState("");
+  const [days, setDays]       = useState("");
 
   useEffect(() => {
-    if (branch) { setFee(String(branch.deliveryFee)); setDays(String(branch.maxAdvanceDays)); }
+    if (branch) {
+      setFee(String(branch.deliveryFee));
+      setBagFee(String(branch.bagCharge));
+      setDays(String(branch.maxAdvanceDays));
+    }
   }, [branch]);
 
   const save = (patch: Partial<UpdateBranchInput>, msg: string) => {
@@ -164,7 +138,7 @@ function PricingBookingPanel({ branches }: { branches: AdminBranchDto[] }) {
       <BranchPicker branches={branches} value={selectedBranchId} onChange={setSelectedBranchId} />
 
       {branch && (
-        <div className="grid gap-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:grid-cols-2">
+        <div className="grid gap-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:grid-cols-3">
           {/* Delivery Fee / Pricing */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-gray-800">Delivery Fee / Pricing</h3>
@@ -186,6 +160,31 @@ function PricingBookingPanel({ branches }: { branches: AdminBranchDto[] }) {
                 onCheckedChange={v => save({ deliveryFeeEnabled: v }, "Pricing updated")} />
               <span className={`text-xs font-medium ${branch.deliveryFeeEnabled ? "text-green-700" : "text-gray-400"}`}>
                 Delivery fee {branch.deliveryFeeEnabled ? "enabled" : "disabled"}
+              </span>
+            </div>
+          </div>
+
+          {/* Bag (Pose) Charges — Pickup orders */}
+          <div className="space-y-4 sm:border-l sm:border-gray-100 sm:pl-6">
+            <h3 className="text-sm font-semibold text-gray-800">Bag (Pose) Charges</h3>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Bag Charge (DKK)</Label>
+              <div className="flex items-center gap-2">
+                <Input type="number" min={0} step={1} value={bagFee} data-tagid="input-settings-bag-charge"
+                  onChange={e => setBagFee(e.target.value)}
+                  className="h-9 w-32" disabled={!branch.bagChargeEnabled} />
+                <Button size="sm" variant="secondary" data-tagid="button-settings-bag-charge-save"
+                  onClick={() => save({ bagCharge: parseFloat(bagFee) || 0 }, "Pricing updated")}
+                  disabled={update.isPending || !branch.bagChargeEnabled}>
+                  Save
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <Switch checked={branch.bagChargeEnabled} data-tagid="button-settings-bag-charge-toggle" disabled={update.isPending}
+                onCheckedChange={v => save({ bagChargeEnabled: v }, "Pricing updated")} />
+              <span className={`text-xs font-medium ${branch.bagChargeEnabled ? "text-green-700" : "text-gray-400"}`}>
+                Bag charge {branch.bagChargeEnabled ? "enabled" : "disabled"}
               </span>
             </div>
           </div>
@@ -1081,6 +1080,18 @@ function ActiveToggle({ status, onToggle }: { status: OrderStatusDto; onToggle: 
   );
 }
 
+function EmailToggle({ status, onToggle }: { status: OrderStatusDto; onToggle: () => void }) {
+  return (
+    <label className="relative inline-flex cursor-pointer items-center" onClick={e => e.stopPropagation()}>
+      <input type="checkbox" className="sr-only peer" checked={status.isEmailSend} onChange={onToggle} data-tagid={`input-order-statuses-email-${status.name}`} />
+      <div className="h-4 w-8 rounded-full bg-muted peer-checked:bg-primary after:absolute after:start-[2px] after:top-[2px] after:h-3 after:w-3 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-4" />
+      <span className={`ml-2 text-xs font-medium ${status.isEmailSend ? "text-green-700" : "text-muted-foreground"}`}>
+        {status.isEmailSend ? "Email on" : "Email off"}
+      </span>
+    </label>
+  );
+}
+
 function OrderStatusesPanel() {
   const [innerTab, setInnerTab] = useState<"statuses" | "transitions">("statuses");
 
@@ -1122,7 +1133,7 @@ function OrderStatusesPanel() {
     setSubmitting(true);
     try {
       if (editStatus) {
-        await updateStatus.mutateAsync({ id: editStatus.id, data: { ...statusForm, isActive: editStatus.isActive } });
+        await updateStatus.mutateAsync({ id: editStatus.id, data: { ...statusForm, isActive: editStatus.isActive, isEmailSend: editStatus.isEmailSend } });
         toast.success("Status updated.");
       } else {
         await createStatus.mutateAsync(statusForm);
@@ -1150,10 +1161,21 @@ function OrderStatusesPanel() {
     try {
       await updateStatus.mutateAsync({
         id: s.id,
-        data: { name: s.name, nameDa: s.nameDa ?? undefined, serviceType: s.serviceType, displayOrder: s.displayOrder, color: s.color ?? undefined, isActive: !s.isActive },
+        data: { name: s.name, nameDa: s.nameDa ?? undefined, serviceType: s.serviceType, displayOrder: s.displayOrder, color: s.color ?? undefined, isActive: !s.isActive, isEmailSend: s.isEmailSend },
       });
     } catch (e: unknown) {
       toast.error((e as Error).message ?? "Failed to toggle status.");
+    }
+  };
+
+  const handleToggleEmailSend = async (s: OrderStatusDto) => {
+    try {
+      await updateStatus.mutateAsync({
+        id: s.id,
+        data: { name: s.name, nameDa: s.nameDa ?? undefined, serviceType: s.serviceType, displayOrder: s.displayOrder, color: s.color ?? undefined, isActive: s.isActive, isEmailSend: !s.isEmailSend },
+      });
+    } catch (e: unknown) {
+      toast.error((e as Error).message ?? "Failed to toggle email setting.");
     }
   };
 
@@ -1190,6 +1212,7 @@ function OrderStatusesPanel() {
     { id: "serviceType", header: "Service",  accessorKey: "serviceType", cell: ({ row }) => <ServiceBadge type={row.original.serviceType} /> },
     { id: "color",       header: "Color",    accessorKey: "color",       enableSorting: false, cell: ({ row }) => <ColorCell color={row.original.color} /> },
     { id: "isActive",    header: "Status",   accessorKey: "isActive",    cell: ({ row }) => <ActiveToggle status={row.original} onToggle={() => handleToggleActive(row.original)} /> },
+    { id: "isEmailSend", header: "Email",    accessorKey: "isEmailSend", cell: ({ row }) => <EmailToggle status={row.original} onToggle={() => handleToggleEmailSend(row.original)} /> },
     { id: "__actions",   header: "Actions",  enableSorting: false, enableColumnFilter: false, cell: ({ row }) => <ActionButtons onEdit={() => openEditStatus(row.original)} onDelete={() => handleDeleteStatus(row.original.id)} /> },
   // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [statuses]);

@@ -2,6 +2,7 @@ using HindIndisk.Api.Application.DTOs.Reservation;
 using HindIndisk.Api.Domain.Entities;
 using HindIndisk.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace HindIndisk.Api.Application.Services;
 
@@ -11,14 +12,18 @@ public class ReservationService : IReservationService
     private readonly IEmailService _email;
     private readonly ICustomerService _customers;
     private readonly BranchClosureService _closures;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ILogger<ReservationService> _logger;
 
     public ReservationService(ApplicationDbContext db, IEmailService email, ICustomerService customers,
-        BranchClosureService closures)
+        BranchClosureService closures, IServiceScopeFactory scopeFactory, ILogger<ReservationService> logger)
     {
-        _db        = db;
-        _email     = email;
-        _customers = customers;
-        _closures  = closures;
+        _db           = db;
+        _email        = email;
+        _customers    = customers;
+        _closures     = closures;
+        _scopeFactory = scopeFactory;
+        _logger       = logger;
     }
 
     public async Task<ReservationDto> CreateAsync(CreateReservationRequest request, long? loggedInUserId = null)
@@ -77,15 +82,28 @@ public class ReservationService : IReservationService
 
         var dto = ToDto(reservation, branchName);
 
-        // Case 3 only: new guest account — credentials before reservation confirmation
-        if (sendCredentials)
-            await _email.SendNewCustomerCredentialsAsync(credentialsEmail!, credentialsName, credentialsPwd!);
+        // Emails are dispatched on a background task with their own DI scope so the HTTP
+        // response isn't blocked on SMTP round-trips. Can't reuse this request's _email/_db —
+        // their scope is disposed as soon as this method returns.
+        var reservationId = reservation.Id;
+        _ = Task.Run(async () =>
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var email = scope.ServiceProvider.GetRequiredService<IEmailService>();
+            try
+            {
+                // Case 3 only: new guest account — credentials before reservation confirmation
+                if (sendCredentials)
+                    await email.SendNewCustomerCredentialsAsync(credentialsEmail!, credentialsName, credentialsPwd!);
 
-        // Customer confirmation
-        await _email.SendReservationConfirmationAsync(reservation.ContactEmail, dto);
-
-        // Admin notification (always — goes to AdminToMail + BCC list)
-        await _email.SendAdminReservationNotificationAsync(dto);
+                await email.SendReservationConfirmationAsync(reservation.ContactEmail, dto);
+                await email.SendAdminReservationNotificationAsync(dto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Background email dispatch failed for reservation #{ReservationId}", reservationId);
+            }
+        });
 
         return dto;
     }
@@ -100,6 +118,7 @@ public class ReservationService : IReservationService
         var list = await _db.Reservations
             .Where(r => r.UserId == userId || r.ContactEmail == userEmail)
             .Include(r => r.Branch)
+            .Include(r => r.User)
             .OrderByDescending(r => r.Date)
             .AsNoTracking()
             .ToListAsync();
@@ -136,8 +155,11 @@ public class ReservationService : IReservationService
         return matches.Select(r => ToDto(r, r.Branch.Name)).ToList();
     }
 
-    private static ReservationDto ToDto(Reservation r, string branchName) =>
-        new(r.Id, branchName,
+    private static ReservationDto ToDto(Reservation r, string branchName)
+    {
+        var ownerName = r.User is null ? null : $"{r.User.Firstname} {r.User.Lastname}".Trim();
+
+        return new(r.Id, branchName,
             r.Date.ToString("yyyy-MM-dd"),
             r.TimeSlot,
             r.GuestCount,
@@ -147,5 +169,9 @@ public class ReservationService : IReservationService
             r.SpecialRequests,
             r.Status,
             r.CreatedAt,
-            r.CancellationReason);
+            r.CancellationReason,
+            r.UserId ?? 0,
+            ownerName,
+            r.BranchId);
+    }
 }

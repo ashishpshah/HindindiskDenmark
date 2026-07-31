@@ -9,8 +9,5 @@ public class EmailConfig
     public string SmtpPass    { get; set; } = string.Empty;
     public string FromName    { get; set; } = string.Empty;
     public string FromAddress { get; set; } = string.Empty;
-    public string AdminToMail { get; set; } = string.Empty;
-    public string CC          { get; set; } = string.Empty;
-    public string BCC         { get; set; } = string.Empty;
     public bool   Enabled     { get; set; } = false;
 }

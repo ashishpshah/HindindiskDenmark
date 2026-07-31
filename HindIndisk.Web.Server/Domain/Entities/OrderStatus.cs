@@ -12,6 +12,7 @@ public class OrderStatus
     public string? Color { get; set; }
     public bool IsTerminal { get; set; }
     public bool IsActive { get; set; } = true;
+    public bool IsEmailSend { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DenmarkTime.Now;
 
     public ICollection<OrderStatusTransition> FromTransitions { get; set; } = [];

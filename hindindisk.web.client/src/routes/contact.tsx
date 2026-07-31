@@ -40,7 +40,7 @@ const EMPTY_CONTACT = { name: "", email: "", subject: "", message: "" };
 
 function ContactPage() {
   const { t } = useI18n();
-  const { setBranch } = useCart();
+  const { branch, setBranch } = useCart();
   const { data: branchesData = [] } = useBranches();
 
   const [contactForm,   setContactForm]   = useState(EMPTY_CONTACT);
@@ -57,7 +57,8 @@ function ContactPage() {
     e.preventDefault();
     setSending(true);
     try {
-      await apiFetch("/api/contact", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(contactForm) });
+      const branchId = branchesData.find(b => b.name === branch)?.id;
+      await apiFetch("/api/contact", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...contactForm, branchId }) });
       setContactResult({ success: true, message: t("pages.contact.sendSuccess") });
       setContactForm(EMPTY_CONTACT);
     } catch (err: unknown) {

@@ -272,24 +272,27 @@ public class AdminService : IAdminService
             _ = _customerHub.Clients.Group($"user-{order.UserId}")
                     .SendAsync("OrderStatusChanged", order.Id, status);
 
-        // Notify customer of status change
+        // Notify customer of status change — only for statuses configured to send email
         var email = order.User?.Email ?? order.ContactEmail;
-        if (!string.IsNullOrWhiteSpace(email))
+        if (targetStatus.IsEmailSend && !string.IsNullOrWhiteSpace(email))
         {
             var name = string.IsNullOrWhiteSpace(order.ContactName) ? "Customer" : order.ContactName;
             if (status == "Cancelled")
-                _ = _email.SendOrderCancelledCustomerAsync(email, name, order.Id, order.CancellationReason);
+                _ = _email.SendOrderCancelledCustomerAsync(email, name, order.Id, order.CancellationReason,
+                        order.Branch.Name, order.OrderType, order.ScheduledDate, order.ScheduledTime);
             else
-                _ = _email.SendOrderStatusUpdateAsync(email, name, order.Id, status);
+                _ = _email.SendOrderStatusUpdateAsync(email, name, order.Id, status,
+                        order.Branch.Name, order.OrderType, order.ScheduledDate, order.ScheduledTime);
         }
 
         // Notify admin when order is cancelled
         if (status == "Cancelled")
             _ = _email.SendOrderCancelledAdminAsync(
-                    order.Id,
+                    order.Id, order.BranchId,
                     string.IsNullOrWhiteSpace(order.ContactName) ? "Customer" : order.ContactName,
                     email ?? order.ContactEmail ?? "",
-                    order.CancellationReason);
+                    order.CancellationReason,
+                    order.Branch.Name, order.OrderType, order.ScheduledDate, order.ScheduledTime);
 
         return ToAdminOrderDto(order);
     }
@@ -298,6 +301,7 @@ public class AdminService : IAdminService
     {
         var order = await _db.Orders
             .Include(o => o.User)
+            .Include(o => o.Branch)
             .FirstOrDefaultAsync(o => o.Id == orderId)
             ?? throw new KeyNotFoundException($"Order {orderId} not found.");
 
@@ -308,9 +312,11 @@ public class AdminService : IAdminService
         var name = string.IsNullOrWhiteSpace(order.ContactName) ? "Customer" : order.ContactName;
 
         if (order.Status == "Cancelled")
-            await _email.SendOrderCancelledCustomerAsync(email, name, order.Id, order.CancellationReason);
+            await _email.SendOrderCancelledCustomerAsync(email, name, order.Id, order.CancellationReason,
+                    order.Branch.Name, order.OrderType, order.ScheduledDate, order.ScheduledTime);
         else
-            await _email.SendOrderStatusUpdateAsync(email, name, order.Id, order.Status);
+            await _email.SendOrderStatusUpdateAsync(email, name, order.Id, order.Status,
+                    order.Branch.Name, order.OrderType, order.ScheduledDate, order.ScheduledTime);
     }
 
     // ── Reservations ──────────────────────────────────────────────────────────
@@ -834,7 +840,7 @@ public class AdminService : IAdminService
 
         return statuses.Select(s => new OrderStatusDto(
             s.Id, s.Name, s.NameDa, s.ServiceType,
-            s.DisplayOrder, s.Color, s.IsTerminal, s.IsActive, s.CreatedAt
+            s.DisplayOrder, s.Color, s.IsTerminal, s.IsActive, s.CreatedAt, s.IsEmailSend
         )).ToList();
     }
 
@@ -853,13 +859,14 @@ public class AdminService : IAdminService
             Color        = request.Color,
             IsTerminal   = false,
             IsActive     = true,
+            IsEmailSend  = true,
         };
         _db.OrderStatuses.Add(status);
         await _db.SaveChangesAsync();
 
         return new OrderStatusDto(
             status.Id, status.Name, status.NameDa, status.ServiceType,
-            status.DisplayOrder, status.Color, status.IsTerminal, status.IsActive, status.CreatedAt);
+            status.DisplayOrder, status.Color, status.IsTerminal, status.IsActive, status.CreatedAt, status.IsEmailSend);
     }
 
     public async Task<OrderStatusDto> UpdateOrderStatusMetaAsync(long id, UpdateOrderStatusMetaRequest request)
@@ -880,6 +887,7 @@ public class AdminService : IAdminService
         status.DisplayOrder = request.DisplayOrder;
         status.Color        = request.Color?.Trim();
         status.IsActive     = request.IsActive;
+        status.IsEmailSend  = request.IsEmailSend;
 
         // Keep the denormalized Order.Status string in sync — otherwise every order
         // already sitting in this status silently stops matching transitions/current-status
@@ -897,7 +905,7 @@ public class AdminService : IAdminService
 
         return new OrderStatusDto(
             status.Id, status.Name, status.NameDa, status.ServiceType,
-            status.DisplayOrder, status.Color, status.IsTerminal, status.IsActive, status.CreatedAt);
+            status.DisplayOrder, status.Color, status.IsTerminal, status.IsActive, status.CreatedAt, status.IsEmailSend);
     }
 
     public async Task DeleteOrderStatusAsync(long id)
@@ -1106,6 +1114,7 @@ public class AdminService : IAdminService
             b.Phone, b.Email, b.GoogleMapsLink,
             b.ImageUrl, b.Rating, b.ReviewCount,
             b.DeliveryFee, b.DeliveryFeeEnabled,
+            b.BagCharge, b.BagChargeEnabled,
             b.IsCloseOrder, b.CloseOrderNote, b.CloseOrderNoteDa,
             reservationClosure != null, reservationClosure?.Note, reservationClosure?.NoteDa,
             deliveryClosure != null, deliveryClosure?.Note, deliveryClosure?.NoteDa,
@@ -1136,6 +1145,8 @@ public class AdminService : IAdminService
             ReviewCount      = request.ReviewCount,
             DeliveryFee        = request.DeliveryFee,
             DeliveryFeeEnabled = request.DeliveryFeeEnabled,
+            BagCharge          = request.BagCharge,
+            BagChargeEnabled   = request.BagChargeEnabled,
             MaxAdvanceDays     = request.MaxAdvanceDays,
         };
 
@@ -1168,6 +1179,8 @@ public class AdminService : IAdminService
         branch.ReviewCount      = request.ReviewCount;
         branch.DeliveryFee        = request.DeliveryFee;
         branch.DeliveryFeeEnabled = request.DeliveryFeeEnabled;
+        branch.BagCharge          = request.BagCharge;
+        branch.BagChargeEnabled   = request.BagChargeEnabled;
         branch.MaxAdvanceDays     = request.MaxAdvanceDays;
 
         await _db.SaveChangesAsync();
@@ -1180,6 +1193,7 @@ public class AdminService : IAdminService
             b.Phone, b.Email, b.GoogleMapsLink,
             b.ImageUrl, b.Rating, b.ReviewCount,
             b.DeliveryFee, b.DeliveryFeeEnabled,
+            b.BagCharge, b.BagChargeEnabled,
             b.IsCloseOrder, b.CloseOrderNote, b.CloseOrderNoteDa,
             false, null, null,
             false, null, null,

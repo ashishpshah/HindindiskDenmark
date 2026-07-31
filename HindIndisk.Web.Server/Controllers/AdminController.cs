@@ -33,6 +33,7 @@ public class AdminController : ApiBaseController
     private readonly IHomeStorySectionService   _homeStory;
     private readonly IExceptionLogService       _exceptionLogs;
     private readonly IEmailSettingsService      _emailSettings;
+    private readonly IEmailRecipientsService    _emailRecipients;
     private readonly IFooterSettingsService     _footerSettings;
 
     public AdminController(
@@ -42,6 +43,7 @@ public class AdminController : ApiBaseController
         IGalleryImageService gallery, IAboutService about,
         IWhyChooseUsService whyChooseUs, IHomeStorySectionService homeStory,
         IExceptionLogService exceptionLogs, IEmailSettingsService emailSettings,
+        IEmailRecipientsService emailRecipients,
         IFooterSettingsService footerSettings)
     {
         _admin         = admin;
@@ -56,6 +58,7 @@ public class AdminController : ApiBaseController
         _homeStory     = homeStory;
         _exceptionLogs = exceptionLogs;
         _emailSettings = emailSettings;
+        _emailRecipients = emailRecipients;
         _footerSettings = footerSettings;
     }
 
@@ -994,6 +997,17 @@ public class AdminController : ApiBaseController
     public async Task<ActionResult<EmailSettingsDto>> UpdateEmailSettings(
         [FromBody] UpdateEmailSettingsRequest request)
         => Ok(await _emailSettings.UpdateAsync(request));
+
+    // GET /api/admin/email-settings/recipients
+    [HttpGet("email-settings/recipients")]
+    public async Task<ActionResult<IReadOnlyList<BranchEmailRecipientsDto>>> GetEmailRecipients()
+        => Ok(await _emailRecipients.GetAllAsync());
+
+    // PATCH /api/admin/email-settings/recipients/{branchId}
+    [HttpPatch("email-settings/recipients/{branchId:long}")]
+    public async Task<ActionResult<BranchEmailRecipientsDto>> UpdateEmailRecipients(
+        long branchId, [FromBody] UpdateBranchEmailRecipientsRequest request)
+        => Ok(await _emailRecipients.UpdateAsync(branchId, request));
 
     // ── Exception logs ────────────────────────────────────────────────────────
 

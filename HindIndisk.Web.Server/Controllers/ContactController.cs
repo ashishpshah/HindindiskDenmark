@@ -16,10 +16,10 @@ public class ContactController : ControllerBase
     /// <summary>Submit a contact enquiry — fires emails to admin and the visitor.</summary>
     [HttpPost]
     [AllowAnonymous]
-    public IActionResult Submit([FromBody] ContactRequest request)
+    public async Task<IActionResult> Submit([FromBody] ContactRequest request)
     {
-        _ = _email.SendContactEnquiryAsync(request.Name, request.Email, request.Subject, request.Message);
-        _ = _email.SendContactConfirmationAsync(request.Email, request.Name, request.Subject, request.Message);
+        await _email.SendContactEnquiryAsync(request.Name, request.Email, request.Subject, request.Message, request.BranchId);
+        await _email.SendContactConfirmationAsync(request.Email, request.Name, request.Subject, request.Message);
         return Ok(new { message = "Message received. We'll reply within 24 hours." });
     }
 }

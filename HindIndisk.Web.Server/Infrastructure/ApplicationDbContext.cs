@@ -46,6 +46,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<AboutTimelineItem>  AboutTimelineItems  => Set<AboutTimelineItem>();
     public DbSet<TeamMember>         TeamMembers         => Set<TeamMember>();
     public DbSet<EmailConfig>        EmailConfigs        => Set<EmailConfig>();
+    public DbSet<BranchEmailRecipients> BranchEmailRecipients => Set<BranchEmailRecipients>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -106,6 +107,17 @@ public class ApplicationDbContext : DbContext
             .HasOne(m => m.Branch)
             .WithMany(b => b.TeamMembers)
             .HasForeignKey(m => m.BranchId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // ── BranchEmailRecipients: one row per branch ────────────────────────
+        modelBuilder.Entity<BranchEmailRecipients>()
+            .HasIndex(r => r.BranchId)
+            .IsUnique();
+
+        modelBuilder.Entity<BranchEmailRecipients>()
+            .HasOne(r => r.Branch)
+            .WithOne(b => b.EmailRecipients)
+            .HasForeignKey<BranchEmailRecipients>(r => r.BranchId)
             .OnDelete(DeleteBehavior.Cascade);
 
         // ── Composite primary keys (join tables) ──────────────────────────────

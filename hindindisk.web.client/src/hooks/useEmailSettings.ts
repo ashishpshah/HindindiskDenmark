@@ -7,9 +7,6 @@ export type EmailSettingsDto = {
   smtpUser:    string;
   fromName:    string;
   fromAddress: string;
-  adminToMail: string;
-  cc:          string;
-  bcc:         string;
   enabled:     boolean;
 };
 

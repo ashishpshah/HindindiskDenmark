@@ -12,5 +12,8 @@ public record ReservationDto(
     string? SpecialRequests,
     string Status,
     DateTime CreatedAt,
-    string? CancellationReason = null
+    string? CancellationReason = null,
+    long UserId = 0,
+    string? OwnerName = null,
+    long BranchId = 0
 );

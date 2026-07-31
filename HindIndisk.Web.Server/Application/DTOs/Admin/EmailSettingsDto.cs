@@ -6,7 +6,4 @@ public record EmailSettingsDto(
     string SmtpUser,
     string FromName,
     string FromAddress,
-    string AdminToMail,
-    string CC,
-    string BCC,
     bool   Enabled);

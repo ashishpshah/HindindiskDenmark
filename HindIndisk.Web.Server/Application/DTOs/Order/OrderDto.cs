@@ -4,6 +4,7 @@ public record OrderDto(
     long Id,
     string OrderType,
     string BranchName,
+    long BranchId,
     decimal Subtotal,
     decimal DeliveryFee,
     decimal Tax,
@@ -24,5 +25,7 @@ public record OrderDto(
     string?   ScheduledTime,         // null = ASAP
     string?   SpecialInstructions,
     string?   CancellationReason,
-    string?   PlacedByName          // null = customer placed the order themselves
+    string?   PlacedByName,         // null = customer placed the order themselves
+    long      UserId,               // the account this order is attributed to
+    string?   OwnerName             // display name of that account (for cross-account "Created by" matches)
 );

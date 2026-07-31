@@ -7,7 +7,4 @@ public record UpdateEmailSettingsRequest(
     string? SmtpPass,
     string  FromName,
     string  FromAddress,
-    string  AdminToMail,
-    string  CC,
-    string  BCC,
     bool    Enabled);

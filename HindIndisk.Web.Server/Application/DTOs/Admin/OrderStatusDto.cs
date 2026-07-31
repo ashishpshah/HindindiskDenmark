@@ -9,7 +9,8 @@ public record OrderStatusDto(
     string? Color,
     bool IsTerminal,
     bool IsActive,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    bool IsEmailSend
 );
 
 public record CreateOrderStatusRequest(
@@ -26,5 +27,6 @@ public record UpdateOrderStatusMetaRequest(
     string ServiceType,
     int DisplayOrder,
     string? Color,
-    bool IsActive
+    bool IsActive,
+    bool IsEmailSend
 );

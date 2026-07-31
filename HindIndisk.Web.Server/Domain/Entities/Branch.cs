@@ -27,6 +27,8 @@ public class Branch
     public int ReviewCount { get; set; } = 0;
     [Column(TypeName = "decimal(8,2)")]  public decimal DeliveryFee        { get; set; } = 39.0m;
     public bool    DeliveryFeeEnabled { get; set; } = true;
+    [Column(TypeName = "decimal(8,2)")]  public decimal BagCharge          { get; set; } = 0m;
+    public bool    BagChargeEnabled   { get; set; } = false;
     public bool    IsCloseOrder       { get; set; } = false;
     public string? CloseOrderNote     { get; set; }
     public string? CloseOrderNoteDa   { get; set; }
@@ -43,4 +45,5 @@ public class Branch
     public virtual AboutPageSettings?                 AboutPageSettings { get; set; }
     public virtual ICollection<AboutTimelineItem>     AboutTimelineItems { get; set; } = [];
     public virtual ICollection<TeamMember>            TeamMembers     { get; set; } = [];
+    public virtual BranchEmailRecipients?             EmailRecipients { get; set; }
 }

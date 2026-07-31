@@ -12,7 +12,8 @@ namespace HindIndisk.Api.Application.Services;
 
 public class EmailService : IEmailService
 {
-    private readonly IEmailSettingsService _emailSettings;
+    private readonly IEmailSettingsService    _emailSettings;
+    private readonly IEmailRecipientsService  _recipients;
     private readonly ILogger<EmailService> _logger;
     private readonly IWebHostEnvironment   _env;
     private readonly IExceptionLogService  _exLog;
@@ -20,13 +21,15 @@ public class EmailService : IEmailService
     private EmailConfig? _cachedCfg;
 
     public EmailService(
-        IEmailSettingsService emailSettings,
+        IEmailSettingsService   emailSettings,
+        IEmailRecipientsService recipients,
         ILogger<EmailService> logger,
         IWebHostEnvironment   env,
         IExceptionLogService  exLog,
         IConfiguration        config)
     {
         _emailSettings = emailSettings;
+        _recipients    = recipients;
         _logger        = logger;
         _env           = env;
         _exLog         = exLog;
@@ -60,7 +63,8 @@ public class EmailService : IEmailService
 
     // ── Customer: order status update (no template file — status-specific) ──
 
-    public async Task SendOrderStatusUpdateAsync(string toEmail, string toName, long orderId, string newStatus)
+    public async Task SendOrderStatusUpdateAsync(string toEmail, string toName, long orderId, string newStatus,
+        string branchName, string orderType, DateOnly? scheduledDate, string? scheduledTime)
     {
         var statusMessages = new Dictionary<string, (string label, string message)>
         {
@@ -74,55 +78,84 @@ public class EmailService : IEmailService
 
         if (!statusMessages.TryGetValue(newStatus, out var info)) return;
 
-        var subject  = $"{info.label} — Order #{orderId} | Hind Indisk";
+        var (displayDate, displayTime) = FormatScheduledSlot(scheduledDate, scheduledTime);
+
+        var subject  = $"Order {newStatus} — #{orderId} | {orderType} | Hind Indisk Restaurant";
         var template = await LoadTemplateAsync("OrderStatusUpdate_Customer.htm");
         var body = template
             .Replace("[StatusLabel]",   WebUtility.HtmlEncode(info.label))
             .Replace("[OrderNumber]",   orderId.ToString())
             .Replace("[Customername]", WebUtility.HtmlEncode(toName))
-            .Replace("[StatusMessage]", WebUtility.HtmlEncode(info.message));
+            .Replace("[StatusMessage]", WebUtility.HtmlEncode(info.message))
+            .Replace("[Branch]",        WebUtility.HtmlEncode(branchName))
+            .Replace("[OrderType]",     WebUtility.HtmlEncode(orderType))
+            .Replace("[ScheduledDate]", displayDate)
+            .Replace("[ScheduledTime]", displayTime);
 
         await SendAsync(toEmail, toName, subject, WrapInHtml(body));
     }
 
     // ── Customer: order cancelled (with optional reason) ────────────────────
 
-    public async Task SendOrderCancelledCustomerAsync(string toEmail, string toName, long orderId, string? reason)
+    public async Task SendOrderCancelledCustomerAsync(string toEmail, string toName, long orderId, string? reason,
+        string branchName, string orderType, DateOnly? scheduledDate, string? scheduledTime)
     {
-        var subject  = $"Order Cancelled — #{orderId} | Hind Indisk";
+        var (displayDate, displayTime) = FormatScheduledSlot(scheduledDate, scheduledTime);
+
+        var subject  = $"Order Cancelled — #{orderId} | {orderType} | Hind Indisk Restaurant";
         var template = await LoadTemplateAsync("OrderCancelled_Customer.htm");
         var body = template
             .Replace("[OrderNumber]",        orderId.ToString())
             .Replace("[Customername]",       WebUtility.HtmlEncode(toName))
-            .Replace("[CancellationReason]", WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(reason) ? "—" : reason));
+            .Replace("[CancellationReason]", WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(reason) ? "—" : reason))
+            .Replace("[Branch]",             WebUtility.HtmlEncode(branchName))
+            .Replace("[OrderType]",          WebUtility.HtmlEncode(orderType))
+            .Replace("[ScheduledDate]",      displayDate)
+            .Replace("[ScheduledTime]",      displayTime);
 
         await SendAsync(toEmail, toName, subject, WrapInHtml(body));
     }
 
     // ── Admin: order cancelled notification ──────────────────────────────────
 
-    public async Task SendOrderCancelledAdminAsync(long orderId, string customerName, string customerEmail, string? reason)
+    public async Task SendOrderCancelledAdminAsync(long orderId, long branchId, string customerName, string customerEmail, string? reason,
+        string branchName, string orderType, DateOnly? scheduledDate, string? scheduledTime)
     {
-        var cfg = await GetCfgAsync();
-        if (string.IsNullOrWhiteSpace(cfg.AdminToMail)) return;
+        var recipients = await _recipients.GetEntityAsync(branchId);
+        if (string.IsNullOrWhiteSpace(recipients.AdminToMail)) return;
 
-        var subject  = $"Order #{orderId} Cancelled — Hind Indisk";
+        var (displayDate, displayTime) = FormatScheduledSlot(scheduledDate, scheduledTime);
+
+        var subject  = $"Order Cancelled — #{orderId} | {orderType} | Hind Indisk Restaurant";
         var template = await LoadTemplateAsync("OrderCancelled_Admin.htm");
         var body = template
             .Replace("[OrderNumber]",        orderId.ToString())
             .Replace("[Customername]",       WebUtility.HtmlEncode(customerName))
             .Replace("[Email]",              WebUtility.HtmlEncode(customerEmail))
-            .Replace("[CancellationReason]", WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(reason) ? "No reason provided" : reason));
+            .Replace("[CancellationReason]", WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(reason) ? "No reason provided" : reason))
+            .Replace("[Branch]",             WebUtility.HtmlEncode(branchName))
+            .Replace("[OrderType]",          WebUtility.HtmlEncode(orderType))
+            .Replace("[ScheduledDate]",      displayDate)
+            .Replace("[ScheduledTime]",      displayTime);
 
-        await SendAsync(cfg.AdminToMail, "Admin", subject, WrapInHtml(body), isAdmin: true);
+        await SendAsync(recipients.AdminToMail, "Admin", subject, WrapInHtml(body), isAdmin: true, cc: recipients.CC, bcc: recipients.BCC);
+    }
+
+    // ── Shared: format a nullable scheduled date/time, falling back to "ASAP" ──
+
+    private static (string date, string time) FormatScheduledSlot(DateOnly? scheduledDate, string? scheduledTime)
+    {
+        var date = scheduledDate.HasValue ? scheduledDate.Value.ToString("dd-MM-yyyy") : "ASAP";
+        var time = scheduledDate.HasValue && !string.IsNullOrWhiteSpace(scheduledTime) ? scheduledTime : "ASAP";
+        return (date, time);
     }
 
     // ── Admin: order notification ────────────────────────────────────────────
 
     public async Task SendAdminOrderNotificationAsync(OrderDto order)
     {
-        var cfg = await GetCfgAsync();
-        if (string.IsNullOrWhiteSpace(cfg.AdminToMail)) return;
+        var recipients = await _recipients.GetEntityAsync(order.BranchId);
+        if (string.IsNullOrWhiteSpace(recipients.AdminToMail)) return;
 
         var templateFile = order.OrderType == "Delivery"
             ? "DeliveryOrder_Admin.htm"
@@ -130,7 +163,7 @@ public class EmailService : IEmailService
 
         var body = await LoadAndFillOrderTemplateAsync(templateFile, order, isAdmin: true);
         var subject = $"New Order #{order.Id} — {order.BranchName} | Hind Indisk";
-        await SendAsync(cfg.AdminToMail, "Admin", subject, body, isAdmin: true);
+        await SendAsync(recipients.AdminToMail, "Admin", subject, body, isAdmin: true, cc: recipients.CC, bcc: recipients.BCC);
     }
 
     // ── Customer: OTP for password reset ────────────────────────────────────
@@ -241,7 +274,7 @@ public class EmailService : IEmailService
             _           => (newStatus,                 "Your reservation status has been updated."),
         };
 
-        var subject     = $"{label} — #{reservationId} | Hind Indisk";
+        var subject     = $"Reservation {newStatus} — #{reservationId} | {branchName} | Hind Indisk Restaurant";
         var displayDate = DateOnly.TryParse(date, out var parsedDate) ? parsedDate.ToString("dd-MM-yyyy") : date;
 
         var template = await LoadTemplateAsync("ReservationStatusUpdate_Customer.htm");
@@ -262,20 +295,25 @@ public class EmailService : IEmailService
 
     public async Task SendAdminReservationNotificationAsync(ReservationDto reservation)
     {
-        var cfg = await GetCfgAsync();
-        if (string.IsNullOrWhiteSpace(cfg.AdminToMail)) return;
+        var recipients = await _recipients.GetEntityAsync(reservation.BranchId);
+        if (string.IsNullOrWhiteSpace(recipients.AdminToMail)) return;
 
         var body = await LoadAndFillReservationTemplateAsync("Reservation_Admin.htm", reservation);
         var subject = $"New Reservation #{reservation.Id} — {reservation.BranchName} | Hind Indisk";
-        await SendAsync(cfg.AdminToMail, "Admin", subject, body, isAdmin: true);
+        await SendAsync(recipients.AdminToMail, "Admin", subject, body, isAdmin: true, cc: recipients.CC, bcc: recipients.BCC);
     }
 
     // ── Admin: contact form enquiry ──────────────────────────────────────────
 
-    public async Task SendContactEnquiryAsync(string fromName, string fromEmail, string subject, string message)
+    public async Task SendContactEnquiryAsync(string fromName, string fromEmail, string subject, string message, long? branchId = null)
     {
-        var cfg = await GetCfgAsync();
-        if (string.IsNullOrWhiteSpace(cfg.AdminToMail)) return;
+        // Contact enquiries route to the recipients of whichever branch the visitor had
+        // selected in the header's branch dropdown at submission time. That dropdown always
+        // defaults to a branch, so the "no branchId" fallback below is defensive only.
+        var recipients = branchId.HasValue
+            ? await _recipients.GetEntityAsync(branchId.Value)
+            : await _recipients.GetDefaultEntityAsync();
+        if (recipients is null || string.IsNullOrWhiteSpace(recipients.AdminToMail)) return;
 
         var template = await LoadTemplateAsync("Contact.htm");
         var body = template
@@ -285,7 +323,7 @@ public class EmailService : IEmailService
             .Replace("[Message]",      WebUtility.HtmlEncode(message));
 
         var emailSubject = $"Contact Enquiry from {fromName} — Hind Indisk";
-        await SendAsync(cfg.AdminToMail, "Admin", emailSubject, WrapInHtml(body), isAdmin: true);
+        await SendAsync(recipients.AdminToMail, "Admin", emailSubject, WrapInHtml(body), isAdmin: true, cc: recipients.CC, bcc: recipients.BCC);
     }
 
     // ── Customer: contact form acknowledgement ───────────────────────────────
@@ -320,8 +358,7 @@ public class EmailService : IEmailService
     {
         var template = await LoadTemplateAsync(fileName);
 
-        var scheduledDate = order.ScheduledDate.HasValue ? order.ScheduledDate.Value.ToString("dd-MM-yyyy") : "ASAP";
-        var scheduledTime = order.ScheduledDate.HasValue && !string.IsNullOrWhiteSpace(order.ScheduledTime) ? order.ScheduledTime : "ASAP";
+        var (scheduledDate, scheduledTime) = FormatScheduledSlot(order.ScheduledDate, order.ScheduledTime);
         var itemRows      = BuildOrderItemRows(order);
         var totalItems    = order.Items.Sum(i => i.Quantity);
 
@@ -419,7 +456,8 @@ public class EmailService : IEmailService
     // ── SMTP send ─────────────────────────────────────────────────────────────
 
     private async Task SendAsync(
-        string toEmail, string toName, string subject, string htmlBody, bool isAdmin = false)
+        string toEmail, string toName, string subject, string htmlBody, bool isAdmin = false,
+        string? cc = null, string? bcc = null)
     {
         try
         {
@@ -439,10 +477,10 @@ public class EmailService : IEmailService
 
             if (isAdmin)
             {
-                foreach (var cc in SplitAddresses(cfg.CC))
-                    message.Cc.Add(MailboxAddress.Parse(cc));
-                foreach (var bcc in SplitAddresses(cfg.BCC))
-                    message.Bcc.Add(MailboxAddress.Parse(bcc));
+                foreach (var c in SplitAddresses(cc ?? ""))
+                    message.Cc.Add(MailboxAddress.Parse(c));
+                foreach (var b in SplitAddresses(bcc ?? ""))
+                    message.Bcc.Add(MailboxAddress.Parse(b));
             }
 
             using var client = new SmtpClient();

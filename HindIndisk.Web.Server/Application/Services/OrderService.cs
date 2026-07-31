@@ -4,6 +4,7 @@ using HindIndisk.Api.Hubs;
 using HindIndisk.Api.Infrastructure;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace HindIndisk.Api.Application.Services;
 
@@ -14,15 +15,20 @@ public class OrderService : IOrderService
     private readonly ICustomerService _customers;
     private readonly BranchClosureService _closures;
     private readonly IHubContext<AdminHub> _adminHub;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ILogger<OrderService> _logger;
 
     public OrderService(ApplicationDbContext db, IEmailService email, ICustomerService customers,
-        BranchClosureService closures, IHubContext<AdminHub> adminHub)
+        BranchClosureService closures, IHubContext<AdminHub> adminHub,
+        IServiceScopeFactory scopeFactory, ILogger<OrderService> logger)
     {
-        _db        = db;
-        _email     = email;
-        _customers = customers;
-        _closures  = closures;
-        _adminHub  = adminHub;
+        _db           = db;
+        _email        = email;
+        _customers    = customers;
+        _closures     = closures;
+        _adminHub     = adminHub;
+        _scopeFactory = scopeFactory;
+        _logger       = logger;
     }
 
     public async Task<OrderDto> CreateOrderAsync(CreateOrderRequest request, long? loggedInUserId = null)
@@ -112,8 +118,11 @@ public class OrderService : IOrderService
             };
         }
 
-        // Delivery fee — from branch config; FreeShipping coupon waives it
-        var deliveryFee = (request.OrderType == "Delivery" && branch.DeliveryFeeEnabled) ? branch.DeliveryFee : 0m;
+        // Delivery fee (Delivery orders) or bag/pose charge (Pickup orders) — from branch config;
+        // FreeShipping coupon waives whichever surcharge applies. Stored in Order.DeliveryFee either way.
+        var deliveryFee = request.OrderType == "Delivery"
+            ? (branch.DeliveryFeeEnabled ? branch.DeliveryFee : 0m)
+            : (branch.BagChargeEnabled  ? branch.BagCharge  : 0m);
         if (appliedOffer?.DiscountType == "FreeShipping") deliveryFee = 0m;
 
         var taxed = Math.Max(subtotal - discount, 0m);
@@ -234,27 +243,40 @@ public class OrderService : IOrderService
             })
             .ToList();
 
-        var dto = new OrderDto(order.Id, order.OrderType, branch.Name,
+        var dto = new OrderDto(order.Id, order.OrderType, branch.Name, branch.Id,
             order.Subtotal, order.DeliveryFee, order.Tax, order.Discount, order.Total,
             order.Status, newStatus.Color, newStatus.NameDa, order.CreatedAt, itemDtos, appliedOffer?.CouponCode,
             order.ContactName, order.ContactPhone, order.ContactEmail,
             order.DeliveryAddress, order.PaymentMethod,
             order.ScheduledDate, order.ScheduledTime, order.SpecialInstructions,
-            order.CancellationReason, placedByName);
-
-        // Case 3 only: new guest account — credentials arrive before the order confirmation
-        if (sendCredentials)
-            await _email.SendNewCustomerCredentialsAsync(credentialsEmail!, credentialsName, credentialsPwd!);
-
-        // Customer confirmation
-        await _email.SendOrderConfirmationAsync(order.ContactEmail!, order.ContactName, dto);
+            order.CancellationReason, placedByName, order.UserId, null);
 
         // Real-time admin notification — fire-and-forget is safe here (SignalR hub, no scoped services)
         _ = _adminHub.Clients.Group(AdminHub.GroupName)
                 .SendAsync("NewOrder", new { order.Id, order.Status, order.ContactName, order.Total });
 
-        // Admin notification (always — goes to AdminToMail + BCC list)
-        await _email.SendAdminOrderNotificationAsync(dto);
+        // Emails are dispatched on a background task with their own DI scope so the HTTP
+        // response isn't blocked on SMTP round-trips. Can't reuse this request's _email/_db —
+        // their scope is disposed as soon as this method returns.
+        var orderId = order.Id;
+        _ = Task.Run(async () =>
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var email = scope.ServiceProvider.GetRequiredService<IEmailService>();
+            try
+            {
+                // Case 3 only: new guest account — credentials arrive before the order confirmation
+                if (sendCredentials)
+                    await email.SendNewCustomerCredentialsAsync(credentialsEmail!, credentialsName, credentialsPwd!);
+
+                await email.SendOrderConfirmationAsync(order.ContactEmail!, order.ContactName, dto);
+                await email.SendAdminOrderNotificationAsync(dto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Background email dispatch failed for order #{OrderId}", orderId);
+            }
+        });
 
         return dto;
     }
@@ -267,6 +289,7 @@ public class OrderService : IOrderService
             .Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem)
             .Include(o => o.AppliedOffers).ThenInclude(ao => ao.Offer)
             .Include(o => o.PlacedByUser)
+            .Include(o => o.User)
             .AsNoTracking()
             .FirstOrDefaultAsync(o => o.Id == orderId && o.UserId == userId)
             ?? throw new KeyNotFoundException("Order not found.");
@@ -288,6 +311,7 @@ public class OrderService : IOrderService
             .Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem)
             .Include(o => o.AppliedOffers).ThenInclude(ao => ao.Offer)
             .Include(o => o.PlacedByUser)
+            .Include(o => o.User)
             .OrderByDescending(o => o.CreatedAt)
             .AsNoTracking()
             .ToListAsync();
@@ -313,12 +337,16 @@ public class OrderService : IOrderService
             ? null
             : $"{o.PlacedByUser.Firstname} {o.PlacedByUser.Lastname}".Trim();
 
-        return new OrderDto(o.Id, o.OrderType, o.Branch.Name,
+        var ownerName = o.User is null
+            ? null
+            : $"{o.User.Firstname} {o.User.Lastname}".Trim();
+
+        return new OrderDto(o.Id, o.OrderType, o.Branch.Name, o.BranchId,
             o.Subtotal, o.DeliveryFee, o.Tax, o.Discount, o.Total,
             o.Status, o.OrderStatus?.Color, o.OrderStatus?.NameDa, o.CreatedAt, items, couponCode,
             o.ContactName, o.ContactPhone, o.ContactEmail,
             o.DeliveryAddress, o.PaymentMethod,
             o.ScheduledDate, o.ScheduledTime, o.SpecialInstructions,
-            o.CancellationReason, placedByName);
+            o.CancellationReason, placedByName, o.UserId, ownerName);
     }
 }

@@ -26,9 +26,6 @@ public class EmailSettingsService : IEmailSettingsService
         cfg.SmtpUser    = request.SmtpUser;
         cfg.FromName    = request.FromName;
         cfg.FromAddress = request.FromAddress;
-        cfg.AdminToMail = request.AdminToMail;
-        cfg.CC          = request.CC;
-        cfg.BCC         = request.BCC;
         cfg.Enabled     = request.Enabled;
 
         if (!string.IsNullOrWhiteSpace(request.SmtpPass))
@@ -52,6 +49,5 @@ public class EmailSettingsService : IEmailSettingsService
 
     private static EmailSettingsDto ToDto(EmailConfig cfg) => new(
         cfg.SmtpHost, cfg.SmtpPort, cfg.SmtpUser,
-        cfg.FromName, cfg.FromAddress,
-        cfg.AdminToMail, cfg.CC, cfg.BCC, cfg.Enabled);
+        cfg.FromName, cfg.FromAddress, cfg.Enabled);
 }
