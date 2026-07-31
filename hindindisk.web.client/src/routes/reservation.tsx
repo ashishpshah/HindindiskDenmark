@@ -427,7 +427,10 @@ function ReservationPage() {
                   ) : slots.length > 0 ? (
                     <Select value={form.time} onValueChange={(v) => setForm({ ...form, time: v })}>
                       <SelectTrigger className="w-36 rounded-full">
-                        <SelectValue placeholder={t("forms.timeLabel")} />
+                        {/* Explicit children bypass Radix's item-mount-dependent label lookup — without
+                            this, a programmatically auto-selected time never shows until the dropdown
+                            has been opened once (no matching SelectItem has mounted to portal its text). */}
+                        <SelectValue placeholder={t("forms.timeLabel")}>{form.time || undefined}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {slots.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -441,15 +444,32 @@ function ReservationPage() {
                   )}
                 </FormField>
 
-                <div className="sm:col-span-2">
-                  <FormField label={t("forms.specialRequestLabel")}>
-                    <Textarea rows={3} placeholder={t("forms.specialRequestPlaceholder")}
-                      value={form.note}
-                      onChange={(e) => setForm({ ...form, note: e.target.value })} />
-                  </FormField>
-                </div>
+                <FormField label={t("forms.firstNameLabel")}>
+                  <Input placeholder={t("forms.firstNamePlaceholder")} value={form.firstname}
+                    onChange={(e) => setForm({ ...form, firstname: e.target.value })} />
+                </FormField>
 
-                <div className="sm:col-span-2">
+                <FormField label={t("forms.lastNameLabel")}>
+                  <Input placeholder={t("forms.lastNamePlaceholder")} value={form.lastname}
+                    onChange={(e) => setForm({ ...form, lastname: e.target.value })} />
+                </FormField>
+
+                  <div className="relative">
+                    <FormField label={t("forms.emailLabel")}>
+                      <Input type="email" required placeholder={t("forms.emailPlaceholder")} value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                    </FormField>
+                    {lookingUp && matchedBy !== "phone" && (
+                      <Loader2 className="absolute right-3 top-9 h-4 w-4 animate-spin text-muted-foreground" />
+                    )}
+                    {customer && !lookingUp && matchedBy === "email" && (
+                      <div className="mt-1 flex items-center gap-1.5 text-xs text-green-600">
+                        <UserCheck className="h-3.5 w-3.5" />
+                        {t("forms.customerFound")}
+                      </div>
+                    )}
+                  </div>
+
                   <div className="relative">
                     <FormField label={t("forms.phoneLabel")}>
                       <Input
@@ -470,34 +490,13 @@ function ReservationPage() {
                       </div>
                     )}
                   </div>
-                </div>
-
-                <FormField label={t("forms.firstNameLabel")}>
-                  <Input placeholder={t("forms.firstNamePlaceholder")} value={form.firstname}
-                    onChange={(e) => setForm({ ...form, firstname: e.target.value })} />
-                </FormField>
-
-                <FormField label={t("forms.lastNameLabel")}>
-                  <Input placeholder={t("forms.lastNamePlaceholder")} value={form.lastname}
-                    onChange={(e) => setForm({ ...form, lastname: e.target.value })} />
-                </FormField>
 
                 <div className="sm:col-span-2">
-                  <div className="relative">
-                    <FormField label={t("forms.emailLabel")}>
-                      <Input type="email" required placeholder={t("forms.emailPlaceholder")} value={form.email}
-                        onChange={(e) => setForm({ ...form, email: e.target.value })} />
-                    </FormField>
-                    {lookingUp && matchedBy !== "phone" && (
-                      <Loader2 className="absolute right-3 top-9 h-4 w-4 animate-spin text-muted-foreground" />
-                    )}
-                    {customer && !lookingUp && matchedBy === "email" && (
-                      <div className="mt-1 flex items-center gap-1.5 text-xs text-green-600">
-                        <UserCheck className="h-3.5 w-3.5" />
-                        {t("forms.customerFound")}
-                      </div>
-                    )}
-                  </div>
+                  <FormField label={t("forms.specialRequestLabel")}>
+                    <Textarea rows={3} placeholder={t("forms.specialRequestPlaceholder")}
+                      value={form.note}
+                      onChange={(e) => setForm({ ...form, note: e.target.value })} />
+                  </FormField>
                 </div>
 
               </div>
