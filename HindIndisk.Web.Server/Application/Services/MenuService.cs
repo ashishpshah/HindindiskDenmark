@@ -62,6 +62,13 @@ public class MenuService : IMenuService
             .Distinct()
             .ToListAsync();
 
+        // A menu item can be mapped to more than one category. When no specific category
+        // filter is applied (the "All" tab, the homepage signature-dish carousel), that
+        // produces one row per category membership — the same item id repeated with a
+        // different category — which the client then renders as visible duplicates.
+        // Collapse to one row per item, keeping its first category association.
+        rows = rows.GroupBy(r => r.Id).Select(g => g.First()).ToList();
+
         var itemIds = rows.Select(r => r.Id).ToList();
 
         // Pass 2 — labels
