@@ -12,5 +12,15 @@ export default defineConfig({
     tsconfigPaths(),
   ],
   base: '/',
-  build: { outDir: 'dist' },
+  build: {
+    outDir: 'dist',
+    rolldownOptions: {
+      onwarn(warning, warn) {
+        // @microsoft/signalr's own bundled code has a misplaced /*#__PURE__*/ comment —
+        // harmless (skips one dead-code-elimination optimization), not our code to fix.
+        if (warning.code === 'INVALID_ANNOTATION') return;
+        warn(warning);
+      },
+    },
+  },
 })
