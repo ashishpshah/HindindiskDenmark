@@ -126,6 +126,8 @@ function CheckoutPage() {
     setBranchPricing({
       deliveryFeeEnabled: currentBranch.deliveryFeeEnabled,
       deliveryFee:        currentBranch.deliveryFee,
+      bagChargeEnabled:   currentBranch.bagChargeEnabled,
+      bagCharge:          currentBranch.bagCharge,
     });
   }, [currentBranch, setBranchPricing]);
 
