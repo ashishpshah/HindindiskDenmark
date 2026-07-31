@@ -11,7 +11,7 @@
   <!-- Header -->
   <div style="background:#343131;padding:20px 24px;">
     <p style="margin:0;color:#fff;font-size:18px;font-weight:bold;">New Reservation</p>
-    <p style="margin:6px 0 0;color:#D9822B;font-size:13px;">Reservation #[ReservationNumber] &bull; Received Date : [ReservationDate] Time : [ReservationTime]</p>
+    <p style="margin:6px 0 0;color:#D9822B;font-size:13px;">Reservation #[ReservationNumber] &bull; [ReservationDate] [ReservationTime]</p>
   </div>
 
   <!-- Meta bar -->
@@ -19,7 +19,11 @@
     <table cellspacing="0" style="width:100%;border-collapse:collapse;font-size:13px;">
       <tr>
         <td style="padding:2px 0;color:#555;width:50%;"><strong style="color:#343131;">Branch:</strong> [Branch]</td>
-        <td style="padding:2px 0;color:#555;"><strong style="color:#343131;">Date:</strong> [ReservationSlotDate] &nbsp; <strong style="color:#343131;">Time:</strong> [ReservationSlotTime]</td>
+        <td style="padding:2px 0;color:#555;"><strong style="color:#343131;">Reservation Date:</strong> [ReservationSlotDate]</td>
+      </tr>
+      <tr>
+        <td style="padding:2px 0;color:#555;width:50%;">&nbsp;</td>
+        <td style="padding:2px 0;color:#555;"><strong style="color:#343131;">Reservation Time:</strong> [ReservationSlotTime]</td>
       </tr>
     </table>
   </div>
