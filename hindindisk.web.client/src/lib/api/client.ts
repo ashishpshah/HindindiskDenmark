@@ -6,13 +6,18 @@ export function resolveUrl(url: string): string {
   return `${BASE}${url}`;
 }
 
-function getToken(): string | null {
+// Admin and customer sessions are independent — a request's own path decides which
+// token applies, so a leftover admin session in the same browser can never get
+// attached to a customer-facing request (or vice versa).
+function isAdminPath(path: string): boolean {
+  return path.startsWith("/api/admin") || path.startsWith(`${BASE}/api/admin`);
+}
+
+function getToken(path: string): string | null {
   try {
-    // Admin token takes precedence; only one zone's session is ever active at a time
-    const admin = localStorage.getItem("hind-admin-token");
-    if (admin) return JSON.parse(admin) as string;
-    const client = localStorage.getItem("hind-token");
-    return client ? (JSON.parse(client) as string) : null;
+    const key = isAdminPath(path) ? "hind-admin-token" : "hind-token";
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as string) : null;
   } catch {
     return null;
   }
@@ -28,9 +33,8 @@ function extractApiError(body: unknown, fallback: string): string {
   return b.message ?? fallback;
 }
 
-function handle401(): void {
-  const wasAdmin = !!localStorage.getItem("hind-admin-token");
-  if (wasAdmin) {
+function handle401(path: string): void {
+  if (isAdminPath(path)) {
     localStorage.removeItem("hind-admin-token");
     localStorage.removeItem("hind-admin-user");
     window.dispatchEvent(new Event("hind:admin-session-expired"));
@@ -42,7 +46,7 @@ function handle401(): void {
 }
 
 export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
-  const token = getToken();
+  const token = getToken(path);
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
     body: formData,
@@ -50,8 +54,16 @@ export async function apiUpload<T>(path: string, formData: FormData): Promise<T>
   });
 
   if (res.status === 401) {
-    handle401();
-    throw new Error("Your session has expired. Please log in again.");
+    // A 401 only means the *session* expired if we actually sent a token. If no
+    // token was attached, this was an unauthenticated request (e.g. a login
+    // attempt) — surface the backend's real error instead of claiming a session
+    // that never existed just expired.
+    if (token) {
+      handle401(path);
+      throw new Error("Your session has expired. Please log in again.");
+    }
+    const body = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(extractApiError(body, "Invalid credentials."));
   }
 
   if (!res.ok) {
@@ -63,7 +75,7 @@ export async function apiUpload<T>(path: string, formData: FormData): Promise<T>
 }
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = getToken();
+  const token = getToken(path);
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -72,10 +84,18 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
   const res = await fetch(`${BASE}${path}`, { ...init, headers });
 
-  // Session expired — clear whichever zone was active and notify context
   if (res.status === 401) {
-    handle401();
-    throw new Error("Your session has expired. Please log in again.");
+    // Same distinction as apiUpload above: only clear the session and show the
+    // "expired" message when a token was actually sent and rejected. A bare
+    // login/register call has no token, so a 401 there means bad credentials,
+    // not an expired session — clearing "hind-user"/"hind-token" in that case
+    // would also be wrong, since there was nothing to clear.
+    if (token) {
+      handle401(path);
+      throw new Error("Your session has expired. Please log in again.");
+    }
+    const body = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(extractApiError(body, "Invalid credentials."));
   }
 
   if (!res.ok) {
