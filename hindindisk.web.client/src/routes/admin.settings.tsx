@@ -106,7 +106,7 @@ function ToggleButton({ label, isClosed, loading = false, disabled, onToggle }: 
 // StatusPanel / OrderTypesPanel tables were replaced by per-branch controls
 // rendered inline in AvailabilityClosuresPanel (driven by its Branch dropdown).
 
-// ── Delivery Fee / Pricing + Advance Booking ──────────────────────────────────
+// ── Delivery Charges + Advance Booking ──────────────────────────────────
 
 function PricingBookingPanel({ branches }: { branches: AdminBranchDto[] }) {
   const qc = useQueryClient();
@@ -139,11 +139,11 @@ function PricingBookingPanel({ branches }: { branches: AdminBranchDto[] }) {
 
       {branch && (
         <div className="grid gap-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:grid-cols-3">
-          {/* Delivery Fee / Pricing */}
+          {/* Delivery Charges */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-800">Delivery Fee / Pricing</h3>
+            <h3 className="text-sm font-semibold text-gray-800">Delivery Charges</h3>
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Delivery Fee (DKK)</Label>
+              <Label className="text-xs text-muted-foreground">Delivery Charges (DKK)</Label>
               <div className="flex items-center gap-2">
                 <Input type="number" min={0} step={1} value={fee} data-tagid="input-settings-delivery-fee"
                   onChange={e => setFee(e.target.value)}
@@ -159,7 +159,7 @@ function PricingBookingPanel({ branches }: { branches: AdminBranchDto[] }) {
               <Switch checked={branch.deliveryFeeEnabled} data-tagid="button-settings-delivery-fee-toggle" disabled={update.isPending}
                 onCheckedChange={v => save({ deliveryFeeEnabled: v }, "Pricing updated")} />
               <span className={`text-xs font-medium ${branch.deliveryFeeEnabled ? "text-green-700" : "text-gray-400"}`}>
-                Delivery fee {branch.deliveryFeeEnabled ? "enabled" : "disabled"}
+                Delivery charges {branch.deliveryFeeEnabled ? "enabled" : "disabled"}
               </span>
             </div>
           </div>

@@ -60,7 +60,8 @@ export function CartDrawer() {
             </div>
             {lines.length > 0 && (
               <div className="space-y-3 border-t bg-muted/30 p-5">
-                <OrderSummary subtotal={subtotal} discount={discount} delivery={delivery} total={total} orderType={orderType} />
+                <OrderSummary subtotal={subtotal} discount={discount} delivery={delivery} total={total} orderType={orderType} showFee={false} />
+                <p className="text-xs italic text-muted-foreground">* {t("cart.feeNote")}</p>
                 <Button data-tagid="a-cart-checkout" asChild size="lg" className="w-full gradient-primary text-primary-foreground" onClick={() => setOpen(false)}>
                   <Link to="/checkout">{t("actions.checkout")}</Link>
                 </Button>

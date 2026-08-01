@@ -6,6 +6,7 @@ type Props = {
   delivery: number;
   total: number;
   orderType: "pickup" | "delivery";
+  showFee?: boolean;
 };
 
 function Row({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
@@ -16,7 +17,7 @@ function Row({ label, value, highlight }: { label: string; value: string; highli
   );
 }
 
-export function OrderSummary({ subtotal, discount, delivery, total, orderType }: Props) {
+export function OrderSummary({ subtotal, discount, delivery, total, orderType, showFee = true }: Props) {
   const { t } = useI18n();
   const feeLabel = orderType === "delivery" ? t("cart.delivery") : t("cart.poseCharges");
   return (
@@ -24,7 +25,7 @@ export function OrderSummary({ subtotal, discount, delivery, total, orderType }:
       <div className="space-y-1">
         <Row label={t("cart.subtotal")} value={`${subtotal} DKK`} />
         {discount > 0 && <Row label={t("cart.discount")} value={`-${discount} DKK`} highlight />}
-        {delivery > 0 && <Row label={feeLabel} value={`${delivery} DKK`} />}
+        {showFee && delivery > 0 && <Row label={feeLabel} value={`${delivery} DKK`} />}
       </div>
       <div className="mt-3 flex justify-between border-t pt-3 font-display text-xl">
         <span>{t("cart.total")}</span>
