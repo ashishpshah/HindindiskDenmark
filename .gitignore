@@ -43,6 +43,8 @@ appsettings.Production.json
 *.md
 e2e/
 test-results/
-HindIndisk.Web.Server/wwwroot/
 .claude/settings.json
 hindindisk.web.client/.tanstack/
+HindIndisk.Web.Server/wwwroot/images/images.zip
+HindIndisk.Web.Server/wwwroot/images/
+HindIndisk.Web.Server/wwwroot/images.zip
