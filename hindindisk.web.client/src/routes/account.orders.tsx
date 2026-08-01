@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
-import { ShoppingBag, Loader2, MapPin, Banknote, UserCog, User, Users, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ShoppingBag, Loader2, MapPin, Banknote, User, Users, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMyOrders } from "@/hooks/useMyOrders";
@@ -30,11 +30,9 @@ function orderRelation(
   orderUserId: number,
   contactName: string,
   contactEmail: string | undefined,
-  placedByName: string | null | undefined,
   ownerName: string | null | undefined,
   user: AuthUser | null
 ) {
-  if (placedByName) return { type: "by" as const, name: placedByName };
   if (!user) return null;
 
   const sameAccount = orderUserId === user.id;
@@ -207,7 +205,7 @@ function OrdersPage() {
 
       {/* ── Order cards ────────────────────────────────────────────────── */}
       {paginated.map((o) => {
-        const relation = orderRelation(o.userId, o.contactName, o.contactEmail, o.placedByName, o.ownerName, user);
+        const relation = orderRelation(o.userId, o.contactName, o.contactEmail, o.ownerName, user);
         const color = statusColorStyle(o.status, activeStatuses);
         return (
         <div key={o.id} className="rounded-3xl border bg-card p-5 shadow-soft">
@@ -232,12 +230,6 @@ function OrdersPage() {
                 </span>
               </div>
               <div className="mt-0.5 text-xs text-muted-foreground">{t("orders.createdAt")} {formatDateTime(o.createdAt)}</div>
-              {relation?.type === "by" && (
-                <div className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-600">
-                  <UserCog className="h-3.5 w-3.5 shrink-0" />
-                  <span>{t("account.createdBy")} <strong>{relation.name}</strong></span>
-                </div>
-              )}
               {relation?.type === "for" && (
                 <div className="mt-1.5 flex items-center gap-1.5 text-xs text-sky-600">
                   <User className="h-3.5 w-3.5 shrink-0" />

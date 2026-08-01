@@ -193,19 +193,10 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(h => h.OrderId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Restrict to avoid multiple cascade paths
-        modelBuilder.Entity<Order>()
-            .HasOne(o => o.User)
-            .WithMany(u => u.Orders)
-            .HasForeignKey(o => o.UserId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        modelBuilder.Entity<Order>()
-            .HasOne(o => o.PlacedByUser)
-            .WithMany()
-            .HasForeignKey(o => o.PlacedByUserId)
-            .IsRequired(false)
-            .OnDelete(DeleteBehavior.Restrict);
+        // Order.UserId is a plain scalar, not a modeled relationship — 0 means guest and
+        // doesn't need to reference a real Users row. Keep a plain index for the
+        // WHERE UserId = X lookups in GetMyOrdersAsync/GetMyAsync.
+        modelBuilder.Entity<Order>().HasIndex(o => o.UserId);
 
         modelBuilder.Entity<Order>()
             .HasOne(o => o.Branch)
@@ -214,11 +205,7 @@ public class ApplicationDbContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
 
         // ── Reservation relationships ─────────────────────────────────────────
-        modelBuilder.Entity<Reservation>()
-            .HasOne(r => r.User)
-            .WithMany(u => u.Reservations)
-            .HasForeignKey(r => r.UserId)
-            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Reservation>().HasIndex(r => r.UserId);
 
         modelBuilder.Entity<Reservation>()
             .HasOne(r => r.Branch)

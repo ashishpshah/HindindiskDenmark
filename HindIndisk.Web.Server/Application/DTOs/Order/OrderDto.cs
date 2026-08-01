@@ -25,7 +25,6 @@ public record OrderDto(
     string?   ScheduledTime,         // null = ASAP
     string?   SpecialInstructions,
     string?   CancellationReason,
-    string?   PlacedByName,         // null = customer placed the order themselves
-    long      UserId,               // the account this order is attributed to
-    string?   OwnerName             // display name of that account (for cross-account "Created by" matches)
+    long      UserId,               // 0 = guest; who was logged in when the order was placed
+    string?   OwnerName             // display name of the account UserId points to (for cross-account "linked" matches)
 );

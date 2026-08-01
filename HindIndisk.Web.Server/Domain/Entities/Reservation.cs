@@ -26,6 +26,5 @@ public class Reservation
 
     public DateTime CreatedAt { get; set; } = DenmarkTime.Now;
 
-    public virtual User? User { get; set; }
     public virtual Branch Branch { get; set; } = null!;
 }

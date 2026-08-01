@@ -18,6 +18,4 @@ public class User
     public virtual Role Role { get; set; } = null!;
     public virtual ICollection<UserBranch> UserBranches { get; set; } = [];
     public virtual ICollection<UserAddress> UserAddresses { get; set; } = [];
-    public virtual ICollection<Order> Orders { get; set; } = [];
-    public virtual ICollection<Reservation> Reservations { get; set; } = [];
 }

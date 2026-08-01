@@ -23,14 +23,27 @@ public class OrdersController : ApiBaseController
     }
 
     [HttpPost]
-    [AllowAnonymous]
     public async Task<IActionResult> Create([FromBody] CreateOrderRequest request)
     {
-        long? placedByUserId = GetUserId();
-
         try
         {
-            var order = await _orders.CreateOrderAsync(request, placedByUserId);
+            var order = await _orders.CreateOrderAsync(request, GetUserId());
+            return Ok(order);
+        }
+        catch (InvalidOperationException ex)
+        {
+            await LogExAsync(ex, 400);
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("guest")]
+    [AllowAnonymous]
+    public async Task<IActionResult> CreateGuest([FromBody] CreateOrderRequest request)
+    {
+        try
+        {
+            var order = await _orders.CreateOrderAsync(request, userId: 0);
             return Ok(order);
         }
         catch (InvalidOperationException ex)

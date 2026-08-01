@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api/client";
+import { useAuth } from "@/context/AuthContext";
 
 export type CreateOrderRequest = {
   branchId: number;
@@ -50,16 +51,16 @@ export type OrderDto = {
   scheduledTime?: string;
   specialInstructions?: string;
   cancellationReason?: string;
-  placedByName?: string;
   userId: number;
   ownerName?: string | null;
 };
 
 export function useCreateOrder() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: (req: CreateOrderRequest) =>
-      apiFetch<OrderDto>("/api/orders", {
+      apiFetch<OrderDto>(user ? "/api/orders" : "/api/orders/guest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(req),

@@ -14,19 +14,38 @@ public class ReservationsController : ApiBaseController
 
     public ReservationsController(IReservationService reservations) => _reservations = reservations;
 
-    /// <summary>Create a reservation — links to the logged-in user when authenticated, otherwise finds/creates by contact details.</summary>
+    private long GetUserId()
+    {
+        var raw = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!long.TryParse(raw, out var id)) throw new UnauthorizedAccessException("Invalid token claims.");
+        return id;
+    }
+
+    /// <summary>Create a reservation for the logged-in customer.</summary>
     [HttpPost]
-    [AllowAnonymous]
+    [Authorize]
     public async Task<IActionResult> Create([FromBody] CreateReservationRequest request)
     {
-        // Resolve logged-in userId from JWT if present (null for guest)
-        long? loggedInUserId = null;
-        var raw = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (long.TryParse(raw, out var uid)) loggedInUserId = uid;
-
         try
         {
-            var reservation = await _reservations.CreateAsync(request, loggedInUserId);
+            var reservation = await _reservations.CreateAsync(request, GetUserId());
+            return Ok(reservation);
+        }
+        catch (InvalidOperationException ex)
+        {
+            await LogExAsync(ex, 400);
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>Create a reservation as a guest (no account).</summary>
+    [HttpPost("guest")]
+    [AllowAnonymous]
+    public async Task<IActionResult> CreateGuest([FromBody] CreateReservationRequest request)
+    {
+        try
+        {
+            var reservation = await _reservations.CreateAsync(request, userId: 0);
             return Ok(reservation);
         }
         catch (InvalidOperationException ex)

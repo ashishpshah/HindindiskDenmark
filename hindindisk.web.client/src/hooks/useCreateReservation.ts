@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api/client";
+import { useAuth } from "@/context/AuthContext";
 
 export type CreateReservationRequest = {
   branchId: number;
@@ -32,9 +33,10 @@ export type ReservationDto = {
 
 export function useCreateReservation() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   return useMutation({
     mutationFn: (req: CreateReservationRequest) =>
-      apiFetch<ReservationDto>("/api/reservations", {
+      apiFetch<ReservationDto>(user ? "/api/reservations" : "/api/reservations/guest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(req),
