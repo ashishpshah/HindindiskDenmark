@@ -12,6 +12,7 @@ export default defineConfig({
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
     ignoreHTTPSErrors: true,
+    viewport: { width: 1920, height: 1080 },
     launchOptions: {
       slowMo: 1500,
       headless: false,
