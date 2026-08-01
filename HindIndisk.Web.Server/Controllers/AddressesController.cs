@@ -30,7 +30,10 @@ public class AddressesController : ApiBaseController
     // POST /api/addresses
     [HttpPost]
     public async Task<ActionResult<AddressDto>> Add([FromBody] SaveAddressRequest request)
-        => Ok(await _addresses.AddAddressAsync(GetUserId(), request));
+    {
+        try   { return Ok(await _addresses.AddAddressAsync(GetUserId(), request)); }
+        catch (KeyNotFoundException ex) { await LogExAsync(ex, 404); return NotFound(new { message = ex.Message }); }
+    }
 
     // PUT /api/addresses/{id}
     [HttpPut("{id:long}")]

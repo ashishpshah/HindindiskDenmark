@@ -12,6 +12,12 @@ export default defineConfig({
     tsconfigPaths(),
   ],
   base: '/',
+  server: {
+    proxy: {
+      '/api': 'http://localhost:5228',
+      '/hubs': { target: 'http://localhost:5228', ws: true },
+    },
+  },
   build: {
     outDir: 'dist',
     rolldownOptions: {

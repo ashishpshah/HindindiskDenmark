@@ -23,6 +23,9 @@ public class AddressService : IAddressService
 
     public async Task<AddressDto> AddAddressAsync(long userId, SaveAddressRequest request)
     {
+        var userExists = await _db.Users.AnyAsync(u => u.Id == userId);
+        if (!userExists) throw new KeyNotFoundException("User not found.");
+
         var address = new UserAddress
         {
             UserId       = userId,
