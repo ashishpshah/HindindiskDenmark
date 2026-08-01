@@ -2,6 +2,7 @@ using HindIndisk.Api.Application.DTOs.Admin;
 using HindIndisk.Api.Domain.Entities;
 using HindIndisk.Api.Hubs;
 using HindIndisk.Api.Infrastructure;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,12 +13,15 @@ public class AdminService : IAdminService
     private readonly ApplicationDbContext _db;
     private readonly IEmailService _email;
     private readonly IHubContext<CustomerHub> _customerHub;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public AdminService(ApplicationDbContext db, IEmailService email, IHubContext<CustomerHub> customerHub)
+    public AdminService(ApplicationDbContext db, IEmailService email, IHubContext<CustomerHub> customerHub,
+        IHttpContextAccessor httpContextAccessor)
     {
-        _db          = db;
-        _email       = email;
-        _customerHub = customerHub;
+        _db                  = db;
+        _email               = email;
+        _customerHub         = customerHub;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
@@ -197,29 +201,32 @@ public class AdminService : IAdminService
         if (!string.IsNullOrWhiteSpace(search))
         {
             var lower = search.ToLower();
+
+            // Order.UserId has no FK/navigation — match the account holder's name/email
+            // via a small separate lookup instead of a join.
+            var matchingUserIds = await _db.Users.AsNoTracking()
+                .Where(u => (u.Firstname.ToLower().Contains(lower)) ||
+                            (u.Lastname.ToLower().Contains(lower)) ||
+                            (u.Email != null && u.Email.ToLower().Contains(lower)))
+                .Select(u => u.Id)
+                .ToListAsync();
+
             if (TryParseSearchId(search, out var oid))
                 q = q.Where(o => o.Id == oid ||
                                   o.ContactName.ToLower().Contains(lower) ||
                                   (o.ContactEmail != null && o.ContactEmail.ToLower().Contains(lower)) ||
-                                  (o.User != null && (
-                                      (o.User.Firstname != null && o.User.Firstname.ToLower().Contains(lower)) ||
-                                      (o.User.Lastname != null && o.User.Lastname.ToLower().Contains(lower)) ||
-                                      (o.User.Email != null && o.User.Email.ToLower().Contains(lower)))));
+                                  matchingUserIds.Contains(o.UserId));
             else
                 q = q.Where(o =>
                     o.ContactName.ToLower().Contains(lower) ||
                     (o.ContactEmail != null && o.ContactEmail.ToLower().Contains(lower)) ||
-                    (o.User != null && (
-                        (o.User.Firstname != null && o.User.Firstname.ToLower().Contains(lower)) ||
-                        (o.User.Lastname != null && o.User.Lastname.ToLower().Contains(lower)) ||
-                        (o.User.Email != null && o.User.Email.ToLower().Contains(lower)))));
+                    matchingUserIds.Contains(o.UserId));
         }
 
         var total = await q.CountAsync();
 
         var orders = await q
             .Include(o => o.Branch)
-            .Include(o => o.User)
             .Include(o => o.OrderItems).ThenInclude(i => i.MenuItem)
             .Include(o => o.AppliedOffers).ThenInclude(a => a.Offer)
             .Include(o => o.StatusHistories)
@@ -239,7 +246,6 @@ public class AdminService : IAdminService
 
         var order = await _db.Orders
             .Include(o => o.Branch)
-            .Include(o => o.User)
             .Include(o => o.OrderItems).ThenInclude(i => i.MenuItem)
             .Include(o => o.AppliedOffers).ThenInclude(a => a.Offer)
             .Include(o => o.StatusHistories)
@@ -273,16 +279,17 @@ public class AdminService : IAdminService
                     .SendAsync("OrderStatusChanged", order.Id, status);
 
         // Notify customer of status change — only for statuses configured to send email
-        var email = order.User?.Email ?? order.ContactEmail;
+        var email = order.ContactEmail;
+        var baseUrl = _httpContextAccessor.GetBaseUrl();
         if (targetStatus.IsEmailSend && !string.IsNullOrWhiteSpace(email))
         {
             var name = string.IsNullOrWhiteSpace(order.ContactName) ? "Customer" : order.ContactName;
             if (status == "Cancelled")
                 _ = _email.SendOrderCancelledCustomerAsync(email, name, order.Id, order.CancellationReason,
-                        order.Branch.Name, order.OrderType, order.ScheduledDate, order.ScheduledTime);
+                        order.Branch.Name, order.OrderType, order.ScheduledDate, order.ScheduledTime, baseUrl);
             else
                 _ = _email.SendOrderStatusUpdateAsync(email, name, order.Id, status,
-                        order.Branch.Name, order.OrderType, order.ScheduledDate, order.ScheduledTime);
+                        order.Branch.Name, order.OrderType, order.ScheduledDate, order.ScheduledTime, baseUrl);
         }
 
         // Notify admin when order is cancelled
@@ -292,7 +299,7 @@ public class AdminService : IAdminService
                     string.IsNullOrWhiteSpace(order.ContactName) ? "Customer" : order.ContactName,
                     email ?? order.ContactEmail ?? "",
                     order.CancellationReason,
-                    order.Branch.Name, order.OrderType, order.ScheduledDate, order.ScheduledTime);
+                    order.Branch.Name, order.OrderType, order.ScheduledDate, order.ScheduledTime, baseUrl);
 
         return ToAdminOrderDto(order);
     }
@@ -300,23 +307,23 @@ public class AdminService : IAdminService
     public async Task ResendOrderStatusEmailAsync(long orderId)
     {
         var order = await _db.Orders
-            .Include(o => o.User)
             .Include(o => o.Branch)
             .FirstOrDefaultAsync(o => o.Id == orderId)
             ?? throw new KeyNotFoundException($"Order {orderId} not found.");
 
-        var email = order.User?.Email ?? order.ContactEmail;
+        var email = order.ContactEmail;
         if (string.IsNullOrWhiteSpace(email))
             throw new InvalidOperationException("This order has no contact email on file.");
 
         var name = string.IsNullOrWhiteSpace(order.ContactName) ? "Customer" : order.ContactName;
+        var baseUrl = _httpContextAccessor.GetBaseUrl();
 
         if (order.Status == "Cancelled")
             await _email.SendOrderCancelledCustomerAsync(email, name, order.Id, order.CancellationReason,
-                    order.Branch.Name, order.OrderType, order.ScheduledDate, order.ScheduledTime);
+                    order.Branch.Name, order.OrderType, order.ScheduledDate, order.ScheduledTime, baseUrl);
         else
             await _email.SendOrderStatusUpdateAsync(email, name, order.Id, order.Status,
-                    order.Branch.Name, order.OrderType, order.ScheduledDate, order.ScheduledTime);
+                    order.Branch.Name, order.OrderType, order.ScheduledDate, order.ScheduledTime, baseUrl);
     }
 
     // ── Reservations ──────────────────────────────────────────────────────────
@@ -399,7 +406,7 @@ public class AdminService : IAdminService
                 r.ContactEmail, r.ContactName,
                 r.Id, r.Branch.Name,
                 r.Date.ToString("yyyy-MM-dd"), r.TimeSlot, r.GuestCount,
-                status);
+                status, _httpContextAccessor.GetBaseUrl());
 
         return ToAdminReservationDto(r);
     }
@@ -418,7 +425,7 @@ public class AdminService : IAdminService
             r.ContactEmail, r.ContactName,
             r.Id, r.Branch.Name,
             r.Date.ToString("yyyy-MM-dd"), r.TimeSlot, r.GuestCount,
-            r.Status);
+            r.Status, _httpContextAccessor.GetBaseUrl());
     }
 
     // ── Menus (categories) ───────────────────────────────────────────────────
@@ -1002,11 +1009,9 @@ public class AdminService : IAdminService
 
     private static AdminOrderDto ToAdminOrderDto(Domain.Entities.Order o)
     {
-        var coupon       = o.AppliedOffers.FirstOrDefault()?.Offer?.CouponCode;
-        var customerName = o.User is not null
-            ? $"{o.User.Firstname} {o.User.Lastname}".Trim()
-            : o.ContactName;
-        var customerEmail = o.User?.Email ?? o.ContactEmail ?? "";
+        var coupon        = o.AppliedOffers.FirstOrDefault()?.Offer?.CouponCode;
+        var customerName  = o.ContactName;
+        var customerEmail = o.ContactEmail ?? "";
         var items = o.OrderItems
             .Select(i => new AdminOrderItemDto(i.MenuItem.Name, i.MenuItem.NameDa, i.Quantity, i.PriceAtPurchase))
             .ToList();

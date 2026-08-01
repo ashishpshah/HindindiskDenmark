@@ -1,6 +1,7 @@
 using HindIndisk.Api.Application.DTOs.Reservation;
 using HindIndisk.Api.Domain.Entities;
 using HindIndisk.Api.Infrastructure;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,22 +14,24 @@ public class ReservationService : IReservationService
     private readonly ICustomerService _customers;
     private readonly BranchClosureService _closures;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<ReservationService> _logger;
 
     public ReservationService(ApplicationDbContext db, IEmailService email, ICustomerService customers,
-        BranchClosureService closures, IServiceScopeFactory scopeFactory, ILogger<ReservationService> logger)
+        BranchClosureService closures, IServiceScopeFactory scopeFactory, IHttpContextAccessor httpContextAccessor,
+        ILogger<ReservationService> logger)
     {
-        _db           = db;
-        _email        = email;
-        _customers    = customers;
-        _closures     = closures;
-        _scopeFactory = scopeFactory;
-        _logger       = logger;
+        _db                  = db;
+        _email               = email;
+        _customers           = customers;
+        _closures            = closures;
+        _scopeFactory        = scopeFactory;
+        _httpContextAccessor = httpContextAccessor;
+        _logger              = logger;
     }
 
-    public async Task<ReservationDto> CreateAsync(CreateReservationRequest request, long? loggedInUserId = null)
+    public async Task<ReservationDto> CreateAsync(CreateReservationRequest request, long userId)
     {
-        long   userId = loggedInUserId ?? 0;
         bool   sendCredentials  = false;
         string? credentialsPwd  = null;
         string? credentialsEmail = null;
@@ -63,7 +66,7 @@ public class ReservationService : IReservationService
             Date            = date,
             TimeSlot        = request.TimeSlot,
             GuestCount      = request.GuestCount,
-            ContactName     = $"{request.Firstname.Trim()} {request.Lastname.Trim()}",
+            ContactName     = $"{request.Firstname?.Trim()} {request.Lastname?.Trim()}".Trim(),
             ContactPhone    = request.Phone?.Trim() ?? string.Empty,
             ContactEmail    = request.Email.Trim(),
             SpecialRequests = request.SpecialRequests,
@@ -84,8 +87,11 @@ public class ReservationService : IReservationService
 
         // Emails are dispatched on a background task with their own DI scope so the HTTP
         // response isn't blocked on SMTP round-trips. Can't reuse this request's _email/_db —
-        // their scope is disposed as soon as this method returns.
+        // their scope is disposed as soon as this method returns. HttpContext is gone by
+        // then too, so the base URL for email links/images must be captured now, while the
+        // request is still live, and threaded through as a plain string.
         var reservationId = reservation.Id;
+        var baseUrl = _httpContextAccessor.GetBaseUrl();
         _ = Task.Run(async () =>
         {
             using var scope = _scopeFactory.CreateScope();
@@ -94,10 +100,10 @@ public class ReservationService : IReservationService
             {
                 // Case 3 only: new guest account — credentials before reservation confirmation
                 if (sendCredentials)
-                    await email.SendNewCustomerCredentialsAsync(credentialsEmail!, credentialsName, credentialsPwd!);
+                    await email.SendNewCustomerCredentialsAsync(credentialsEmail!, credentialsName, credentialsPwd!, baseUrl);
 
-                await email.SendReservationConfirmationAsync(reservation.ContactEmail, dto);
-                await email.SendAdminReservationNotificationAsync(dto);
+                await email.SendReservationConfirmationAsync(reservation.ContactEmail, dto, baseUrl);
+                await email.SendAdminReservationNotificationAsync(dto, baseUrl);
             }
             catch (Exception ex)
             {
@@ -118,12 +124,16 @@ public class ReservationService : IReservationService
         var list = await _db.Reservations
             .Where(r => r.UserId == userId || r.ContactEmail == userEmail)
             .Include(r => r.Branch)
-            .Include(r => r.User)
             .OrderByDescending(r => r.Date)
             .AsNoTracking()
             .ToListAsync();
 
-        return list.Select(r => ToDto(r, r.Branch.Name)).ToList();
+        var ownerUserIds = list.Select(r => r.UserId ?? 0).Distinct().ToList();
+        var ownerNames = await _db.Users.AsNoTracking()
+            .Where(u => ownerUserIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => $"{u.Firstname} {u.Lastname}".Trim());
+
+        return list.Select(r => ToDto(r, r.Branch.Name, ownerNames.GetValueOrDefault(r.UserId ?? 0))).ToList();
     }
 
     public async Task<IReadOnlyList<ReservationDto>> CheckDuplicateAsync(
@@ -155,10 +165,8 @@ public class ReservationService : IReservationService
         return matches.Select(r => ToDto(r, r.Branch.Name)).ToList();
     }
 
-    private static ReservationDto ToDto(Reservation r, string branchName)
+    private static ReservationDto ToDto(Reservation r, string branchName, string? ownerName = null)
     {
-        var ownerName = r.User is null ? null : $"{r.User.Firstname} {r.User.Lastname}".Trim();
-
         return new(r.Id, branchName,
             r.Date.ToString("yyyy-MM-dd"),
             r.TimeSlot,

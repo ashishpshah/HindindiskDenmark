@@ -115,6 +115,10 @@ namespace HindIndisk.Web.Server
 
 			// ── Email service ─────────────────────────────────────────────────────────────
 			builder.Services.AddScoped<IEmailService, EmailService>();
+			// Lets services read the current request's scheme+host to build absolute
+			// URLs (e.g. links/images in emails) that reflect wherever the app is
+			// actually running, instead of a fixed config value.
+			builder.Services.AddHttpContextAccessor();
 
 			// ── Google Reviews ────────────────────────────────────────────────────────────
 			builder.Services.AddHttpClient("GooglePlaces");

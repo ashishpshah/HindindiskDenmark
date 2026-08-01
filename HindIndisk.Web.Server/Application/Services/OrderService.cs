@@ -2,6 +2,7 @@ using HindIndisk.Api.Application.DTOs.Order;
 using HindIndisk.Api.Domain.Entities;
 using HindIndisk.Api.Hubs;
 using HindIndisk.Api.Infrastructure;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,40 +17,29 @@ public class OrderService : IOrderService
     private readonly BranchClosureService _closures;
     private readonly IHubContext<AdminHub> _adminHub;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<OrderService> _logger;
 
     public OrderService(ApplicationDbContext db, IEmailService email, ICustomerService customers,
         BranchClosureService closures, IHubContext<AdminHub> adminHub,
-        IServiceScopeFactory scopeFactory, ILogger<OrderService> logger)
+        IServiceScopeFactory scopeFactory, IHttpContextAccessor httpContextAccessor, ILogger<OrderService> logger)
     {
-        _db           = db;
-        _email        = email;
-        _customers    = customers;
-        _closures     = closures;
-        _adminHub     = adminHub;
-        _scopeFactory = scopeFactory;
-        _logger       = logger;
+        _db                   = db;
+        _email                = email;
+        _customers            = customers;
+        _closures             = closures;
+        _adminHub             = adminHub;
+        _scopeFactory         = scopeFactory;
+        _httpContextAccessor  = httpContextAccessor;
+        _logger               = logger;
     }
 
-    public async Task<OrderDto> CreateOrderAsync(CreateOrderRequest request, long? loggedInUserId = null)
+    public async Task<OrderDto> CreateOrderAsync(CreateOrderRequest request, long userId)
     {
-        long   userId = loggedInUserId ?? 0;
         bool   sendCredentials  = false;
         string? credentialsPwd  = null;
         string? credentialsEmail = null;
         string  credentialsName  = string.Empty;
-
-        // Resolve the name of the admin/staff member who placed this order (if any)
-        string? placedByName = null;
-        if (loggedInUserId.HasValue)
-        {
-            var placer =await _db.Users.AsNoTracking()
-                .Where(u => u.Id == loggedInUserId.Value)
-                .Select(u => new { u.Firstname, u.Lastname })
-                .FirstOrDefaultAsync();
-            if (placer is not null)
-                placedByName = $"{placer.Firstname} {placer.Lastname}".Trim();
-        }
 
         if (request.OrderType == "Delivery" && string.IsNullOrWhiteSpace(request.DeliveryAddress))
             throw new InvalidOperationException("Delivery address is required for delivery orders.");
@@ -118,7 +108,7 @@ public class OrderService : IOrderService
             };
         }
 
-        // Delivery fee (Delivery orders) or bag/pose charge (Pickup orders) — from branch config;
+        // Delivery charges (Delivery orders) or bag/pose charge (Pickup orders) — from branch config;
         // FreeShipping coupon waives whichever surcharge applies. Stored in Order.DeliveryFee either way.
         var deliveryFee = request.OrderType == "Delivery"
             ? (branch.DeliveryFeeEnabled ? branch.DeliveryFee : 0m)
@@ -175,7 +165,6 @@ public class OrderService : IOrderService
             ScheduledTime        = request.ScheduledTime,
             SpecialInstructions  = string.IsNullOrWhiteSpace(request.SpecialInstructions) ? null : request.SpecialInstructions.Trim(),
             CreatedAt            = DenmarkTime.Now,
-            PlacedByUserId       = loggedInUserId,
         };
         _db.Orders.Add(order);
         await _db.SaveChangesAsync(); // generates order.Id
@@ -249,7 +238,7 @@ public class OrderService : IOrderService
             order.ContactName, order.ContactPhone, order.ContactEmail,
             order.DeliveryAddress, order.PaymentMethod,
             order.ScheduledDate, order.ScheduledTime, order.SpecialInstructions,
-            order.CancellationReason, placedByName, order.UserId, null);
+            order.CancellationReason, order.UserId, null);
 
         // Real-time admin notification — fire-and-forget is safe here (SignalR hub, no scoped services)
         _ = _adminHub.Clients.Group(AdminHub.GroupName)
@@ -257,8 +246,11 @@ public class OrderService : IOrderService
 
         // Emails are dispatched on a background task with their own DI scope so the HTTP
         // response isn't blocked on SMTP round-trips. Can't reuse this request's _email/_db —
-        // their scope is disposed as soon as this method returns.
+        // their scope is disposed as soon as this method returns. HttpContext is gone by
+        // then too, so the base URL for email links/images must be captured now, while the
+        // request is still live, and threaded through as a plain string.
         var orderId = order.Id;
+        var baseUrl = _httpContextAccessor.GetBaseUrl();
         _ = Task.Run(async () =>
         {
             using var scope = _scopeFactory.CreateScope();
@@ -267,10 +259,10 @@ public class OrderService : IOrderService
             {
                 // Case 3 only: new guest account — credentials arrive before the order confirmation
                 if (sendCredentials)
-                    await email.SendNewCustomerCredentialsAsync(credentialsEmail!, credentialsName, credentialsPwd!);
+                    await email.SendNewCustomerCredentialsAsync(credentialsEmail!, credentialsName, credentialsPwd!, baseUrl);
 
-                await email.SendOrderConfirmationAsync(order.ContactEmail!, order.ContactName, dto);
-                await email.SendAdminOrderNotificationAsync(dto);
+                await email.SendOrderConfirmationAsync(order.ContactEmail!, order.ContactName, dto, baseUrl);
+                await email.SendAdminOrderNotificationAsync(dto, baseUrl);
             }
             catch (Exception ex)
             {
@@ -288,13 +280,16 @@ public class OrderService : IOrderService
             .Include(o => o.OrderStatus)
             .Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem)
             .Include(o => o.AppliedOffers).ThenInclude(ao => ao.Offer)
-            .Include(o => o.PlacedByUser)
-            .Include(o => o.User)
             .AsNoTracking()
             .FirstOrDefaultAsync(o => o.Id == orderId && o.UserId == userId)
             ?? throw new KeyNotFoundException("Order not found.");
 
-        return ToDto(order);
+        var ownerName = await _db.Users.AsNoTracking()
+            .Where(u => u.Id == order.UserId)
+            .Select(u => $"{u.Firstname} {u.Lastname}".Trim())
+            .FirstOrDefaultAsync();
+
+        return ToDto(order, ownerName);
     }
 
     public async Task<IReadOnlyList<OrderDto>> GetMyOrdersAsync(long userId)
@@ -310,16 +305,19 @@ public class OrderService : IOrderService
             .Include(o => o.OrderStatus)
             .Include(o => o.OrderItems).ThenInclude(oi => oi.MenuItem)
             .Include(o => o.AppliedOffers).ThenInclude(ao => ao.Offer)
-            .Include(o => o.PlacedByUser)
-            .Include(o => o.User)
             .OrderByDescending(o => o.CreatedAt)
             .AsNoTracking()
             .ToListAsync();
 
-        return orders.Select(ToDto).ToList();
+        var ownerUserIds = orders.Select(o => o.UserId).Distinct().ToList();
+        var ownerNames = await _db.Users.AsNoTracking()
+            .Where(u => ownerUserIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => $"{u.Firstname} {u.Lastname}".Trim());
+
+        return orders.Select(o => ToDto(o, ownerNames.GetValueOrDefault(o.UserId))).ToList();
     }
 
-    private static OrderDto ToDto(Order o)
+    private static OrderDto ToDto(Order o, string? ownerName)
     {
         var couponCode = o.AppliedOffers.FirstOrDefault()?.Offer?.CouponCode;
         var items = o.OrderItems
@@ -333,20 +331,12 @@ public class OrderService : IOrderService
                 oi.PriceAtPurchase))
             .ToList();
 
-        var placedByName = o.PlacedByUser is null
-            ? null
-            : $"{o.PlacedByUser.Firstname} {o.PlacedByUser.Lastname}".Trim();
-
-        var ownerName = o.User is null
-            ? null
-            : $"{o.User.Firstname} {o.User.Lastname}".Trim();
-
         return new OrderDto(o.Id, o.OrderType, o.Branch.Name, o.BranchId,
             o.Subtotal, o.DeliveryFee, o.Tax, o.Discount, o.Total,
             o.Status, o.OrderStatus?.Color, o.OrderStatus?.NameDa, o.CreatedAt, items, couponCode,
             o.ContactName, o.ContactPhone, o.ContactEmail,
             o.DeliveryAddress, o.PaymentMethod,
             o.ScheduledDate, o.ScheduledTime, o.SpecialInstructions,
-            o.CancellationReason, placedByName, o.UserId, ownerName);
+            o.CancellationReason, o.UserId, ownerName);
     }
 }

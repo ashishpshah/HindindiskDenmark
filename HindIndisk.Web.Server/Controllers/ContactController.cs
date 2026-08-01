@@ -18,8 +18,9 @@ public class ContactController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Submit([FromBody] ContactRequest request)
     {
-        await _email.SendContactEnquiryAsync(request.Name, request.Email, request.Subject, request.Message, request.BranchId);
-        await _email.SendContactConfirmationAsync(request.Email, request.Name, request.Subject, request.Message);
+        var baseUrl = HttpContext.Request.GetBaseUrl();
+        await _email.SendContactEnquiryAsync(request.Name, request.Email, request.Subject, request.Message, request.BranchId, baseUrl);
+        await _email.SendContactConfirmationAsync(request.Email, request.Name, request.Subject, request.Message, baseUrl);
         return Ok(new { message = "Message received. We'll reply within 24 hours." });
     }
 }

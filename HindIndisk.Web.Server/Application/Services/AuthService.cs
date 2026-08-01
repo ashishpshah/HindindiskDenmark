@@ -5,6 +5,7 @@ using System.Text;
 using HindIndisk.Api.Application.DTOs.Auth;
 using HindIndisk.Api.Domain.Entities;
 using HindIndisk.Api.Infrastructure;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -15,6 +16,7 @@ public class AuthService : IAuthService
     private readonly ApplicationDbContext _db;
     private readonly IConfiguration      _config;
     private readonly IEmailService        _email;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     const int OtpExpiryMinutes      = 10;
     const int OtpCooldownSeconds    = 60;
@@ -24,11 +26,13 @@ public class AuthService : IAuthService
     public AuthService(
         ApplicationDbContext db,
         IConfiguration       config,
-        IEmailService        email)
+        IEmailService        email,
+        IHttpContextAccessor httpContextAccessor)
     {
-        _db     = db;
-        _config = config;
-        _email  = email;
+        _db                  = db;
+        _config              = config;
+        _email               = email;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task StartRegistrationAsync(RegisterRequest request)
@@ -92,7 +96,7 @@ public class AuthService : IAuthService
 
         try
         {
-            await _email.SendRegistrationOtpEmailAsync(normalizedEmail, $"{request.Firstname} {request.Lastname}".Trim(), otp);
+            await _email.SendRegistrationOtpEmailAsync(normalizedEmail, $"{request.Firstname} {request.Lastname}".Trim(), otp, _httpContextAccessor.GetBaseUrl());
         }
         catch
         {
@@ -141,7 +145,7 @@ public class AuthService : IAuthService
 
         // Welcome email — fire-and-forget
         if (!string.IsNullOrWhiteSpace(user.Email))
-            _ = _email.SendWelcomeEmailAsync(user.Email, $"{user.Firstname} {user.Lastname}".Trim());
+            _ = _email.SendWelcomeEmailAsync(user.Email, $"{user.Firstname} {user.Lastname}".Trim(), _httpContextAccessor.GetBaseUrl());
 
         return new AuthResponse(GenerateToken(user), ToDto(user));
     }
@@ -239,7 +243,7 @@ public class AuthService : IAuthService
 
         try
         {
-            await _email.SendOtpEmailAsync(email.Trim(), $"{user.Firstname} {user.Lastname}".Trim(), otp);
+            await _email.SendOtpEmailAsync(email.Trim(), $"{user.Firstname} {user.Lastname}".Trim(), otp, _httpContextAccessor.GetBaseUrl());
         }
         catch
         {

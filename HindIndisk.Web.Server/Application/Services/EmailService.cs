@@ -17,7 +17,12 @@ public class EmailService : IEmailService
     private readonly ILogger<EmailService> _logger;
     private readonly IWebHostEnvironment   _env;
     private readonly IExceptionLogService  _exLog;
-    private readonly string                _siteUrl;
+
+    // Fallback used only when no request-derived baseUrl is available (should be rare —
+    // effectively every call site captures one from the current request). Kept config-driven
+    // so it still tracks environment (dev/staging/prod) even in that fallback case.
+    private readonly string _fallbackSiteUrl;
+
     private EmailConfig? _cachedCfg;
 
     public EmailService(
@@ -28,12 +33,12 @@ public class EmailService : IEmailService
         IExceptionLogService  exLog,
         IConfiguration        config)
     {
-        _emailSettings = emailSettings;
-        _recipients    = recipients;
-        _logger        = logger;
-        _env           = env;
-        _exLog         = exLog;
-        _siteUrl       = (config["Frontend:BaseUrl"] ?? "https://hindindisk.dk").TrimEnd('/');
+        _emailSettings   = emailSettings;
+        _recipients      = recipients;
+        _logger          = logger;
+        _env             = env;
+        _exLog           = exLog;
+        _fallbackSiteUrl = (config["Frontend:BaseUrl"] ?? "https://hindindisk.dk").TrimEnd('/');
     }
 
     private async Task<EmailConfig> GetCfgAsync()
@@ -41,22 +46,22 @@ public class EmailService : IEmailService
 
     // ── Customer: order confirmation ─────────────────────────────────────────
 
-    public async Task SendOrderConfirmationAsync(string toEmail, string toName, OrderDto order)
+    public async Task SendOrderConfirmationAsync(string toEmail, string toName, OrderDto order, string? baseUrl = null)
     {
         var templateFile = order.OrderType == "Delivery"
             ? "DeliveryOrder_Customer.htm"
             : "PlacedOrder_Customer.htm";
 
-        var body = await LoadAndFillOrderTemplateAsync(templateFile, order, isAdmin: false);
+        var body = await LoadAndFillOrderTemplateAsync(templateFile, order, isAdmin: false, ResolveSiteUrl(baseUrl));
         var subject = $"Order Confirmed — #{order.Id} | Hind Indisk";
         await SendAsync(toEmail, toName, subject, body);
     }
 
     // ── Customer: reservation confirmation ──────────────────────────────────
 
-    public async Task SendReservationConfirmationAsync(string toEmail, ReservationDto reservation)
+    public async Task SendReservationConfirmationAsync(string toEmail, ReservationDto reservation, string? baseUrl = null)
     {
-        var body = await LoadAndFillReservationTemplateAsync("Reservation_Customer.htm", reservation);
+        var body = await LoadAndFillReservationTemplateAsync("Reservation_Customer.htm", reservation, ResolveSiteUrl(baseUrl));
         var subject = $"Table Reserved — #{reservation.Id} | Hind Indisk";
         await SendAsync(toEmail, reservation.ContactName, subject, body);
     }
@@ -64,7 +69,7 @@ public class EmailService : IEmailService
     // ── Customer: order status update (no template file — status-specific) ──
 
     public async Task SendOrderStatusUpdateAsync(string toEmail, string toName, long orderId, string newStatus,
-        string branchName, string orderType, DateOnly? scheduledDate, string? scheduledTime)
+        string branchName, string orderType, DateOnly? scheduledDate, string? scheduledTime, string? baseUrl = null)
     {
         var statusMessages = new Dictionary<string, (string label, string message)>
         {
@@ -81,7 +86,7 @@ public class EmailService : IEmailService
         var (displayDate, displayTime) = FormatScheduledSlot(scheduledDate, scheduledTime);
 
         var subject  = $"Order {newStatus} — #{orderId} | {orderType} | Hind Indisk Restaurant";
-        var template = await LoadTemplateAsync("OrderStatusUpdate_Customer.htm");
+        var template = await LoadTemplateAsync("OrderStatusUpdate_Customer.htm", ResolveSiteUrl(baseUrl));
         var body = template
             .Replace("[StatusLabel]",   WebUtility.HtmlEncode(info.label))
             .Replace("[OrderNumber]",   orderId.ToString())
@@ -98,12 +103,12 @@ public class EmailService : IEmailService
     // ── Customer: order cancelled (with optional reason) ────────────────────
 
     public async Task SendOrderCancelledCustomerAsync(string toEmail, string toName, long orderId, string? reason,
-        string branchName, string orderType, DateOnly? scheduledDate, string? scheduledTime)
+        string branchName, string orderType, DateOnly? scheduledDate, string? scheduledTime, string? baseUrl = null)
     {
         var (displayDate, displayTime) = FormatScheduledSlot(scheduledDate, scheduledTime);
 
         var subject  = $"Order Cancelled — #{orderId} | {orderType} | Hind Indisk Restaurant";
-        var template = await LoadTemplateAsync("OrderCancelled_Customer.htm");
+        var template = await LoadTemplateAsync("OrderCancelled_Customer.htm", ResolveSiteUrl(baseUrl));
         var body = template
             .Replace("[OrderNumber]",        orderId.ToString())
             .Replace("[Customername]",       WebUtility.HtmlEncode(toName))
@@ -119,7 +124,7 @@ public class EmailService : IEmailService
     // ── Admin: order cancelled notification ──────────────────────────────────
 
     public async Task SendOrderCancelledAdminAsync(long orderId, long branchId, string customerName, string customerEmail, string? reason,
-        string branchName, string orderType, DateOnly? scheduledDate, string? scheduledTime)
+        string branchName, string orderType, DateOnly? scheduledDate, string? scheduledTime, string? baseUrl = null)
     {
         var recipients = await _recipients.GetEntityAsync(branchId);
         if (string.IsNullOrWhiteSpace(recipients.AdminToMail)) return;
@@ -127,7 +132,7 @@ public class EmailService : IEmailService
         var (displayDate, displayTime) = FormatScheduledSlot(scheduledDate, scheduledTime);
 
         var subject  = $"Order Cancelled — #{orderId} | {orderType} | Hind Indisk Restaurant";
-        var template = await LoadTemplateAsync("OrderCancelled_Admin.htm");
+        var template = await LoadTemplateAsync("OrderCancelled_Admin.htm", ResolveSiteUrl(baseUrl));
         var body = template
             .Replace("[OrderNumber]",        orderId.ToString())
             .Replace("[Customername]",       WebUtility.HtmlEncode(customerName))
@@ -152,7 +157,7 @@ public class EmailService : IEmailService
 
     // ── Admin: order notification ────────────────────────────────────────────
 
-    public async Task SendAdminOrderNotificationAsync(OrderDto order)
+    public async Task SendAdminOrderNotificationAsync(OrderDto order, string? baseUrl = null)
     {
         var recipients = await _recipients.GetEntityAsync(order.BranchId);
         if (string.IsNullOrWhiteSpace(recipients.AdminToMail)) return;
@@ -161,17 +166,17 @@ public class EmailService : IEmailService
             ? "DeliveryOrder_Admin.htm"
             : "PlacedOrder_Admin.htm";
 
-        var body = await LoadAndFillOrderTemplateAsync(templateFile, order, isAdmin: true);
+        var body = await LoadAndFillOrderTemplateAsync(templateFile, order, isAdmin: true, ResolveSiteUrl(baseUrl));
         var subject = $"New Order #{order.Id} — {order.BranchName} | Hind Indisk";
         await SendAsync(recipients.AdminToMail, "Admin", subject, body, isAdmin: true, cc: recipients.CC, bcc: recipients.BCC);
     }
 
     // ── Customer: OTP for password reset ────────────────────────────────────
 
-    public async Task SendOtpEmailAsync(string toEmail, string toName, string otp)
+    public async Task SendOtpEmailAsync(string toEmail, string toName, string otp, string? baseUrl = null)
     {
         var subject  = "Password Reset OTP — Hind Indisk";
-        var template = await LoadTemplateAsync("PasswordResetOtp.htm");
+        var template = await LoadTemplateAsync("PasswordResetOtp.htm", ResolveSiteUrl(baseUrl));
         var body = WrapInHtml(template
             .Replace("[Customername]", WebUtility.HtmlEncode(toName))
             .Replace("[Otp]",          WebUtility.HtmlEncode(otp)));
@@ -207,10 +212,10 @@ public class EmailService : IEmailService
 
     // ── Customer: OTP for registration email verification ──────────────────
 
-    public async Task SendRegistrationOtpEmailAsync(string toEmail, string toName, string otp)
+    public async Task SendRegistrationOtpEmailAsync(string toEmail, string toName, string otp, string? baseUrl = null)
     {
         var subject  = "Verify Your Email — Hind Indisk";
-        var template = await LoadTemplateAsync("RegistrationOtp.htm");
+        var template = await LoadTemplateAsync("RegistrationOtp.htm", ResolveSiteUrl(baseUrl));
         var body = WrapInHtml(template
             .Replace("[Customername]", WebUtility.HtmlEncode(toName))
             .Replace("[Otp]",          WebUtility.HtmlEncode(otp)));
@@ -246,14 +251,15 @@ public class EmailService : IEmailService
 
     // ── Customer: welcome on registration ────────────────────────────────────
 
-    public async Task SendWelcomeEmailAsync(string toEmail, string toName)
+    public async Task SendWelcomeEmailAsync(string toEmail, string toName, string? baseUrl = null)
     {
+        var siteUrl  = ResolveSiteUrl(baseUrl);
         var subject  = "Welcome to Hind Indisk!";
-        var template = await LoadTemplateAsync("Welcome.htm");
+        var template = await LoadTemplateAsync("Welcome.htm", siteUrl);
         var body = WrapInHtml(template
             .Replace("[Customername]",    WebUtility.HtmlEncode(toName))
-            .Replace("[MenuLink]",        $"{_siteUrl}/menu")
-            .Replace("[ReservationLink]", $"{_siteUrl}/reservation"));
+            .Replace("[MenuLink]",        $"{siteUrl}/menu")
+            .Replace("[ReservationLink]", $"{siteUrl}/reservation"));
 
         await SendAsync(toEmail, toName, subject, body);
     }
@@ -264,7 +270,7 @@ public class EmailService : IEmailService
         string toEmail, string toName,
         long   reservationId, string branchName,
         string date, string timeSlot, int guestCount,
-        string newStatus)
+        string newStatus, string? baseUrl = null)
     {
         var (label, message) = newStatus switch
         {
@@ -277,7 +283,7 @@ public class EmailService : IEmailService
         var subject     = $"Reservation {newStatus} — #{reservationId} | {branchName} | Hind Indisk Restaurant";
         var displayDate = DateOnly.TryParse(date, out var parsedDate) ? parsedDate.ToString("dd-MM-yyyy") : date;
 
-        var template = await LoadTemplateAsync("ReservationStatusUpdate_Customer.htm");
+        var template = await LoadTemplateAsync("ReservationStatusUpdate_Customer.htm", ResolveSiteUrl(baseUrl));
         var body = WrapInHtml(template
             .Replace("[StatusLabel]",         WebUtility.HtmlEncode(label))
             .Replace("[ReservationNumber]",   reservationId.ToString())
@@ -293,19 +299,19 @@ public class EmailService : IEmailService
 
     // ── Admin: reservation notification ─────────────────────────────────────
 
-    public async Task SendAdminReservationNotificationAsync(ReservationDto reservation)
+    public async Task SendAdminReservationNotificationAsync(ReservationDto reservation, string? baseUrl = null)
     {
         var recipients = await _recipients.GetEntityAsync(reservation.BranchId);
         if (string.IsNullOrWhiteSpace(recipients.AdminToMail)) return;
 
-        var body = await LoadAndFillReservationTemplateAsync("Reservation_Admin.htm", reservation);
+        var body = await LoadAndFillReservationTemplateAsync("Reservation_Admin.htm", reservation, ResolveSiteUrl(baseUrl));
         var subject = $"New Reservation #{reservation.Id} — {reservation.BranchName} | Hind Indisk";
         await SendAsync(recipients.AdminToMail, "Admin", subject, body, isAdmin: true, cc: recipients.CC, bcc: recipients.BCC);
     }
 
     // ── Admin: contact form enquiry ──────────────────────────────────────────
 
-    public async Task SendContactEnquiryAsync(string fromName, string fromEmail, string subject, string message, long? branchId = null)
+    public async Task SendContactEnquiryAsync(string fromName, string fromEmail, string subject, string message, long? branchId = null, string? baseUrl = null)
     {
         // Contact enquiries route to the recipients of whichever branch the visitor had
         // selected in the header's branch dropdown at submission time. That dropdown always
@@ -315,7 +321,7 @@ public class EmailService : IEmailService
             : await _recipients.GetDefaultEntityAsync();
         if (recipients is null || string.IsNullOrWhiteSpace(recipients.AdminToMail)) return;
 
-        var template = await LoadTemplateAsync("Contact.htm");
+        var template = await LoadTemplateAsync("Contact.htm", ResolveSiteUrl(baseUrl));
         var body = template
             .Replace("[Customername]", WebUtility.HtmlEncode(fromName))
             .Replace("[Email]",        WebUtility.HtmlEncode(fromEmail))
@@ -328,9 +334,9 @@ public class EmailService : IEmailService
 
     // ── Customer: contact form acknowledgement ───────────────────────────────
 
-    public async Task SendContactConfirmationAsync(string toEmail, string toName, string subject, string message)
+    public async Task SendContactConfirmationAsync(string toEmail, string toName, string subject, string message, string? baseUrl = null)
     {
-        var template = await LoadTemplateAsync("Contact_Customer.htm");
+        var template = await LoadTemplateAsync("Contact_Customer.htm", ResolveSiteUrl(baseUrl));
         var body = template
             .Replace("[Customername]", WebUtility.HtmlEncode(toName))
             .Replace("[Email]",        WebUtility.HtmlEncode(toEmail))
@@ -340,23 +346,30 @@ public class EmailService : IEmailService
         await SendAsync(toEmail, toName, "We received your message — Hind Indisk", WrapInHtml(body));
     }
 
-    public async Task SendNewCustomerCredentialsAsync(string toEmail, string toName, string plainPassword)
+    public async Task SendNewCustomerCredentialsAsync(string toEmail, string toName, string plainPassword, string? baseUrl = null)
     {
-        var template = await LoadTemplateAsync("NewCustomerCredentials.htm");
+        var siteUrl  = ResolveSiteUrl(baseUrl);
+        var template = await LoadTemplateAsync("NewCustomerCredentials.htm", siteUrl);
         var body = WrapInHtml(template
             .Replace("[Customername]", WebUtility.HtmlEncode(toName))
             .Replace("[Email]",        WebUtility.HtmlEncode(toEmail))
             .Replace("[Password]",     WebUtility.HtmlEncode(plainPassword))
-            .Replace("[AccountLink]",  $"{_siteUrl}/account"));
+            .Replace("[AccountLink]",  $"{siteUrl}/account"));
 
         await SendAsync(toEmail, toName, "Welcome to Hind Indisk — Your Account Details", body);
     }
 
     // ── Template helpers ─────────────────────────────────────────────────────
 
-    private async Task<string> LoadAndFillOrderTemplateAsync(string fileName, OrderDto order, bool isAdmin)
+    // baseUrl is null whenever the caller had no HttpContext to read from (shouldn't
+    // normally happen — every call site captures one from the triggering request before
+    // it's lost, e.g. before forking into a background Task.Run).
+    private string ResolveSiteUrl(string? baseUrl) =>
+        string.IsNullOrWhiteSpace(baseUrl) ? _fallbackSiteUrl : baseUrl.TrimEnd('/');
+
+    private async Task<string> LoadAndFillOrderTemplateAsync(string fileName, OrderDto order, bool isAdmin, string siteUrl)
     {
-        var template = await LoadTemplateAsync(fileName);
+        var template = await LoadTemplateAsync(fileName, siteUrl);
 
         var (scheduledDate, scheduledTime) = FormatScheduledSlot(order.ScheduledDate, order.ScheduledTime);
         var itemRows      = BuildOrderItemRows(order);
@@ -381,9 +394,9 @@ public class EmailService : IEmailService
         return WrapInHtml(body);
     }
 
-    private async Task<string> LoadAndFillReservationTemplateAsync(string fileName, ReservationDto reservation)
+    private async Task<string> LoadAndFillReservationTemplateAsync(string fileName, ReservationDto reservation, string siteUrl)
     {
-        var template = await LoadTemplateAsync(fileName);
+        var template = await LoadTemplateAsync(fileName, siteUrl);
 
         var slotDate = DateOnly.TryParse(reservation.Date, out var d) ? d.ToString("dd-MM-yyyy") : reservation.Date;
 
@@ -403,10 +416,16 @@ public class EmailService : IEmailService
         return WrapInHtml(body);
     }
 
-    private async Task<string> LoadTemplateAsync(string fileName)
+    // [siteUrl] is a placeholder token baked into every template's logo link, logo image
+    // src, footer link, and (where present) "contact us" link — same convention as
+    // [Customername], [OrderNumber], etc. Replaced with the resolved runtime domain so
+    // emails always link to wherever the app is actually running.
+    private async Task<string> LoadTemplateAsync(string fileName, string siteUrl)
     {
         var path = Path.Combine(_env.WebRootPath, "Email_Template", fileName);
-        return await File.ReadAllTextAsync(path);
+        var raw  = await File.ReadAllTextAsync(path);
+
+        return raw.Replace("[siteUrl]", siteUrl);
     }
 
     private static string BuildOrderItemRows(OrderDto order)
@@ -440,8 +459,11 @@ public class EmailService : IEmailService
                 + $"<td align=\"right\" style=\"padding:6px\">{order.Tax:0} DKK</td></tr>");
 
         if (order.DeliveryFee > 0)
-            sb.AppendLine($"<tr><td colspan=\"3\" align=\"right\" style=\"padding:6px\">Delivery fee:</td>"
+        {
+            var feeLabel = order.OrderType == "Delivery" ? "Delivery charges" : "Pose Charges";
+            sb.AppendLine($"<tr><td colspan=\"3\" align=\"right\" style=\"padding:6px\">{feeLabel}:</td>"
                 + $"<td align=\"right\" style=\"padding:6px\">{order.DeliveryFee:0} DKK</td></tr>");
+        }
 
         sb.AppendLine($"<tr style=\"font-weight:bold\">"
             + $"<td colspan=\"3\" align=\"right\" style=\"padding:6px\">Total:</td>"
