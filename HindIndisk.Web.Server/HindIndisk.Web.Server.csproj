@@ -4,6 +4,11 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Self-contained by default so a plain `dotnet publish -c Release` ships the .NET
+         runtime with the app — the live host no longer needs a matching ASP.NET Core
+         Hosting Bundle installed. See Publish_Both.md. -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
   </PropertyGroup>
 
   <ItemGroup>

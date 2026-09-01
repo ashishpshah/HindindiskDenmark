@@ -2,8 +2,20 @@
 
 ## Command
 ```
+dotnet publish -c Release -o ./publish
+```
+
+The server `.csproj` now pins `<RuntimeIdentifier>win-x64</RuntimeIdentifier>` and
+`<SelfContained>true</SelfContained>` as defaults, so the plain command above is enough —
+it produces the same self-contained `win-x64` output as the older explicit form below (still
+works identically if you type it out):
+```
 dotnet publish -c Release -r win-x64 --self-contained true -o ./publish
 ```
+
+Also see `global.json` at the repo root — it pins the `dotnet` SDK to `8.0.420` so a newer
+SDK installed on the machine (e.g. .NET 9/10) can never silently change what `dotnet
+publish` produces for this net8.0 project.
 
 ## The Wiring
 
