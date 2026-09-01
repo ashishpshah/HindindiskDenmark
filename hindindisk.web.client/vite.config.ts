@@ -16,6 +16,10 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:5228',
       '/hubs': { target: 'http://localhost:5228', ws: true },
+      // Static assets the backend serves from wwwroot (branch/menu images, Food Control
+      // Report PDFs, …) — without this they 404 and Vite silently falls back to index.html.
+      '/images': 'http://localhost:5228',
+      '/FoodControlReport': 'http://localhost:5228',
     },
   },
   build: {

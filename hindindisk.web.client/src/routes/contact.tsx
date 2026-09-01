@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, lazy, Suspense } from "react";
 import {
   Phone, MapPin,
-  Loader2, Star, ArrowRight, CheckCircle2, AlertTriangle,
+  Loader2, Star, ArrowRight, CheckCircle2, AlertTriangle, FileText,
 } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { PageHero } from "@/components/PageHero";
@@ -12,8 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useBranches } from "@/hooks/useBranches";
+import { useFoodControlReports } from "@/hooks/useFoodControlReports";
 import { useCart } from "@/context/CartContext";
-import { apiFetch } from "@/lib/api/client";
+import { apiFetch, resolveUrl } from "@/lib/api/client";
 import { useI18n } from "@/i18n/I18nProvider";
 
 const WorldMap = lazy(() =>
@@ -39,13 +40,15 @@ const EMPTY_CONTACT = { name: "", email: "", subject: "", message: "" };
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 function ContactPage() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { branch, setBranch } = useCart();
   const { data: branchesData = [] } = useBranches();
+  const { data: foodControlReports = [] } = useFoodControlReports();
 
   const [contactForm,   setContactForm]   = useState(EMPTY_CONTACT);
   const [sending,       setSending]       = useState(false);
   const [contactResult, setContactResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [reportPreview, setReportPreview] = useState<{ title: string; url: string } | null>(null);
 
   const setField = (k: keyof typeof contactForm) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -113,7 +116,11 @@ function ContactPage() {
           <p className="mt-4 text-muted-foreground">{t("pages.locations.subtitle")}</p>
         </div>
 
-        {branchesData.map((b, i) => (
+        {branchesData.map((b, i) => {
+          // Report's `branch` is a short suburb key (e.g. "Vesterbro"); the branch's own
+          // name is the full display name (e.g. "Hind Indisk Vesterbro") — match loosely.
+          const foodControlReport = foodControlReports.find(r => b.name.toLowerCase().includes(r.branch.toLowerCase()));
+          return (
           <div key={b.name} className={`grid gap-10 lg:grid-cols-2 lg:items-center ${i % 2 ? "lg:[&>*:first-child]:order-2" : ""}`}>
             <div className="aspect-[4/3] overflow-hidden rounded-3xl shadow-elegant">
               <iframe
@@ -147,10 +154,24 @@ function ContactPage() {
                     {t("pages.locations.directionsBtn")}
                   </a>
                 </Button>
+                {foodControlReport && (
+                  <Button
+                    variant="outline"
+                    className="cursor-pointer"
+                    onClick={() => setReportPreview({
+                      title: `${b.name} — ${lang === "da" ? foodControlReport.textDa : foodControlReport.text}`,
+                      url: resolveUrl(foodControlReport.url),
+                    })}
+                  >
+                    <FileText className="mr-1 h-4 w-4" />
+                    {lang === "da" ? foodControlReport.textDa : foodControlReport.text}
+                  </Button>
+                )}
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </section>
 
       {/* ── World Map ───────────────────────────────────────────────────────── 
@@ -197,6 +218,18 @@ function ContactPage() {
           <Button className="mt-6 w-full gradient-primary text-primary-foreground" onClick={() => setContactResult(null)}>
             {contactResult?.success ? "Done" : "Close"}
           </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Food control report preview dialog ─────────────────────────────── */}
+      <Dialog open={reportPreview !== null} onOpenChange={(open) => { if (!open) setReportPreview(null); }}>
+        <DialogContent className="flex h-[85vh] max-w-4xl flex-col gap-3 p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg">{reportPreview?.title}</DialogTitle>
+          </DialogHeader>
+          {reportPreview && (
+            <iframe title={reportPreview.title} src={reportPreview.url} className="w-full flex-1 rounded-lg border" />
+          )}
         </DialogContent>
       </Dialog>
     </Layout>

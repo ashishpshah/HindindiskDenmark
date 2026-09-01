@@ -24,12 +24,13 @@ public class LocationsController : ControllerBase
     private readonly IWhyChooseUsService      _whyChooseUs;
     private readonly IHomeStorySectionService _homeStory;
     private readonly IFooterSettingsService   _footerSettings;
+    private readonly IConfiguration           _config;
 
     public LocationsController(ILocationService locations, SlotService slots,
         BranchClosureService closures, IHeroSlideService heroSlides,
         IGalleryImageService gallery, IAboutService about,
         IWhyChooseUsService whyChooseUs, IHomeStorySectionService homeStory,
-        IFooterSettingsService footerSettings)
+        IFooterSettingsService footerSettings, IConfiguration config)
     {
         _locations   = locations;
         _slots       = slots;
@@ -40,6 +41,7 @@ public class LocationsController : ControllerBase
         _whyChooseUs = whyChooseUs;
         _homeStory   = homeStory;
         _footerSettings = footerSettings;
+        _config      = config;
     }
 
     /// <summary>All restaurant branches with address, hours, and contact details.</summary>
@@ -116,4 +118,29 @@ public class LocationsController : ControllerBase
     [ProducesResponseType(typeof(FooterSettingsDto), 200)]
     public async Task<IActionResult> GetFooterSettings()
         => Ok(await _footerSettings.GetAsync());
+
+    /// <summary>Active per-branch Food Control ("Smiley") report links, sourced from appsettings.json.</summary>
+    [HttpGet("food-control-reports")]
+    [ProducesResponseType(typeof(IReadOnlyList<FoodControlReportDto>), 200)]
+    public IActionResult GetFoodControlReports()
+    {
+        var entries = _config.GetSection("FoodControlReports").Get<List<FoodControlReportConfigEntry>>() ?? [];
+        var reports = entries
+            .Where(e => e.IsActive)
+            .Select(e => new FoodControlReportDto(e.Branch, e.Text, e.TextDa, ToPublicUrl(e.FilePath), e.IsActive))
+            .ToList();
+        return Ok(reports);
+    }
+
+    /// <summary>The config stores the physical on-disk path (rooted at "wwwroot"); static files are
+    /// served from wwwroot at "/", so strip that segment and switch to forward slashes for the client.</summary>
+    private static string ToPublicUrl(string filePath)
+    {
+        var normalized = filePath.Replace('\\', '/').TrimStart('/');
+        if (normalized.StartsWith("wwwroot/", StringComparison.OrdinalIgnoreCase))
+            normalized = normalized["wwwroot/".Length..];
+        return "/" + normalized;
+    }
+
+    private record FoodControlReportConfigEntry(string Branch, string Text, string TextDa, string FilePath, bool IsActive);
 }
