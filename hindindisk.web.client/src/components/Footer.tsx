@@ -3,6 +3,8 @@ import { Facebook, Instagram, Twitter, Phone, Mail, MapPin } from "lucide-react"
 import { logoUrl, navLinks } from "@/data/mock";
 import { useBranches } from "@/hooks/useBranches";
 import { useFooterSettings } from "@/hooks/useFooterSettings";
+import { findFoodControlReport, useFoodControlReports } from "@/hooks/useFoodControlReports";
+import { SmileyIcon } from "@/components/SmileyIcon";
 import { useI18n } from "@/i18n/I18nProvider";
 import { nowInDenmark } from "@/lib/denmarkTime";
 
@@ -19,14 +21,16 @@ export function Footer() {
   const { t, lang } = useI18n();
   const { data: branchesData = [] } = useBranches();
   const { data: footerSettings } = useFooterSettings();
+  const { data: foodControlReports = [] } = useFoodControlReports();
+
   const copyright =
     (lang === "da" ? footerSettings?.copyrightDa : footerSettings?.copyright) || t("footer.copyright");
   return (
     <footer className="relative mt-32 overflow-hidden bg-secondary text-secondary-foreground">
       <div className="absolute inset-0 opacity-30" style={{ background: "var(--gradient-dark)" }} />
       <div className="absolute -top-40 left-1/2 h-80 w-[80%] -translate-x-1/2 rounded-full bg-primary/20 blur-3xl" />
-      <div className="relative mx-auto grid max-w-7xl gap-12 px-6 py-20 md:grid-cols-2 lg:grid-cols-5">
-        <div className="lg:col-span-2 space-y-5">
+      <div className="relative mx-auto grid max-w-[1440px] gap-12 px-6 py-20 md:grid-cols-2 lg:grid-cols-12">
+        <div className="lg:col-span-4 space-y-5">
           <img src={logoUrl} alt="Hind Indisk" className="h-20" />
           <p className="max-w-sm text-base font-sans text-white/70 leading-relaxed">
             {t("footer.tagline")}
@@ -45,7 +49,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div>
+        <div className="lg:col-span-2">
           <h4 className="mb-4 font-display text-xl text-primary">{t("footer.quickLinks")}</h4>
           <ul className="space-y-2 text-base font-sans text-white/70">
             {navLinks.map((l) => (
@@ -59,8 +63,11 @@ export function Footer() {
           const address      = (lang === "da" ? b.addressDa      : b.address)      || b.address;
           const addressLine2 = (lang === "da" ? b.addressLine2Da : b.addressLine2) || b.addressLine2;
           const city         = (lang === "da" ? b.cityDa         : b.city)         || b.city;
+          // The per-branch findsmiley.dk link is configured server-side (appsettings.json)
+          // and matched to the branch here — never hardcoded, or the two can drift apart.
+          const foodControlReport = findFoodControlReport(foodControlReports, b.name, b.nameDa);
           return (
-          <div key={b.id}>
+          <div key={b.id} className="lg:col-span-3">
             <h4 className="mb-4 font-display text-xl text-primary">{name}</h4>
             <div className="space-y-2.5 text-base font-sans text-white/70">
               <div className="flex items-start gap-2">
@@ -68,7 +75,7 @@ export function Footer() {
                 <div>
                   <div>{address}</div>
                   {addressLine2 && <div>{addressLine2}</div>}
-                  <div>{city}, {b.postalCode}</div>
+                  <div>{b.postalCode}&nbsp;{city}</div>
                 </div>
               </div>
               {b.phone && (
@@ -78,11 +85,26 @@ export function Footer() {
                 </a>
               )}
               {b.email && (
-                <a href={`mailto:${b.email}`} data-tagid={`link-footer-email-${b.id}`} className="flex items-center gap-2 hover:text-primary transition">
+                <a href={`mailto:${b.email}`} data-tagid={`link-footer-email-${b.id}`} className="flex min-w-0 items-center gap-2 hover:text-primary transition">
                   <Mail className="h-4 w-4 shrink-0 text-primary/70" />
-                  {b.email}
+                  <span className="min-w-0 break-words">{b.email}</span>
                 </a>
               )}
+
+              {foodControlReport?.smileyUrl && (
+                <a
+                  href={foodControlReport.smileyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-tagid={`link-footer-smiley-${b.id}`}
+                  title={lang === "da" ? foodControlReport.textDa : foodControlReport.text}
+                  className="inline-flex w-fit items-center gap-1 text-sm text-primary/80 hover:text-primary underline underline-offset-2 transition"
+                >
+                  <SmileyIcon size={20} />
+                  Smiley →
+                </a>
+              )}
+<br />
               {b.googleMapsLink && (
                 <a href={b.googleMapsLink} target="_blank" rel="noopener noreferrer" data-tagid={`link-footer-maps-${b.id}`}
                   className="inline-block text-sm text-primary/80 hover:text-primary underline underline-offset-2 transition">

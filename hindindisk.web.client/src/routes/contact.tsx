@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useBranches } from "@/hooks/useBranches";
-import { useFoodControlReports } from "@/hooks/useFoodControlReports";
+import { useFoodControlReports, findFoodControlReport } from "@/hooks/useFoodControlReports";
 import { useCart } from "@/context/CartContext";
 import { apiFetch, resolveUrl } from "@/lib/api/client";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -119,7 +119,7 @@ function ContactPage() {
         {branchesData.map((b, i) => {
           // Report's `branch` is a short suburb key (e.g. "Vesterbro"); the branch's own
           // name is the full display name (e.g. "Hind Indisk Vesterbro") — match loosely.
-          const foodControlReport = foodControlReports.find(r => b.name.toLowerCase().includes(r.branch.toLowerCase()));
+          const foodControlReport = findFoodControlReport(foodControlReports, b.name, b.nameDa);
           return (
           <div key={b.name} className={`grid gap-10 lg:grid-cols-2 lg:items-center ${i % 2 ? "lg:[&>*:first-child]:order-2" : ""}`}>
             <div className="aspect-[4/3] overflow-hidden rounded-3xl shadow-elegant">

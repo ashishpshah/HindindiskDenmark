@@ -4,6 +4,8 @@ import { Menu, X, ShoppingBag, User, LogOut, MapPin, ChevronDown } from "lucide-
 import { motion, AnimatePresence } from "framer-motion";
 import { logoUrl } from "@/data/mock";
 import { useBranches } from "@/hooks/useBranches";
+import { findFoodControlReport, useFoodControlReports } from "@/hooks/useFoodControlReports";
+import { SmileyIcon } from "@/components/SmileyIcon";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -44,6 +46,11 @@ export function Header() {
   const { user, openModal, logout } = useAuth();
   const { totalQty, setOpen: setCartOpen, branch, setBranch } = useCart();
   const { data: branchesData = [] } = useBranches();
+  const { data: foodControlReports = [] } = useFoodControlReports();
+
+  // The findsmiley.dk link for the selected branch is configured server-side
+  // (appsettings.json) — never hardcoded here, or the two can drift apart.
+  const smileyReport = findFoodControlReport(foodControlReports, branch);
 
   const navLinks = [
     { to: "/", label: t("nav.home") },
@@ -60,6 +67,15 @@ export function Header() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Lock the page behind the mobile drawer, so a swipe over the drawer scrolls the
+  // drawer itself instead of the page underneath.
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [open]);
 
   return (
     <header
@@ -86,6 +102,19 @@ export function Header() {
               {l.label}
             </Link>
           ))}
+          {smileyReport?.smileyUrl && (
+            <a
+              href={smileyReport.smileyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-tagid="link-header-smiley"
+              title={lang === "da" ? smileyReport.textDa : smileyReport.text}
+              className="inline-flex items-center gap-1 rounded-full px-3 py-2 text-[15px] font-medium tracking-wide text-foreground/80 transition hover:bg-accent hover:text-primary"
+            >
+              <SmileyIcon size={16} />
+              Smiley
+            </a>
+          )}
         </nav>
 
         <div className="hidden items-center gap-2 lg:flex">
@@ -163,6 +192,15 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-1 lg:hidden">
+          <button
+            data-tagid="button-header-branch-mobile-current"
+            onClick={() => setOpen(true)}
+            aria-label={branch || "Select branch"}
+            className="flex max-w-[104px] items-center gap-1 rounded-full px-2 py-1.5 text-xs text-foreground/70 transition hover:text-primary sm:max-w-[150px]"
+          >
+            <MapPin className="h-4 w-4 shrink-0" />
+            <span className="truncate">{branch || "Select branch"}</span>
+          </button>
           <button data-tagid="button-header-cart-mobile" onClick={() => setCartOpen(true)} className="relative grid h-10 w-10 place-items-center rounded-full hover:bg-accent" aria-label="Cart">
             <ShoppingBag className="h-5 w-5" />
             {totalQty > 0 && (
@@ -179,24 +217,38 @@ export function Header() {
         {open && (
           <motion.div
             id="mobile-nav"
-            className="fixed inset-0 z-[60] bg-secondary text-secondary-foreground lg:hidden"
+            className="fixed inset-0 z-[60] flex flex-col overflow-hidden bg-secondary text-secondary-foreground lg:hidden"
             initial={{ opacity: 0, x: "100%" }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: "100%" }}
             transition={{ type: "tween", duration: 0.3 }}
           >
-            <div className="flex h-24 items-center justify-between px-4">
+            <div className="flex h-24 shrink-0 items-center justify-between px-4">
               <img src={logoUrl} alt="Hind" className="h-20" />
               <button data-tagid="button-header-menu-close" className="rounded-full p-2 hover:bg-white/10" onClick={() => setOpen(false)} aria-label="Close menu">
                 <X className="h-6 w-6" />
               </button>
             </div>
-            <nav className="flex flex-col gap-1 px-6 py-6 text-xl">
+            <nav className="flex flex-1 flex-col gap-1 overflow-y-auto overscroll-contain px-6 py-6 text-xl">
               {navLinks.map((l) => (
                 <Link key={l.to} to={l.to} data-tagid={`link-header-nav-mobile-${l.to === "/" ? "home" : l.to.slice(1)}`} onClick={() => setOpen(false)} className="border-b border-white/10 py-3 hover:text-primary">
                   {l.label}
                 </Link>
               ))}
+              {smileyReport?.smileyUrl && (
+                <a
+                  href={smileyReport.smileyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-tagid="link-header-smiley-mobile"
+                  onClick={() => setOpen(false)}
+                  title={lang === "da" ? smileyReport.textDa : smileyReport.text}
+                  className="flex items-center gap-2 border-b border-white/10 py-3 hover:text-primary"
+                >
+                  <SmileyIcon size={20} />
+                  <span className="text-xl">Smiley</span>
+                </a>
+              )}
               <div className="mt-4 border-t border-white/10 pt-4">
                 <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wider text-white/50">
                   <MapPin className="h-3.5 w-3.5" /> {t("pages.menu.changeLocation")}

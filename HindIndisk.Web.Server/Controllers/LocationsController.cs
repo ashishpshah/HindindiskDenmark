@@ -127,7 +127,7 @@ public class LocationsController : ControllerBase
         var entries = _config.GetSection("FoodControlReports").Get<List<FoodControlReportConfigEntry>>() ?? [];
         var reports = entries
             .Where(e => e.IsActive)
-            .Select(e => new FoodControlReportDto(e.Branch, e.Text, e.TextDa, ToPublicUrl(e.FilePath), e.IsActive))
+            .Select(e => new FoodControlReportDto(e.Branch, e.Text, e.TextDa, ToPublicUrl(e.FilePath), e.Url ?? string.Empty, e.IsActive))
             .ToList();
         return Ok(reports);
     }
@@ -142,5 +142,5 @@ public class LocationsController : ControllerBase
         return "/" + normalized;
     }
 
-    private record FoodControlReportConfigEntry(string Branch, string Text, string TextDa, string FilePath, bool IsActive);
+    private record FoodControlReportConfigEntry(string Branch, string Text, string TextDa, string FilePath, string? Url, bool IsActive);
 }
