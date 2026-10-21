@@ -89,7 +89,7 @@ export function Header() {
           <img src={logoUrl} alt="Hind Indisk Restaurant" className="h-20 w-auto drop-shadow-md" />
         </Link>
 
-        <nav className="hidden items-center gap-1 lg:flex">
+        <nav className="hidden min-w-0 items-center gap-0.5 lg:flex">
           {navLinks.map((l) => (
             <Link
               key={l.to}
@@ -117,7 +117,7 @@ export function Header() {
           )}
         </nav>
 
-        <div className="hidden items-center gap-2 lg:flex">
+        <div className="hidden min-w-0 items-center gap-1 lg:flex">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button data-tagid="button-header-branch" className="relative flex max-w-[160px] items-center gap-1 rounded-full px-2 py-2 text-xs text-foreground/70 hover:text-primary">
